@@ -25,6 +25,8 @@ import WorkflowExecutionDetailsComponent from "./WorkflowExecutionDetailsCompone
 import TableDetailsComponent from "./TableDetailsComponent";
 import ProductRegistrationListComponent from "./ProductRegistrationListComponent";
 import RegisterNewProductComponent from "./RegisterNewProductComponent";
+import SearchComponent from "./SearchComponent";
+
 
 function MainComponent(props) {
     return (
@@ -36,6 +38,7 @@ function MainComponent(props) {
                     {type: "link", text: "Catalog", href: "/"},
                     {type: "link", text: "Workflow Executions", href: "/workflow-executions"},
                     {type: "link", text: "Product Registration", href: "/product-registration/list"},
+                    {type: "link", text: "Search", href: "/search"},
                     {type: "link", text: "Logout", href: "#"}
                 ]}
                 onFollow={async(event) => {
@@ -62,6 +65,9 @@ function MainComponent(props) {
                     </Route>
                     <Route exact path="/workflow-executions">
                         <WorkflowExecutionsComponent />
+                    </Route>
+                    <Route exact path="/search">
+                        <SearchComponent />
                     </Route>
                     <Route exact path="/execution-details/:execArn">
                         <WorkflowExecutionDetailsComponent />
