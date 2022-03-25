@@ -19,10 +19,10 @@ import { SFNClient, StartExecutionCommand } from "@aws-sdk/client-sfn";
 import { useEffect, useState } from "react";
 import Amplify, { Auth } from "aws-amplify";
 import { Button, Container, Form, FormField, Header, Input } from "@awsui/components-react";
-// const cfnOutput = require("../cfn-output.json");
+const cfnOutput = require("../cfn-output.json");
 
 const config = Amplify.configure();
-const SM_ARN = ""; //TODO: replace with CDK generated SM ARN
+const SM_ARN = cfnOutput.InfraStack.StateMachineArn;
 
 function RequestAccessComponent({dbName, tableName, successHandler}) {
     const [targetAccount, setTargetAccount] = useState();
