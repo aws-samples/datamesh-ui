@@ -26,6 +26,8 @@ import TableDetailsComponent from "./TableDetailsComponent";
 import ProductRegistrationListComponent from "./ProductRegistrationListComponent";
 import RegisterNewProductComponent from "./RegisterNewProductComponent";
 import SearchComponent from "./SearchComponent";
+import DataProductDetailsComponent from "./DataProductDetailsComponent"
+
 
 
 function MainComponent(props) {
@@ -68,6 +70,9 @@ function MainComponent(props) {
                     </Route>
                     <Route exact path="/search">
                         <SearchComponent />
+                    </Route>
+                    <Route exact path="/data-product-details/:dataProduct">
+                        <DataProductDetailsComponent />
                     </Route>
                     <Route exact path="/execution-details/:execArn">
                         <WorkflowExecutionDetailsComponent />

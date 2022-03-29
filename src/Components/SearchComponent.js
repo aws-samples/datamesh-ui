@@ -18,8 +18,9 @@
 import axios from 'axios'
 import Amplify, { Auth } from "aws-amplify";
 import { useState } from "react";
-import { Table, Box, Container, Header, Input } from "@awsui/components-react";
+import { Table, Box, Container, Header, Input, Link } from "@awsui/components-react";
 
+const config = Amplify.configure();
 function SearchComponent() {
 
   var results = []
@@ -32,7 +33,7 @@ function SearchComponent() {
 
   const onSearch = async (text) => {
     
-    const baseURL = "https://puv53xh491.execute-api.eu-west-1.amazonaws.com"
+    const baseURL = "https://0d93m1h9mh.execute-api.eu-west-1.amazonaws.com"
     results = await axios.get(`${baseURL}/prod/search/${text}`)
   
     setState(prevState => {
@@ -55,6 +56,8 @@ function SearchComponent() {
   }
 
   let data = [];
+  
+  console.log(state.results.data)
   if (state.results.data) {
     data = state.results.data || [];
   }
@@ -72,20 +75,16 @@ function SearchComponent() {
           display={(data) ? "block" : "none"}></Box>}
         items={data} columnDefinitions={[
           {
+            header: "Table Name",
+            cell:  item => <Link href={"/data-product-details/"+item.documentId}>{item.tableInformation.tableName} </Link>
+          },
+          {
             header: "Product Owner ID",
             cell: item => item.tableInformation.catalogName + ""
           },
           {
             header: "Database Name",
             cell: item => item.tableInformation.databaseName + ""
-          },
-          {
-            header: "Table Name",
-            cell: item => item.tableInformation.tableName + ""
-          },
-          {
-            header: "Location",
-            cell: item => item.tableInformation.tableDescription.StorageDescriptor.Location + ""
           },
           {
             header: "Columns",
