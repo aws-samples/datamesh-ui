@@ -44,7 +44,7 @@ function DataProductDetailsComponent(props) {
         //const sfnClient = new SFNClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
         try {
             const baseURL = SEARCH_ARN
-            //const response = await axios.get(`${baseURL}/prod/documentId/${dataProduct}`)
+            //const response = await axios.get(`${baseURL}/documentId/${dataProduct}`)
             const response = await axios.get(`${baseURL}/prod/document/${dataProduct}`)
             console.log(response)
             console.log(response.data.tableInformation)

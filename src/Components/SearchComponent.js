@@ -37,7 +37,7 @@ function SearchComponent() {
   const onSearch = async (text) => {
     
     const baseURL = SEARCH_ARN
-    results = await axios.get(`${baseURL}/prod/search/${text}`)
+    results = await axios.get(`${baseURL}/search/${text}`)
   
     setState(prevState => {
       return { ...prevState, results: results }
