@@ -24,7 +24,8 @@ import ValueWithLabel from './ValueWithLabel';
 import BadgeStatus from './BadgeStatus';
 import axios from 'axios'
 
-
+const cfnOutput = require("../cfn-output.json");
+const SEARCH_ARN = cfnOutput.InfraStack.SearchArn;
 const config = Amplify.configure();
 
 function DataProductDetailsComponent(props) {
@@ -42,7 +43,7 @@ function DataProductDetailsComponent(props) {
         //const credentials = await Auth.currentCredentials();
         //const sfnClient = new SFNClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
         try {
-            const baseURL = "https://0d93m1h9mh.execute-api.eu-west-1.amazonaws.com"
+            const baseURL = SEARCH_ARN
             //const response = await axios.get(`${baseURL}/prod/documentId/${dataProduct}`)
             const response = await axios.get(`${baseURL}/prod/document/${dataProduct}`)
             console.log(response)

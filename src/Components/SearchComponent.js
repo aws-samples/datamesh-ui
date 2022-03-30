@@ -20,6 +20,9 @@ import Amplify, { Auth } from "aws-amplify";
 import { useState } from "react";
 import { Table, Box, Container, Header, Input, Link } from "@awsui/components-react";
 
+const cfnOutput = require("../cfn-output.json");
+const SEARCH_ARN = cfnOutput.InfraStack.SearchArn;
+
 const config = Amplify.configure();
 function SearchComponent() {
 
@@ -33,7 +36,7 @@ function SearchComponent() {
 
   const onSearch = async (text) => {
     
-    const baseURL = "https://0d93m1h9mh.execute-api.eu-west-1.amazonaws.com"
+    const baseURL = SEARCH_ARN
     results = await axios.get(`${baseURL}/prod/search/${text}`)
   
     setState(prevState => {
