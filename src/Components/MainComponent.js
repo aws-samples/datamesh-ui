@@ -27,7 +27,8 @@ import ProductRegistrationListComponent from "./ProductRegistrationListComponent
 import RegisterNewProductComponent from "./RegisterNewProductComponent";
 import SearchComponent from "./SearchComponent";
 import DataProductDetailsComponent from "./DataProductDetailsComponent"
-
+import DataQualityReportsComponent from "./QualityUI/DataQualityReportsComponent";
+import DataQualityReportResultsComponent from "./QualityUI/DataQualityReportResultsComponent";
 
 
 function MainComponent(props) {
@@ -82,6 +83,12 @@ function MainComponent(props) {
                     </Route>
                     <Route exact path="/product-registration/new">
                         <RegisterNewProductComponent />
+                    </Route>
+                    <Route exact path="/data-quality-reports/:dbname/:tablename">
+                        <DataQualityReportsComponent />
+                    </Route>
+                    <Route exact path="/data-quality-report-results/:dbname/:tablename/:bucket/:key">
+                        <DataQualityReportResultsComponent />
                     </Route>
                 </Switch>
             </BrowserRouter>
