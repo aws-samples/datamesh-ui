@@ -32,7 +32,7 @@ Amplify.configure({
         endpoints: [
             {
                 name: "DataQualityAPIGW",
-                endpoint: cfnOutput.InfraStack.DataQualityApiUrl
+                endpoint: cfnOutput.InfraStack.DataQualityHttpApiUrl
             }
         ]
     }
