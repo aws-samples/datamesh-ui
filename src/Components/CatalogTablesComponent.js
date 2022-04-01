@@ -16,7 +16,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import { GlueClient, GetTablesCommand, GetDatabasesCommand, GetDatabaseCommand } from "@aws-sdk/client-glue";
-import { Box, BreadcrumbGroup, Flashbar, Header, Link, Table } from "@awsui/components-react";
+import { ColumnLayout, Box, BreadcrumbGroup, Flashbar, Header, Link, Table } from "@awsui/components-react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import Amplify, { Auth } from "aws-amplify";
