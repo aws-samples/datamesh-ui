@@ -23,7 +23,7 @@ import Amplify from 'aws-amplify';
 import MainComponent from './Components/MainComponent';
 import { useEffect, useState } from 'react';
 import {AuthState, onAuthUIStateChange} from '@aws-amplify/ui-components';
-const cfnOutput = require("../cfn-output.json");
+const cfnOutput = require("./cfn-output.json");
 
 Amplify.configure(awsconfig);
 
