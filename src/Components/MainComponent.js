@@ -23,16 +23,19 @@ import {Auth} from "aws-amplify";
 import WorkflowExecutionsComponent from "./WorkflowExecutionsComponent";
 import WorkflowExecutionDetailsComponent from "./WorkflowExecutionDetailsComponent";
 import TableDetailsComponent from "./TableDetailsComponent";
+import ProductRegistrationListComponent from "./ProductRegistrationListComponent";
+import RegisterNewProductComponent from "./RegisterNewProductComponent";
 
 function MainComponent(props) {
     return (
         <AppLayout navigation={
             <SideNavigation 
                 activeHref={window.location.pathname} 
-                header={{ href: "/", text: "Data Lake Workflow"}}
+                header={{ href: "/", text: "Data Mesh UI"}}
                 items={[
                     {type: "link", text: "Catalog", href: "/"},
                     {type: "link", text: "Workflow Executions", href: "/workflow-executions"},
+                    {type: "link", text: "Product Registration", href: "/product-registration/list"},
                     {type: "link", text: "Logout", href: "#"}
                 ]}
                 onFollow={async(event) => {
@@ -62,6 +65,12 @@ function MainComponent(props) {
                     </Route>
                     <Route exact path="/execution-details/:execArn">
                         <WorkflowExecutionDetailsComponent />
+                    </Route>
+                    <Route exact path="/product-registration/list">
+                        <ProductRegistrationListComponent />
+                    </Route>
+                    <Route exact path="/product-registration/new">
+                        <RegisterNewProductComponent />
                     </Route>
                 </Switch>
             </BrowserRouter>
