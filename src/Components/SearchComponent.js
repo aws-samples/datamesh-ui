@@ -21,7 +21,7 @@ import { useState } from "react";
 import { Table, Box, Container, Header, Input, Link } from "@awsui/components-react";
 
 const cfnOutput = require("../cfn-output.json");
-const SEARCH_ARN = cfnOutput.InfraStack.SearchArn;
+const SearchApiUrl = cfnOutput.InfraStack.SearchApiUrl;
 
 const config = Amplify.configure();
 function SearchComponent() {
@@ -36,7 +36,7 @@ function SearchComponent() {
 
   const onSearch = async (text) => {
     
-    const baseURL = SEARCH_ARN
+    const baseURL = SearchApiUrl
     results = await axios.get(`${baseURL}search/${text}`)
   
     setState(prevState => {

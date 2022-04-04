@@ -25,7 +25,7 @@ import BadgeStatus from './BadgeStatus';
 import axios from 'axios'
 
 const cfnOutput = require("../cfn-output.json");
-const SEARCH_ARN = cfnOutput.InfraStack.SearchArn;
+const SearchApiUrl = cfnOutput.InfraStack.SearchApiUrl;
 const config = Amplify.configure();
 
 function DataProductDetailsComponent(props) {
@@ -43,7 +43,7 @@ function DataProductDetailsComponent(props) {
         //const credentials = await Auth.currentCredentials();
         //const sfnClient = new SFNClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
         try {
-            const baseURL = SEARCH_ARN
+            const baseURL = SearchApiUrl
             const response = await axios.get(`${baseURL}document/${dataProduct}`)
             console.log(response)
             console.log(response.data.tableInformation)
