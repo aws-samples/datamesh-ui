@@ -72,30 +72,40 @@ function RegisterNewProductComponent() {
                         <Button variant="primary" onClick={onSubmit}>Submit</Button>
                     </SpaceBetween>
                 }>
-                    <Container>
-                        <FormField label="Product Account ID" description="Account ID where the product is located.">
-                            <Input type="number" value={accountId} onChange={(event) => {setAccountId(event.detail.value)}} />
-                        </FormField>
-                        <FormField label="Data Location" description="S3 location where the product is stored.">
-                            <SpaceBetween direction="horizontal" size="m">
-                                <Input type="text" placeholder="S3 Bucket Name" value={bucket} onChange={(event) => {setBucket(event.detail.value)}} />
-                                <Input type="text" placeholder="Prefix ending with /" value={prefix} onChange={(event) => {setPrefix(event.detail.value)}} />
-                            </SpaceBetween>
-                        </FormField>
-                        <FormField label="Product Metadata" description="Details about the product.">
-                            <SpaceBetween direction="horizontal" size="m">
-                                <Input type="text" placeholder="Database Name" value={dbName} onChange={(event) => {setDbName(event.detail.value)}} />
-                                <Input type="text" placeholder="Product Name" value={productName} onChange={(event) => {setProductName(event.detail.value)}} />
-                                <Input type="text" placeholder="Owner Name" value={ownerName} onChange={(event) => {setOwnerName(event.detail.value)}} />
-                            </SpaceBetween>
-                        </FormField>
-                        <FormField label="PII Data" description="Does the product contain sensitive information?">
-                            <Select selectedOption={piiFlag} options={[
-                                        {label: "Contains PII Data", value: "true"},
-                                        {label: "Does NOT Contain PII Data", value: "false"}
-                                    ]} onChange={(event) => {setPiiFlag(event.detail.selectedOption)}} />
-                        </FormField>
-                    </Container>
+                    <Box>
+                        <Container header={<Header variant="h4" description="Account/storage location where the product is stored.">Product Location</Header>}>
+                            <FormField label="Product Account ID" constraintText="Must have the ProducerWorkflow IAM role already setup.">
+                                <Input type="number" value={accountId} onChange={(event) => {setAccountId(event.detail.value)}} />
+                            </FormField>
+                            
+                            <FormField label="S3 Bucket Name" constraintText="Do not include the s3:// prefix.">
+                                <Input type="text" value={bucket} onChange={(event) => {setBucket(event.detail.value)}} />
+                            </FormField>
+
+                            <FormField label="S3 Prefix" constraintText="Prefix must end with /">
+                                <Input type="text" value={prefix} onChange={(event) => {setPrefix(event.detail.value)}} />
+                            </FormField>
+                        </Container>
+                    </Box>
+                    <Box margin={{top: "m"}}>
+                        <Container header={<Header variant="h4" description="Metadata about the product.">Product Metadata</Header>}>
+                            <FormField label="Database Name">
+                                <Input type="text" value={dbName} onChange={(event) => {setDbName(event.detail.value)}} />
+                            </FormField>
+                            <FormField label="Product Name">
+                                <Input type="text" value={productName} onChange={(event) => {setProductName(event.detail.value)}} />
+                            </FormField>
+                            <FormField label="Owner Name">
+                            <Input type="text" value={ownerName} onChange={(event) => {setOwnerName(event.detail.value)}} />
+                            </FormField>
+                            <FormField label="PII Data">
+                                <Select selectedOption={piiFlag} options={[
+                                                {label: "Contains PII Data", value: "true"},
+                                                {label: "Does NOT Contain PII Data", value: "false"}
+                                            ]} onChange={(event) => {setPiiFlag(event.detail.selectedOption)}} />
+                            </FormField>
+                        </Container>
+                    </Box>
                 </Form>
             </Box>
         </Box>
