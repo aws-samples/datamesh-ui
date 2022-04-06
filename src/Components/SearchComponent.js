@@ -86,6 +86,10 @@ function SearchComponent() {
             cell: item => item.tableInformation.catalogName + ""
           },
           {
+              header: "Actions",
+              cell: item => <Link variant="primary" href={"/request-access/"+item.tableInformation.databaseName + "/" + item.tableInformation.tableName  }>Request Access</Link>
+          },
+          {
             header: "Database Name",
             cell: item => item.tableInformation.databaseName + ""
           },
