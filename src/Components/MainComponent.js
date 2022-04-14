@@ -38,7 +38,7 @@ function MainComponent(props) {
                 activeHref={window.location.pathname} 
                 header={{ href: "/", text: "Data Mesh UI"}}
                 items={[
-                    {type: "link", text: "Catalog", href: "/"},
+                    {type: "link", text: "Products", href: "/"},
                     {type: "link", text: "Workflow Executions", href: "/workflow-executions"},
                     {type: "link", text: "Product Registration", href: "/product-registration/list"},
                     {type: "link", text: "Search", href: "/search"},

@@ -41,7 +41,7 @@ function CatalogComponent(props) {
                 footer={<Box textAlign="center" display={(response && response.NextToken) ? "block" : "none"}><Link variant="primary" onFollow={(event) => setNextToken(response.NextToken)}>View More</Link></Box>}
                 columnDefinitions={[
                     {
-                        header: "Database Name",
+                        header: "Name",
                         cell: item => item.Name
 
                     },
@@ -60,7 +60,7 @@ function CatalogComponent(props) {
                 ]}
 
                 items={databases}
-                header={<Header variant="h2">Catalog - Databases</Header>}
+                header={<Header variant="h2">Products</Header>}
              />
         </div>
     );
