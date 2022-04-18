@@ -50,7 +50,7 @@ function CatalogTablesComponent(props) {
     return(
         <div>
             <BreadcrumbGroup items={[
-                { text: "Databases", href: "/"},
+                { text: "Products", href: "/"},
                 { text: dbname, href: "/tables/"+dbname }
             ]} />
             <Box margin={{top: "s", bottom: "s"}} display={requestSuccessful ? "block" : "none"}>
@@ -78,9 +78,6 @@ function CatalogTablesComponent(props) {
                     items={tables}
                     header={<Header variant="h2">Tables in {dbname}</Header>}
                 />
-            </Box>
-            <Box margin={{top: "l"}}>
-                <RequestAccessComponent dbName={dbname} tableName="*" successHandler={requestAccessSuccessHandler} />
             </Box>
         </div>
     );

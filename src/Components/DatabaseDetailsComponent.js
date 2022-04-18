@@ -35,10 +35,10 @@ function DatabaseDetailsComponent({dbName}) {
 
     if (db) {
         return (
-            <Container header={<Header variant="h2">Database Details</Header>}>
+            <Container header={<Header variant="h2">Product Details</Header>}>
                 <ColumnLayout columns={2} variant="text-grid">
                     <SpaceBetween size="m">
-                        <ValueWithLabel label="Database">
+                        <ValueWithLabel label="Product">
                             {dbName}
                         </ValueWithLabel>
                         <ValueWithLabel label="Location">
