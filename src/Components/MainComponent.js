@@ -25,6 +25,11 @@ import WorkflowExecutionDetailsComponent from "./WorkflowExecutionDetailsCompone
 import TableDetailsComponent from "./TableDetailsComponent";
 import ProductRegistrationListComponent from "./ProductRegistrationListComponent";
 import RegisterNewProductComponent from "./RegisterNewProductComponent";
+import SearchComponent from "./SearchComponent";
+import DataProductDetailsComponent from "./DataProductDetailsComponent"
+import DataQualityReportsComponent from "./QualityUI/DataQualityReportsComponent";
+import DataQualityReportResultsComponent from "./QualityUI/DataQualityReportResultsComponent";
+
 
 function MainComponent(props) {
     return (
@@ -36,6 +41,7 @@ function MainComponent(props) {
                     {type: "link", text: "Catalog", href: "/"},
                     {type: "link", text: "Workflow Executions", href: "/workflow-executions"},
                     {type: "link", text: "Product Registration", href: "/product-registration/list"},
+                    {type: "link", text: "Search", href: "/search"},
                     {type: "link", text: "Logout", href: "#"}
                 ]}
                 onFollow={async(event) => {
@@ -63,6 +69,12 @@ function MainComponent(props) {
                     <Route exact path="/workflow-executions">
                         <WorkflowExecutionsComponent />
                     </Route>
+                    <Route exact path="/search">
+                        <SearchComponent />
+                    </Route>
+                    <Route exact path="/data-product-details/:dataProduct">
+                        <DataProductDetailsComponent />
+                    </Route>
                     <Route exact path="/execution-details/:execArn">
                         <WorkflowExecutionDetailsComponent />
                     </Route>
@@ -71,6 +83,12 @@ function MainComponent(props) {
                     </Route>
                     <Route exact path="/product-registration/new">
                         <RegisterNewProductComponent />
+                    </Route>
+                    <Route exact path="/data-quality-reports/:dbname/:tablename">
+                        <DataQualityReportsComponent />
+                    </Route>
+                    <Route exact path="/data-quality-report-results/:dbname/:tablename/:bucket/:key">
+                        <DataQualityReportResultsComponent />
                     </Route>
                 </Switch>
             </BrowserRouter>

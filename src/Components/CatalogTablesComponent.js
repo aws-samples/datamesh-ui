@@ -16,7 +16,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import { GlueClient, GetTablesCommand, GetDatabasesCommand, GetDatabaseCommand } from "@aws-sdk/client-glue";
-import { Box, BreadcrumbGroup, Flashbar, Header, Link, Table } from "@awsui/components-react";
+import { ColumnLayout, Box, BreadcrumbGroup, Flashbar, Header, Link, Table } from "@awsui/components-react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import Amplify, { Auth } from "aws-amplify";
@@ -71,7 +71,7 @@ function CatalogTablesComponent(props) {
                         },
                         {
                             header: "Actions",
-                            cell: item => <Link variant="primary" href={"/request-access/"+dbname+"/"+item.Name}>Request Per Table Access</Link>
+                            cell: item => <ColumnLayout columns={2} variant="text-grid"><div><Link variant="primary" href={"/request-access/"+dbname+"/"+item.Name}>Request Per Table Access</Link></div><div><Link variant="primary" href={"/data-quality-reports/"+dbname+"/"+item.Name}>View Quality Reports</Link></div></ColumnLayout>
                         }
                     ]}
 
