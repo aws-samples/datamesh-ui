@@ -1,5 +1,6 @@
-!Workflow*/*.js
 *.js
+!lib/central/resources/lambda/Workflow*/*
+!lib/producer/resources/lambda/*/*
 !jest.config.js
 *.d.ts
 node_modules
