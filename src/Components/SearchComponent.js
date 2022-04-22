@@ -15,92 +15,208 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import axios from 'axios'
+import axios from "axios";
 import Amplify, { Auth } from "aws-amplify";
 import { useState } from "react";
-import { Table, Box, Container, Header, Input, Link } from "@awsui/components-react";
+import {
+    Table,
+    Box,
+    Container,
+    Header,
+    Link,
+    Autosuggest,
+} from "@awsui/components-react";
 
 const cfnOutput = require("../cfn-output.json");
 const SearchApiUrl = cfnOutput.InfraStack.SearchApiUrl;
 
 const config = Amplify.configure();
-function SearchComponent() {
 
-  var results = []
-  const [input, setInput] = useState('')
+const MIN_SEARCH_STRING_LENGTH = 1;
 
-  const [state, setState] = useState({
-    results: []
-  });
-
-
-  const onSearch = async (text) => {
-    
-    const baseURL = SearchApiUrl
-    results = await axios.get(`${baseURL}search/${text}`)
-  
-    setState(prevState => {
-      return { ...prevState, results: results }
-    })
-
-  };
-
-  const [searchTerm, setSearchTerm] = useState()
-
-  const changeHandle = (event) => {
-    const text = event.detail.value;
-    setSearchTerm(text)
-    setInput(event.detail.value)
-  }
-  const handleEnterKeyPressed = (event) => {
-    if (event.detail.key === 'Enter') {
-      onSearch(searchTerm)
+function searchResultsToSelectOptions(searchResults, searchTerm) {
+    if (!searchResults) {
+        return [];
     }
-  }
 
-  let data = [];
-  
-  console.log(state.results.data)
-  if (state.results.data) {
-    data = state.results.data || [];
-  }
+    const lowerCaseSearchTerm = searchTerm.toLowerCase();
+    const nestedSelectOptions = searchResults.map((searchResult) => {
+        const resultArray = [];
 
-  return (
+        const databaseName = searchResult.tableInformation.databaseName;
+        if (databaseName.toLowerCase().includes(lowerCaseSearchTerm)) {
+            resultArray.push({
+                value: databaseName,
+                tags: ["Database"],
+            });
+        }
 
-    <div>
+        const tableName = searchResult.tableInformation.tableName;
+        if (tableName.toLowerCase().includes(lowerCaseSearchTerm)) {
+            resultArray.push({
+                value: tableName,
+                description: `${databaseName}.${tableName}`,
+                tags: ["Table"],
+            });
+        }
 
-      <Container header={<Header variant="h2">Explore Data Products</Header>}>
-        <Input type="search" value={input} onKeyDown={handleEnterKeyPressed} onChange={changeHandle}> </Input>
-      </Container>
+        const columnNames = searchResult.tableInformation.columnNames;
+        columnNames.forEach((columnName) => {
+            if (columnName.toLowerCase().includes(lowerCaseSearchTerm)) {
+                resultArray.push({
+                    value: columnName,
+                    description: `${databaseName}.${tableName}.${columnName}`,
+                    tags: ["Column"],
+                });
+            }
+        });
 
-      <Table
-        footer={<Box textAlign="center"
-          display={(data) ? "block" : "none"}></Box>}
-        items={data} columnDefinitions={[
-          {
-            header: "Table Name",
-            cell:  item => <Link href={"/data-product-details/"+item.documentId}>{item.tableInformation.tableName} </Link>
-          },
-          {
-            header: "Product Owner ID",
-            cell: item => item.tableInformation.catalogName + ""
-          },
-          {
-              header: "Actions",
-              cell: item => <Link variant="primary" href={"/request-access/"+item.tableInformation.databaseName + "/" + item.tableInformation.tableName  }>Request Access</Link>
-          },
-          {
-            header: "Database Name",
-            cell: item => item.tableInformation.databaseName + ""
-          },
-          {
-            header: "Columns",
-            cell: item => item.tableInformation.columnNames + ""
-          }
+        return resultArray;
+    });
 
-        ]} />
-    </div>
-  );
+    return nestedSelectOptions.flat();
+}
+
+function SearchComponent() {
+    var results = [];
+    var selectionOptions = [];
+    const [input, setInput] = useState("");
+
+    const [state, setState] = useState({
+        results: [],
+        selectionOptions: [],
+    });
+
+    console.log("Selection Options", selectionOptions);
+
+    const searchForText = async (text) => {
+        const baseURL = SearchApiUrl;
+        results = await axios.get(`${baseURL}search/${text}`);
+
+        selectionOptions = searchResultsToSelectOptions(results.data, text);
+
+        setState((prevState) => {
+            return {
+                ...prevState,
+                results: results,
+                selectionOptions: selectionOptions,
+            };
+        });
+    };
+
+    let data = [];
+
+    if (state.results.data) {
+        data = state.results.data || [];
+    }
+
+    const onLoadItemsHandler = (event) => {
+        console.log("onLoadItemsHandler", event);
+        const filterText = event.detail.filteringText || "";
+
+        if (filterText.length < MIN_SEARCH_STRING_LENGTH) {
+            return;
+        }
+
+        searchForText(filterText);
+    };
+
+    const onSelectHandler = (event) => {
+        console.log("onSelect", event);
+        const selectedValue = event.detail.value || "";
+
+        if (selectedValue) {
+            searchForText(selectedValue);
+        }
+    };
+
+    const onChangeHandler = (event) => {
+        console.log("onChange", event);
+        const text = event.detail.value;
+
+        if (text.length < MIN_SEARCH_STRING_LENGTH) {
+            setState((prevState) => {
+                return {
+                    ...prevState,
+                    results: [],
+                    selectionOptions: [],
+                };
+            });
+        }
+
+        setInput(text);
+    };
+
+    return (
+        <div>
+            <Container
+                header={<Header variant="h2">Explore Data Products</Header>}
+            >
+                <Autosuggest
+                    autoFocus={true}
+                    onLoadItems={onLoadItemsHandler}
+                    filteringType="manual"
+                    options={state.selectionOptions}
+                    value={input}
+                    onChange={onChangeHandler}
+                    onSelect={onSelectHandler}
+                    enteredTextLabel={(value) => value}
+                ></Autosuggest>
+            </Container>
+
+            <Table
+                footer={
+                    <Box
+                        textAlign="center"
+                        display={data ? "block" : "none"}
+                    ></Box>
+                }
+                items={data}
+                columnDefinitions={[
+                    {
+                        header: "Table Name",
+                        cell: (item) => (
+                            <Link
+                                href={
+                                    "/data-product-details/" + item.documentId
+                                }
+                            >
+                                {item.tableInformation.tableName}{" "}
+                            </Link>
+                        ),
+                    },
+                    {
+                        header: "Product Owner ID",
+                        cell: (item) => item.tableInformation.catalogName + "",
+                    },
+                    {
+                        header: "Actions",
+                        cell: (item) => (
+                            <Link
+                                variant="primary"
+                                href={
+                                    "/request-access/" +
+                                    item.tableInformation.databaseName +
+                                    "/" +
+                                    item.tableInformation.tableName
+                                }
+                            >
+                                Request Access
+                            </Link>
+                        ),
+                    },
+                    {
+                        header: "Database Name",
+                        cell: (item) => item.tableInformation.databaseName + "",
+                    },
+                    {
+                        header: "Columns",
+                        cell: (item) => item.tableInformation.columnNames + "",
+                    },
+                ]}
+            />
+        </div>
+    );
 }
 
 export default SearchComponent;
