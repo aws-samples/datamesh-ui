@@ -1,0 +1,11 @@
+*.js
+!lib/central/resources/lambda/Workflow*/*
+!lib/central/resources/lambda/DataQuality*/*
+!lib/producer/resources/lambda/*/*
+!jest.config.js
+*.d.ts
+node_modules
+
+# CDK asset staging directory
+.cdk.staging
+cdk.out
