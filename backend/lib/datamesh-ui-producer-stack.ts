@@ -1,8 +1,8 @@
-import { CfnParameter } from "aws-cdk-lib";
+import { CfnParameter, Stack } from "aws-cdk-lib";
 import { Construct } from "constructs";
 import { ProducerApprovalWorkflow } from "./producer/producer-approval-workflow";
 
-export class DataMeshUIProducerStack extends Construct {
+export class DataMeshUIProducerStack extends Stack {
     constructor(scope: Construct, id: string) {
         super(scope, id);
 

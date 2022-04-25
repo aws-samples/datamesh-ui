@@ -1,11 +1,11 @@
-import { Aws, CfnParameter } from "aws-cdk-lib";
+import { Aws, CfnParameter, Stack } from "aws-cdk-lib";
 import { Construct } from "constructs";
 import { ApprovalWorkflow } from "./central/approval-workflow";
 import { DataQualityCentralAccount } from "./central/data-quality-central-account";
 import { DataMeshUI } from "./central/datamesh-ui";
 import { GlueCatalogSearchApi } from "./central/glue-catalog-search-api";
 
-export class DataMeshUICentralStack extends Construct {
+export class DataMeshUICentralStack extends Stack {
     constructor(scope: Construct, id: string) {
         super(scope, id);
 
