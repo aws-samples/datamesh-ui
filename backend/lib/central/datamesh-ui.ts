@@ -20,22 +20,14 @@ export interface DataMeshUIProps {
     dpmStateMachineRoleArn?: string,
     searchApiUrl: string,
     dataQualityHttpApiUrl: string
+    userPool: UserPool,
+    identityPool: IdentityPool
 }
 
 export class DataMeshUI extends Construct {
 
-    readonly authRole: IRole;
-
     constructor(scope: Construct, id: string, props: DataMeshUIProps) {
         super(scope, id)
-
-        const userPool = new UserPool(this, "DataMeshUICognitoUserPool", {
-            standardAttributes: {
-                email: {
-                    required: true
-                }
-            }
-        });
 
         let uiPayload : any = {
             "InfraStack": {
@@ -45,19 +37,12 @@ export class DataMeshUI extends Construct {
             }
         }
 
-        const client = new UserPoolClient(this, "DataMeshUICognitoUserPoolWebClient", {
-            userPool: userPool,
-            userPoolClientName: "WebClient"
-        });
+  
 
-        const identityProvider = new IdentityPool(this, "DataMeshUICognitoIdentityPool", {
-            allowUnauthenticatedIdentities: false
-        });      
-
-        identityProvider.addUserPoolAuthentication(new UserPoolAuthenticationProvider({userPool, userPoolClient: client}));
+        
 
         const stateMachineArn = props.stateMachineArn;
-        identityProvider.authenticatedRole.attachInlinePolicy(new Policy(this, "DataMeshUIAuthRoleInlinePolicy", {
+        props.identityPool.authenticatedRole.attachInlinePolicy(new Policy(this, "DataMeshUIAuthRoleInlinePolicy", {
             statements: [   
                 new PolicyStatement({
                     effect: Effect.ALLOW,
@@ -87,8 +72,6 @@ export class DataMeshUI extends Construct {
             ]
         }));
 
-        this.authRole = identityProvider.authenticatedRole;
-
         // const repo = new Repository(this, "DataMeshUIRepository", {
         //     repositoryName: "datamesh-ui",
         //     code: Code.fromZipFile(props.dataMeshUICodeZip, "main")
@@ -113,7 +96,7 @@ export class DataMeshUI extends Construct {
                         "DESCRIBE"
                     ],
                     "Principal": {
-                        "DataLakePrincipalIdentifier": identityProvider.authenticatedRole.roleArn
+                        "DataLakePrincipalIdentifier": props.identityPool.authenticatedRole.roleArn
                     },
                     "Resource": {
                         "Table": {
@@ -257,7 +240,7 @@ export class DataMeshUI extends Construct {
 
             registerProductUIRule.addTarget(new SfnStateMachine(registerProductSM));
 
-            identityProvider.authenticatedRole.attachInlinePolicy(new Policy(this, "UIDPMStateMachinePolicy", {
+            props.identityPool.authenticatedRole.attachInlinePolicy(new Policy(this, "UIDPMStateMachinePolicy", {
                 statements: [   
                     new PolicyStatement({
                         effect: Effect.ALLOW,
@@ -289,22 +272,6 @@ export class DataMeshUI extends Construct {
                 ]
             }));
         }
-
-        new CfnOutput(this, "CognitoAuthRoleArn", {
-            value: identityProvider.authenticatedRole.roleArn
-        });
-
-        new CfnOutput(this, "UserPoolId", {
-            value: userPool.userPoolId
-        });
-
-        new CfnOutput(this, "ClientId", {
-            value: client.userPoolClientId
-        });
-
-        new CfnOutput(this, "IdentityPoolId", {
-            value: identityProvider.identityPoolId
-        })
 
         new CfnOutput(this, "UIPayload", {
             value: JSON.stringify(uiPayload)

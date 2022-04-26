@@ -3,6 +3,7 @@ import { Construct } from "constructs";
 import { ApprovalWorkflow } from "./central/approval-workflow";
 import { DataQualityCentralAccount } from "./central/data-quality-central-account";
 import { DataMeshUI } from "./central/datamesh-ui";
+import { DataMeshUIAuth } from "./central/datamesh-ui-auth";
 import { GlueCatalogSearchApi } from "./central/glue-catalog-search-api";
 
 export class DataMeshUICentralStack extends Stack {
@@ -36,6 +37,8 @@ export class DataMeshUICentralStack extends Stack {
             dpmStateMachineRoleArn: centralLfAdminRoleArn.valueAsString
         });
 
+        const dataMeshUIAuth = new DataMeshUIAuth(this, "DataMeshUIAuth");
+
         const dataQuality = new DataQualityCentralAccount(this, "DataQualityCentralAccount");
 
         const searchCatalog = new GlueCatalogSearchApi(this, "SearchCatalogAPI", {
@@ -49,7 +52,9 @@ export class DataMeshUICentralStack extends Stack {
             dpmStateMachineArn: centralStateMachineArn.valueAsString,
             dpmStateMachineRoleArn: centralLfAdminRoleArn.valueAsString,
             dataQualityHttpApiUrl: dataQuality.dataQualityEndpoint,
-            searchApiUrl: searchCatalog.osEndpoint
+            searchApiUrl: searchCatalog.osEndpoint,
+            userPool: dataMeshUIAuth.userPool,
+            identityPool: dataMeshUIAuth.identityPool
         })
     }
 }
