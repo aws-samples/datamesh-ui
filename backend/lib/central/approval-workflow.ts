@@ -127,7 +127,18 @@ export class ApprovalWorkflow extends Construct {
         });
 
         this.stateMachineWorkflowRole = new Role(this, "DataLakeWorkflowRole", {
-            assumedBy: new ServicePrincipal("states.amazonaws.com")
+            assumedBy: new ServicePrincipal("states.amazonaws.com"),
+            inlinePolicies: {
+                "AllowEmitEvent": new PolicyDocument({
+                    statements: [
+                        new PolicyStatement({
+                            effect: Effect.ALLOW,
+                            actions: ["events:PutEvents"],
+                            resources: ["*"]
+                        })
+                    ]
+                })
+            }
         });
 
         const workflowActivityApprover = new Function(this, "WorkflowActivityApprover", {
@@ -194,7 +205,8 @@ export class ApprovalWorkflow extends Construct {
             payload: TaskInput.fromObject({
                 "source.$": "$.source",
                 "target.$": "$.target",
-            })
+            }),
+            resultPath: JsonPath.DISCARD
         });
 
         const sfnSendAndWaitPIIColumnApproval = new LambdaInvoke(this, "SendAndWaitPIIColumnApproval", {
@@ -212,13 +224,16 @@ export class ApprovalWorkflow extends Construct {
             payload: TaskInput.fromObject({
                 "source.$": "$.source",
                 "target.$": "$.target",
-            })
+            }),
+            resultPath: JsonPath.DISCARD
         });
+
+        const centralEventBus = EventBus.fromEventBusArn(this, "CentralEventBus", props.centralEventBusArn);
 
         const sfnEmitToCentralEventBus = new CallAwsService(this, "EmitToCentralEventBus", {
             service: "eventbridge",
             action: "putEvents",
-            iamResources: [props.centralEventBusArn],
+            iamResources: ["*"],
             parameters: {
                 "Entries": [
                     {
@@ -228,11 +243,12 @@ export class ApprovalWorkflow extends Construct {
                         "table_names.$": "States.Array($.source.table)"
                       },
                       "DetailType.$": "States.Format('{}_createResourceLinks', $.target.account_id)",
-                      "EventBusName": props.centralEventBusArn,
+                      "EventBusName": centralEventBus.eventBusName,
                       "Source": "com.central.stepfunction"
                     }
                 ]
-            }
+            },
+            resultPath: JsonPath.DISCARD
         });
 
         const sfnDoesItHavePIIColumns = new Choice(this, "DoesItHavePIIColumns");
@@ -317,6 +333,20 @@ export class ApprovalWorkflow extends Construct {
                 }
             })
 
+            const lfAdminRole = Role.fromRoleArn(this, "DPMLFAdminRole", props.dpmStateMachineRoleArn);
+
+            lfAdminRole.attachInlinePolicy(new Policy(this, "eventBridgePassRolePolicy", {
+                document: new PolicyDocument({
+                    statements: [
+                        new PolicyStatement({
+                            effect: Effect.ALLOW,
+                            actions: ["iam:PassRole"],
+                            resources: [eventBridgeCrossAccountRole.roleArn]
+                        })
+                    ]
+                })
+            }))
+
             const approvalWorkflowTarget = new CallAwsService(this, "ApprovalWorkflowTarget", {
                 service: "eventbridge",
                 action: "putTargets",
@@ -356,7 +386,7 @@ export class ApprovalWorkflow extends Construct {
             const workflowNewProductAuthFlow = new StateMachine(this, "WorkflowNewProductAuthFlow", {
                 definition: initialState,
                 role: Role.fromRoleArn(this, "DPMStateMachineRole", props.dpmStateMachineRoleArn),
-                stateMachineType: StateMachineType.EXPRESS
+                stateMachineType: StateMachineType.STANDARD
             });
 
             const dpmAddProdEventBridgeRule = new Rule(this, 'DPMAddProdWorkflowRule', {

@@ -50,7 +50,6 @@ exports.handler = async (event) => {
             Name: tableName
         }).promise();
     
-        const tableParameters = details.Table.Parameters;
         const columns = details.Table.StorageDescriptor.Columns;
 
         for (var i = 0; i < columns.length; i++) {

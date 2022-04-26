@@ -53,15 +53,18 @@ function RegisterNewProductComponent() {
     }
 
     const onSubmit = async() => {
-        if (accountId && dbName && ownerName) {
+        if (accountId && dbName && ownerName && isProductListValid()) {
             const credentials = await Auth.currentCredentials();
             const sfnClient = new SFNClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
             await sfnClient.send(new StartExecutionCommand({
                 stateMachineArn: dpmStateMachineArn,
                 input: JSON.stringify({
-                    "productAccountId": accountId,
-                    "productDatabaseName": dbName,
-                    "productOwnerName": ownerName
+                    "data_product_s3": extractDatabaseS3Location(),
+                    "database_name": dbName,
+                    "producer_acc_id": accountId,
+                    "product_owner_name": ownerName,
+                    "product_pii_flag": piiFlag.value,
+                    "tables": products
                 })
             }))
 
@@ -69,6 +72,22 @@ function RegisterNewProductComponent() {
         } else {
             setError("Missing required fields.");
         }
+    }
+
+    const isProductListValid = () => {
+        for (const p of products) {
+            if (!p.name || p.name.length == 0 || !p.location || p.location.length == 0 || !p.location.startsWith("s3://")) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    const extractDatabaseS3Location = () => {
+        const row = products[0];
+        const extractBucket = /s3:\/\/(.+?)\//;
+        return extractBucket.exec(row.location)[1];
     }
 
     return (

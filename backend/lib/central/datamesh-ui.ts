@@ -7,7 +7,7 @@ import { CfnOutput, SecretValue, Stack } from "aws-cdk-lib";
 import { BuildSpec } from "aws-cdk-lib/aws-codebuild";
 import { Code, Repository } from "aws-cdk-lib/aws-codecommit";
 import { CallAwsService } from "aws-cdk-lib/aws-stepfunctions-tasks";
-import { JsonPath, Pass, StateMachine, StateMachineType } from "aws-cdk-lib/aws-stepfunctions";
+import { JsonPath, Map, Pass, StateMachine, StateMachineType } from "aws-cdk-lib/aws-stepfunctions";
 import { EventField, Rule, RuleTargetInput } from "aws-cdk-lib/aws-events";
 import { SfnStateMachine } from "aws-cdk-lib/aws-events-targets";
 import { AttributeType, BillingMode, Table } from "aws-cdk-lib/aws-dynamodb";
@@ -140,7 +140,7 @@ export class DataMeshUI extends Construct {
             const dataMeshUINewProductAuthFlow = new StateMachine(this, "DataMeshUINewProductAuthFlow", {
                 definition: initialState,
                 role: Role.fromRoleArn(this, "DPMStateMachineRole", props.dpmStateMachineRoleArn),
-                stateMachineType: StateMachineType.EXPRESS
+                stateMachineType: StateMachineType.STANDARD
             });
 
             const dpmAddProdEventBridgeRule = new Rule(this, 'DPMAddProdDataMeshUIRule', {
@@ -198,6 +198,17 @@ export class DataMeshUI extends Construct {
                 }
             });
 
+            const mapTables = new Map(this, "TraverseTableArray", {
+                itemsPath: "$.payload.tables",
+                maxConcurrency: 2,
+                parameters: {
+                    "producerAccountId.$": "$.payload.producer_acc_id",
+                    "status.$": "$.status",
+                    "createdAt.$": "$.createdAt",
+                    "table.$": "$$.Map.Item.Value"
+                }
+            });
+
             const putRegisterProductData = new CallAwsService(this, "PutRegisterProductData", {
                 service: "dynamodb",
                 action: "putItem",
@@ -207,10 +218,13 @@ export class DataMeshUI extends Construct {
                     "TableName": registerProductTable.tableName,
                     "Item": {
                         "accountId": {
-                            "S.$": "$.payload.productAccountId" 
+                            "S.$": "$.producerAccountId" 
                         },
                         "dbTableName": {
-                            "S.$": "States.Format('{}#{}', $.payload.productDatabaseName, $.payload.productName)"
+                            "S.$": "States.Format('{}#{}', $.producerAccountId, $.table.name)"
+                        },
+                        "location": {
+                            "S.$": "$.table.location"
                         },
                         "status": {
                             "S.$": "$.status"
@@ -223,11 +237,12 @@ export class DataMeshUI extends Construct {
             })
 
             putRegisterProductData.endStates;
-            registerProductInitialState.next(putRegisterProductData)
+            mapTables.iterator(putRegisterProductData).endStates;
+            registerProductInitialState.next(mapTables)
 
             const registerProductSM = new StateMachine(this, "RegisterProductMetadata", {
                 definition: registerProductInitialState,
-                stateMachineType: StateMachineType.EXPRESS
+                stateMachineType: StateMachineType.STANDARD
             });
 
             const registerProductUIRule = new Rule(this, 'RegisterProductUIRule', {
