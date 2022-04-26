@@ -1,7 +1,7 @@
 import { HttpApi } from "@aws-cdk/aws-apigatewayv2-alpha";
 import { HttpLambdaIntegration } from "@aws-cdk/aws-apigatewayv2-integrations-alpha";
 import { IdentityPool, UserPoolAuthenticationProvider } from "@aws-cdk/aws-cognito-identitypool-alpha";
-import { Stack } from "aws-cdk-lib";
+import { RemovalPolicy, Stack } from "aws-cdk-lib";
 import { UserPool } from "aws-cdk-lib/aws-cognito";
 import { EventBus, EventField, Rule, RuleTargetInput } from "aws-cdk-lib/aws-events";
 import { SfnStateMachine } from "aws-cdk-lib/aws-events-targets";
@@ -48,6 +48,8 @@ export class ApprovalWorkflow extends Construct {
         const centralApprovalEventBus = new EventBus(this, "CentralApprovalEventBus", {
             eventBusName: util.format("%s_centralApprovalBus", Stack.of(this).account)
         });
+
+        centralApprovalEventBus.applyRemovalPolicy(RemovalPolicy.DESTROY);
 
         const eventBridgeCrossAccountRole = new Role(this, "EventBridgeCrossAccountRole", {
             assumedBy: new ServicePrincipal("events.amazonaws.com"),
@@ -399,6 +401,8 @@ export class ApprovalWorkflow extends Construct {
                     }
                 }
             });
+
+            dpmAddProdEventBridgeRule.applyRemovalPolicy(RemovalPolicy.DESTROY);
 
             dpmAddProdEventBridgeRule.addTarget(new SfnStateMachine(workflowNewProductAuthFlow))
         }
