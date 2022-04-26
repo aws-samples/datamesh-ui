@@ -39,7 +39,6 @@ function ProductRegistrationListComponent() {
             <Box>
                 <SpaceBetween direction="horizontal" size="s">
                     <Button onClick={doRegisterNew} variant="primary"><Icon name="add-plus" /> Register Product</Button>
-                    <Button onClick={doRefresh}><Icon name="refresh" /> Refresh</Button>
                 </SpaceBetween>
             </Box>
             <Box margin={{top: "m"}}>

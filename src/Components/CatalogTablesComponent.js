@@ -66,10 +66,6 @@ function CatalogTablesComponent(props) {
                             cell: item => item.Name
                         },
                         {
-                            header: "Data Owner",
-                            cell: item => ("data_owner" in item.Parameters) ? item.Parameters.data_owner : "n/a"
-                        },
-                        {
                             header: "Actions",
                             cell: item => <ColumnLayout columns={2} variant="text-grid"><div><Link variant="primary" href={"/request-access/"+dbname+"/"+item.Name}>Request Per Table Access</Link></div><div><Link variant="primary" href={"/data-quality-reports/"+dbname+"/"+item.Name}>View Quality Reports</Link></div></ColumnLayout>
                         }

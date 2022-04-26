@@ -50,7 +50,7 @@ exports.handler = async (event) => {
                     messageBody: messageBody,
                     subject: subject
                 },
-                DetailType: util.format("%s_sharingApproval", target.account_id),
+                DetailType: util.format("%s_sharingApproval", sourceAccountId),
                 EventBusName: centralApprovalBusName,
                 Source: SOURCE
             }
