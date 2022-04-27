@@ -26,21 +26,18 @@
     "react-router": "^5.2.0",
     "react-router-dom": "^5.2.0",
     "react-scripts": "^5.0.0",
+    "uuid": "^8.3.2",
     "web-vitals": "^1.0.1"
   },
   "scripts": {
     "init-ui": "yarn install && amplify init",
-    "deploy-ui": "yarn init-ui && amplify add auth && amplify add hosting && amplify publish && ./post-ui-deployment.js",
-    "init-central": "cd infra/central && yarn install && cdk bootstrap",
-    "deploy-central": "cd infra/central && yarn install && cdk bootstrap && cdk deploy --all --require-approval never --outputs-file ../../src/cfn-output.json",
-    "deploy-producer": "cd infra/producer && yarn install && cdk deploy --require-approval never",
+    "deploy-central": "cd backend && yarn install && cdk deploy DataMeshUICentralStack --require-approval never --outputs-file central-output.json",
+    "deploy-producer": "cd backend && yarn install && cdk deploy DataMeshUIProducerStack --require-approval never",
+    "deploy-ui": "yarn install && amplify init && ./deployment/generate-ui-payload.js backend/central-output.json | amplify import auth --headless && amplify push -y && amplify add hosting && amplify publish && ./post-ui-deployment.js",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "clean-central": "cd infra/central && yarn install && cdk destroy",
-    "clean-producer": "cd infra/producer && yarn install && cdk destroy",
-    "clean-ui": "./pre-ui-teardown.js && amplify delete"
+    "eject": "react-scripts eject"
   },
   "eslintConfig": {
     "extends": [

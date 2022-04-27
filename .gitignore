@@ -32,6 +32,8 @@ amplify/
 
 scoutsuite-report/
 
+*-output.json
+
 #amplify-do-not-edit-begin
 amplify/\#current-cloud-backend
 amplify/.config/local-*
