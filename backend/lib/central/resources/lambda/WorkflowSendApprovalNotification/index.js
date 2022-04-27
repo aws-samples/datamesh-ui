@@ -46,10 +46,10 @@ exports.handler = async (event) => {
     await eb.putEvents({
         Entries: [
             {
-                Detail: {
+                Detail: JSON.stringify({
                     messageBody: messageBody,
                     subject: subject
-                },
+                }),
                 DetailType: util.format("%s_sharingApproval", sourceAccountId),
                 EventBusName: centralApprovalBusName,
                 Source: SOURCE
