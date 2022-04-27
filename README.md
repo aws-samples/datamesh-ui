@@ -11,8 +11,9 @@ To deploy the UI, you need backend components from 2 locations, these are as fol
 
 1. From the `core` folder, run the following: `npx projen build`.
 2. Deploy the following components from the `core/lib/datamesh` folder:
-    - Center: `cdk deploy --app=integ.central.js --profile <PROFILE_FOR_CENTRAL_ACCOUNT> --parameters dataDomainAccountId=<DATA_DOMAIN_ACC_ID> --parameters dataDomainRegion=<DATA_DOMAIN_REGION>`
+    - Center: `cdk deploy --app=integ.central.js --profile <PROFILE_FOR_CENTRAL_ACCOUNT> --parameters producerAccountId=<DATA_DOMAIN_ACC_ID> --parameters producerRegion=<DATA_DOMAIN_REGION> --parameters consumerAccountId=<DATA_DOMAIN_ACC_ID> --parameters consumerRegion=<DATA_DOMAIN_REGION>`
     - Producer: `cdk deploy --debug --app=integ.producer.js --profile <PROFILE_FOR_PRODUCER_ACCOUNT> --parameters centralAccountId=<CENTRAL_ACC_ID>`
+    - Consumer: `cdk deploy --debug --app=integ.consumer.js --profile <PROFILE_FOR_CONSUMER_ACCOUNT> --parameters centralAccountId=<CENTRAL_ACC_ID>`
 
 ### Build the Data Mesh UI Specific Backend
 
