@@ -1,5 +1,4 @@
 import { Construct } from "constructs";
-import { Code, Function, Runtime } from "aws-cdk-lib/aws-lambda";
 import {
     aws_apigateway,
     CfnOutput,
@@ -29,6 +28,7 @@ import {
     LambdaRestApi,
 } from "aws-cdk-lib/aws-apigateway";
 import { UserPool } from "aws-cdk-lib/aws-cognito";
+import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 
 export interface GlueCatalogSearchApiProps {
     accountId: string;
@@ -163,15 +163,13 @@ export class GlueCatalogSearchApi extends Construct {
             inlinePolicies: { inline0: glueCatalogLambdaRolePolicy },
         });
 
-        const indexDeltaLambda = new Function(this, "IndexDeltaLambda", {
-            runtime: Runtime.NODEJS_14_X,
-            handler: "index.handler",
+        const indexDeltaLambda = new NodejsFunction(this, "IndexDeltaLambda", {
+            entry:
+                __dirname +
+                "/resources/lambda/GlueCatalogSearch/IndexDelta/index.ts",
             vpc,
             vpcSubnets: privateSubnets,
             securityGroups: [opensearchDomainSecurityGroup],
-            code: Code.fromAsset(
-                __dirname + "/resources/lambda/GlueCatalogSearch/IndexDelta"
-            ),
             role: indexDeltaLambdaRole,
             logRetention: RetentionDays.ONE_DAY,
             environment: {
@@ -203,15 +201,13 @@ export class GlueCatalogSearchApi extends Construct {
             targets: [new LambdaFunction(indexDeltaLambda, {})],
         });
 
-        const searchLambda = new Function(this, "SearchIndexLambda", {
-            runtime: Runtime.NODEJS_14_X,
-            handler: "index.handler",
+        const searchLambda = new NodejsFunction(this, "SearchIndexLambda", {
+            entry:
+                __dirname +
+                "/resources/lambda/GlueCatalogSearch/SearchIndex/index.ts",
             vpc,
             vpcSubnets: privateSubnets,
             securityGroups: [opensearchDomainSecurityGroup],
-            code: Code.fromAsset(
-                __dirname + "/resources/lambda/GlueCatalogSearch/SearchIndex"
-            ),
             logRetention: RetentionDays.ONE_DAY,
             environment: {
                 OPENSEARCH_INDEX: opensearchIndex,
@@ -252,19 +248,17 @@ export class GlueCatalogSearchApi extends Construct {
 
         this.osEndpoint = searchApi.url;
 
-        const getByDocumentIdLambda = new Function(
+        const getByDocumentIdLambda = new NodejsFunction(
             this,
             "GetByDocumentIdLambda",
             {
-                runtime: Runtime.NODEJS_14_X,
-                handler: "index.handler",
+                entry:
+                    __dirname +
+                    "/resources/lambda/GlueCatalogSearch/GetByDocumentId/index.ts",
                 vpc,
                 vpcSubnets: privateSubnets,
                 securityGroups: [opensearchDomainSecurityGroup],
-                code: Code.fromAsset(
-                    __dirname +
-                        "/resources/lambda/GlueCatalogSearch/GetByDocumentId"
-                ),
+
                 logRetention: RetentionDays.ONE_DAY,
                 environment: {
                     OPENSEARCH_INDEX: opensearchIndex,
@@ -306,15 +300,13 @@ export class GlueCatalogSearchApi extends Construct {
             inlinePolicies: { inline0: glueCatalogLambdaRolePolicy },
         });
 
-        const indexAllLambda = new Function(this, "IndexAllLambda", {
-            runtime: Runtime.NODEJS_14_X,
-            handler: "index.handler",
+        const indexAllLambda = new NodejsFunction(this, "IndexAllLambda", {
+            entry:
+                __dirname +
+                "/resources/lambda/GlueCatalogSearch/IndexAll/index.ts",
             vpc,
             vpcSubnets: privateSubnets,
             securityGroups: [opensearchDomainSecurityGroup],
-            code: Code.fromAsset(
-                __dirname + "/resources/lambda/GlueCatalogSearch/IndexAll"
-            ),
             logRetention: RetentionDays.ONE_DAY,
             role: indexAllLambdaRole,
             timeout: Duration.seconds(30),
