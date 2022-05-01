@@ -167,6 +167,7 @@ export class GlueCatalogSearchApi extends Construct {
             entry:
                 __dirname +
                 "/resources/lambda/GlueCatalogSearch/IndexDelta/index.ts",
+            depsLockFilePath: __dirname + "/../../yarn.lock",
             vpc,
             vpcSubnets: privateSubnets,
             securityGroups: [opensearchDomainSecurityGroup],
@@ -205,6 +206,7 @@ export class GlueCatalogSearchApi extends Construct {
             entry:
                 __dirname +
                 "/resources/lambda/GlueCatalogSearch/SearchIndex/index.ts",
+            depsLockFilePath: __dirname + "/../../yarn.lock",
             vpc,
             vpcSubnets: privateSubnets,
             securityGroups: [opensearchDomainSecurityGroup],
@@ -255,6 +257,7 @@ export class GlueCatalogSearchApi extends Construct {
                 entry:
                     __dirname +
                     "/resources/lambda/GlueCatalogSearch/GetByDocumentId/index.ts",
+                depsLockFilePath: __dirname + "/../../yarn.lock",
                 vpc,
                 vpcSubnets: privateSubnets,
                 securityGroups: [opensearchDomainSecurityGroup],
@@ -304,6 +307,7 @@ export class GlueCatalogSearchApi extends Construct {
             entry:
                 __dirname +
                 "/resources/lambda/GlueCatalogSearch/IndexAll/index.ts",
+            depsLockFilePath: __dirname + "/../../yarn.lock",
             vpc,
             vpcSubnets: privateSubnets,
             securityGroups: [opensearchDomainSecurityGroup],
