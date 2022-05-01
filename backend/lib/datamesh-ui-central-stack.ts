@@ -10,41 +10,72 @@ export class DataMeshUICentralStack extends Stack {
     constructor(scope: Construct, id: string) {
         super(scope, id);
 
-        const centralStateMachineArn = new CfnParameter(this, "centralStateMachineArn", {
-            type: "String",
-            description: "State Machine ARN in Central Governance account"
-        });
+        const centralStateMachineArn = new CfnParameter(
+            this,
+            "centralStateMachineArn",
+            {
+                type: "String",
+                description: "State Machine ARN in Central Governance account",
+            }
+        );
 
-        const centralLfAdminRoleArn = new CfnParameter(this, "centralLfAdminRoleArn", {
-            type: "String",
-            description: "LakeFormation Admin Role ARN in Central Governance account"
-        });
+        const centralLfAdminRoleArn = new CfnParameter(
+            this,
+            "centralLfAdminRoleArn",
+            {
+                type: "String",
+                description:
+                    "LakeFormation Admin Role ARN in Central Governance account",
+            }
+        );
 
-        const centralEventBusArn = new CfnParameter(this, "centralEventBusArn", {
-            type: "String",
-            description: "Central EventBridge ARN in Central Governance account"
-        })
+        const centralEventBusArn = new CfnParameter(
+            this,
+            "centralEventBusArn",
+            {
+                type: "String",
+                description:
+                    "Central EventBridge ARN in Central Governance account",
+            }
+        );
 
-        const centralOpensearchSize = new CfnParameter(this, "centralOpensearchSize", {
-            type: "String",
-            description: "Instance size of OpenSearch node",
-            default: "t3.small.search"
-        })
+        const centralOpensearchSize = new CfnParameter(
+            this,
+            "centralOpensearchSize",
+            {
+                type: "String",
+                description: "Instance size of OpenSearch node",
+                default: "t3.small.search",
+            }
+        );
 
-        const approvalWorkflow = new ApprovalWorkflow(this, "ApprovalWorkflow", {
-            centralEventBusArn: centralEventBusArn.valueAsString,
-            dpmStateMachineArn: centralStateMachineArn.valueAsString,
-            dpmStateMachineRoleArn: centralLfAdminRoleArn.valueAsString
-        });
+        const approvalWorkflow = new ApprovalWorkflow(
+            this,
+            "ApprovalWorkflow",
+            {
+                centralEventBusArn: centralEventBusArn.valueAsString,
+                dpmStateMachineArn: centralStateMachineArn.valueAsString,
+                dpmStateMachineRoleArn: centralLfAdminRoleArn.valueAsString,
+            }
+        );
 
         const dataMeshUIAuth = new DataMeshUIAuth(this, "DataMeshUIAuth");
 
-        const dataQuality = new DataQualityCentralAccount(this, "DataQualityCentralAccount");
+        const dataQuality = new DataQualityCentralAccount(
+            this,
+            "DataQualityCentralAccount"
+        );
 
-        const searchCatalog = new GlueCatalogSearchApi(this, "SearchCatalogAPI", {
-            accountId: Aws.ACCOUNT_ID,
-            opensearchDataNodeInstanceSize: centralOpensearchSize.valueAsString
-        });
+        const searchCatalog = new GlueCatalogSearchApi(
+            this,
+            "SearchCatalogAPI",
+            {
+                accountId: Aws.ACCOUNT_ID,
+                opensearchDataNodeInstanceSize:
+                    centralOpensearchSize.valueAsString,
+                userPool: dataMeshUIAuth.userPool,
+            }
+        );
 
         new DataMeshUI(this, "DataMeshUI", {
             stateMachineArn: approvalWorkflow.stateMachine.stateMachineArn,
@@ -54,7 +85,7 @@ export class DataMeshUICentralStack extends Stack {
             dataQualityHttpApiUrl: dataQuality.dataQualityEndpoint,
             searchApiUrl: searchCatalog.osEndpoint,
             userPool: dataMeshUIAuth.userPool,
-            identityPool: dataMeshUIAuth.identityPool
-        })
+            identityPool: dataMeshUIAuth.identityPool,
+        });
     }
 }

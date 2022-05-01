@@ -1,6 +1,12 @@
 import { Construct } from "constructs";
 import { Code, Function, Runtime } from "aws-cdk-lib/aws-lambda";
-import { CfnOutput, custom_resources, Duration } from "aws-cdk-lib";
+import {
+    aws_apigateway,
+    CfnOutput,
+    custom_resources,
+    Duration,
+    RemovalPolicy,
+} from "aws-cdk-lib";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { Port, SecurityGroup, SubnetType, Vpc } from "aws-cdk-lib/aws-ec2";
 import { CfnDataLakeSettings } from "aws-cdk-lib/aws-lakeformation";
@@ -16,11 +22,18 @@ import {
 import { Domain, EngineVersion } from "aws-cdk-lib/aws-opensearchservice";
 import { Rule } from "aws-cdk-lib/aws-events";
 import { LambdaFunction } from "aws-cdk-lib/aws-events-targets";
-import { LambdaIntegration, LambdaRestApi } from "aws-cdk-lib/aws-apigateway";
+import {
+    CfnMethod,
+    CognitoUserPoolsAuthorizer,
+    LambdaIntegration,
+    LambdaRestApi,
+} from "aws-cdk-lib/aws-apigateway";
+import { UserPool } from "aws-cdk-lib/aws-cognito";
 
 export interface GlueCatalogSearchApiProps {
     accountId: string;
     opensearchDataNodeInstanceSize?: string;
+    userPool: UserPool;
 }
 
 export class GlueCatalogSearchApi extends Construct {
@@ -67,6 +80,7 @@ export class GlueCatalogSearchApi extends Construct {
         );
 
         const opensearchDomain = new Domain(this, "CatalogDomain", {
+            removalPolicy: RemovalPolicy.DESTROY,
             version: EngineVersion.OPENSEARCH_1_1,
             enableVersionUpgrade: true,
             enforceHttps: true,
@@ -206,9 +220,25 @@ export class GlueCatalogSearchApi extends Construct {
         });
         opensearchDomain.grantIndexReadWrite(opensearchIndex, searchLambda);
 
+        const cognitoAuthorizer = new CognitoUserPoolsAuthorizer(
+            this,
+            "CognitoUserPoolsAuthorizer",
+            {
+                cognitoUserPools: [props.userPool],
+            }
+        );
+
         const searchApi = new LambdaRestApi(this, "SearchApi", {
             handler: searchLambda,
             proxy: false,
+            defaultCorsPreflightOptions: {
+                allowOrigins: ["*"],
+                allowCredentials: true,
+            },
+            defaultMethodOptions: {
+                authorizationType: aws_apigateway.AuthorizationType.COGNITO,
+                authorizer: cognitoAuthorizer,
+            },
         });
 
         searchApi.root
@@ -217,7 +247,7 @@ export class GlueCatalogSearchApi extends Construct {
             .addMethod("GET");
 
         new CfnOutput(this, "searchApi", {
-                value: searchApi.url,
+            value: searchApi.url,
         });
 
         this.osEndpoint = searchApi.url;
@@ -248,6 +278,16 @@ export class GlueCatalogSearchApi extends Construct {
             .addResource("document")
             .addResource("{documentId}")
             .addMethod("GET", new LambdaIntegration(getByDocumentIdLambda));
+
+        // Remove the default authorizer for OPTIONS requests to ensure that CORS pre-flight works
+        searchApi.methods
+            .filter((m) => m.httpMethod === "OPTIONS")
+            .forEach((m) => {
+                (m?.node?.defaultChild as CfnMethod).addPropertyOverride(
+                    "AuthorizationType",
+                    "NONE"
+                );
+            });
 
         new CfnOutput(this, "SearchApiArn", {
             value: searchApi.arnForExecuteApi(),
