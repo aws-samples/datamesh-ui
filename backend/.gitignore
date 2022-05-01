@@ -1,5 +1,6 @@
 *.js
 !lib/central/resources/lambda/Workflow*/*
+!lib/central/resources/lambda/Derive*/*
 !lib/central/resources/lambda/DataQuality*/*
 !lib/producer/resources/lambda/*/*
 !jest.config.js
