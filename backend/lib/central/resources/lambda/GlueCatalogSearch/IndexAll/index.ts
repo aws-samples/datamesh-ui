@@ -9,11 +9,12 @@ import * as AWS from "aws-sdk";
 import axios, { AxiosError, AxiosResponse } from "axios";
 import { aws4Interceptor } from "aws4-axios";
 
-AWS.config.update({ region: "eu-west-1" });
-
 const opensearchDomainEndpoint = process.env.DOMAIN_ENDPOINT;
 const awsRegion = process.env.AWS_REGION;
 const CatalogId = process.env.accountId;
+
+AWS.config.update({ region: awsRegion });
+
 const interceptor = aws4Interceptor({
     region: awsRegion,
     service: "es",
