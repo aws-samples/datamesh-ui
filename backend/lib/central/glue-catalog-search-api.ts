@@ -1,6 +1,11 @@
 import { Construct } from "constructs";
-import { Code, Function, Runtime } from "aws-cdk-lib/aws-lambda";
-import { CfnOutput, custom_resources, Duration } from "aws-cdk-lib";
+import {
+    aws_apigateway,
+    CfnOutput,
+    custom_resources,
+    Duration,
+    RemovalPolicy,
+} from "aws-cdk-lib";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { Port, SecurityGroup, SubnetType, Vpc } from "aws-cdk-lib/aws-ec2";
 import { CfnDataLakeSettings } from "aws-cdk-lib/aws-lakeformation";
@@ -16,11 +21,19 @@ import {
 import { Domain, EngineVersion } from "aws-cdk-lib/aws-opensearchservice";
 import { Rule } from "aws-cdk-lib/aws-events";
 import { LambdaFunction } from "aws-cdk-lib/aws-events-targets";
-import { LambdaIntegration, LambdaRestApi } from "aws-cdk-lib/aws-apigateway";
+import {
+    CfnMethod,
+    CognitoUserPoolsAuthorizer,
+    LambdaIntegration,
+    LambdaRestApi,
+} from "aws-cdk-lib/aws-apigateway";
+import { UserPool } from "aws-cdk-lib/aws-cognito";
+import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 
 export interface GlueCatalogSearchApiProps {
     accountId: string;
     opensearchDataNodeInstanceSize?: string;
+    userPool: UserPool;
 }
 
 export class GlueCatalogSearchApi extends Construct {
@@ -67,6 +80,7 @@ export class GlueCatalogSearchApi extends Construct {
         );
 
         const opensearchDomain = new Domain(this, "CatalogDomain", {
+            removalPolicy: RemovalPolicy.DESTROY,
             version: EngineVersion.OPENSEARCH_1_1,
             enableVersionUpgrade: true,
             enforceHttps: true,
@@ -149,15 +163,14 @@ export class GlueCatalogSearchApi extends Construct {
             inlinePolicies: { inline0: glueCatalogLambdaRolePolicy },
         });
 
-        const indexDeltaLambda = new Function(this, "IndexDeltaLambda", {
-            runtime: Runtime.NODEJS_14_X,
-            handler: "index.handler",
+        const indexDeltaLambda = new NodejsFunction(this, "IndexDeltaLambda", {
+            entry:
+                __dirname +
+                "/resources/lambda/GlueCatalogSearch/IndexDelta/index.ts",
+            depsLockFilePath: __dirname + "/../../yarn.lock",
             vpc,
             vpcSubnets: privateSubnets,
             securityGroups: [opensearchDomainSecurityGroup],
-            code: Code.fromAsset(
-                __dirname + "/resources/lambda/GlueCatalogSearch/IndexDelta"
-            ),
             role: indexDeltaLambdaRole,
             logRetention: RetentionDays.ONE_DAY,
             environment: {
@@ -189,15 +202,14 @@ export class GlueCatalogSearchApi extends Construct {
             targets: [new LambdaFunction(indexDeltaLambda, {})],
         });
 
-        const searchLambda = new Function(this, "SearchIndexLambda", {
-            runtime: Runtime.NODEJS_14_X,
-            handler: "index.handler",
+        const searchLambda = new NodejsFunction(this, "SearchIndexLambda", {
+            entry:
+                __dirname +
+                "/resources/lambda/GlueCatalogSearch/SearchIndex/index.ts",
+            depsLockFilePath: __dirname + "/../../yarn.lock",
             vpc,
             vpcSubnets: privateSubnets,
             securityGroups: [opensearchDomainSecurityGroup],
-            code: Code.fromAsset(
-                __dirname + "/resources/lambda/GlueCatalogSearch/SearchIndex"
-            ),
             logRetention: RetentionDays.ONE_DAY,
             environment: {
                 OPENSEARCH_INDEX: opensearchIndex,
@@ -206,9 +218,25 @@ export class GlueCatalogSearchApi extends Construct {
         });
         opensearchDomain.grantIndexReadWrite(opensearchIndex, searchLambda);
 
+        const cognitoAuthorizer = new CognitoUserPoolsAuthorizer(
+            this,
+            "CognitoUserPoolsAuthorizer",
+            {
+                cognitoUserPools: [props.userPool],
+            }
+        );
+
         const searchApi = new LambdaRestApi(this, "SearchApi", {
             handler: searchLambda,
             proxy: false,
+            defaultCorsPreflightOptions: {
+                allowOrigins: ["*"],
+                allowCredentials: true,
+            },
+            defaultMethodOptions: {
+                authorizationType: aws_apigateway.AuthorizationType.COGNITO,
+                authorizer: cognitoAuthorizer,
+            },
         });
 
         searchApi.root
@@ -217,24 +245,23 @@ export class GlueCatalogSearchApi extends Construct {
             .addMethod("GET");
 
         new CfnOutput(this, "searchApi", {
-                value: searchApi.url,
+            value: searchApi.url,
         });
 
         this.osEndpoint = searchApi.url;
 
-        const getByDocumentIdLambda = new Function(
+        const getByDocumentIdLambda = new NodejsFunction(
             this,
             "GetByDocumentIdLambda",
             {
-                runtime: Runtime.NODEJS_14_X,
-                handler: "index.handler",
+                entry:
+                    __dirname +
+                    "/resources/lambda/GlueCatalogSearch/GetByDocumentId/index.ts",
+                depsLockFilePath: __dirname + "/../../yarn.lock",
                 vpc,
                 vpcSubnets: privateSubnets,
                 securityGroups: [opensearchDomainSecurityGroup],
-                code: Code.fromAsset(
-                    __dirname +
-                        "/resources/lambda/GlueCatalogSearch/GetByDocumentId"
-                ),
+
                 logRetention: RetentionDays.ONE_DAY,
                 environment: {
                     OPENSEARCH_INDEX: opensearchIndex,
@@ -248,6 +275,16 @@ export class GlueCatalogSearchApi extends Construct {
             .addResource("document")
             .addResource("{documentId}")
             .addMethod("GET", new LambdaIntegration(getByDocumentIdLambda));
+
+        // Remove the default authorizer for OPTIONS requests to ensure that CORS pre-flight works
+        searchApi.methods
+            .filter((m) => m.httpMethod === "OPTIONS")
+            .forEach((m) => {
+                (m?.node?.defaultChild as CfnMethod).addPropertyOverride(
+                    "AuthorizationType",
+                    "NONE"
+                );
+            });
 
         new CfnOutput(this, "SearchApiArn", {
             value: searchApi.arnForExecuteApi(),
@@ -266,15 +303,14 @@ export class GlueCatalogSearchApi extends Construct {
             inlinePolicies: { inline0: glueCatalogLambdaRolePolicy },
         });
 
-        const indexAllLambda = new Function(this, "IndexAllLambda", {
-            runtime: Runtime.NODEJS_14_X,
-            handler: "index.handler",
+        const indexAllLambda = new NodejsFunction(this, "IndexAllLambda", {
+            entry:
+                __dirname +
+                "/resources/lambda/GlueCatalogSearch/IndexAll/index.ts",
+            depsLockFilePath: __dirname + "/../../yarn.lock",
             vpc,
             vpcSubnets: privateSubnets,
             securityGroups: [opensearchDomainSecurityGroup],
-            code: Code.fromAsset(
-                __dirname + "/resources/lambda/GlueCatalogSearch/IndexAll"
-            ),
             logRetention: RetentionDays.ONE_DAY,
             role: indexAllLambdaRole,
             timeout: Duration.seconds(30),

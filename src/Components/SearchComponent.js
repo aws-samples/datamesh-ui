@@ -30,8 +30,6 @@ import {
 const cfnOutput = require("../cfn-output.json");
 const SearchApiUrl = cfnOutput.InfraStack.SearchApiUrl;
 
-const config = Amplify.configure();
-
 const MIN_SEARCH_STRING_LENGTH = 1;
 
 function searchResultsToSelectOptions(searchResults, searchTerm) {
@@ -91,7 +89,14 @@ function SearchComponent() {
 
     const searchForText = async (text) => {
         const baseURL = SearchApiUrl;
-        results = await axios.get(`${baseURL}search/${text}`);
+        const authToken = `Bearer ${(await Auth.currentSession())
+            .getIdToken()
+            .getJwtToken()}`;
+        results = await axios.get(`${baseURL}search/${text}`, {
+            headers: {
+                Authorization: authToken,
+            },
+        });
 
         selectionOptions = searchResultsToSelectOptions(results.data, text);
 
