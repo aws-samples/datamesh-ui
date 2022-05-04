@@ -15,14 +15,23 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import Amplify, { Auth } from 'aws-amplify';
-import { useEffect, useState } from 'react';
-import { SFNClient, DescribeExecutionCommand } from '@aws-sdk/client-sfn';
-import { useParams } from 'react-router';
-import { Box, BreadcrumbGroup, ColumnLayout, Table, Container, Flashbar, Header, SpaceBetween } from '@awsui/components-react';
-import ValueWithLabel from './ValueWithLabel';
-import BadgeStatus from './BadgeStatus';
-import axios from 'axios'
+import Amplify, { Auth } from "aws-amplify";
+import { useEffect, useState } from "react";
+import { SFNClient, DescribeExecutionCommand } from "@aws-sdk/client-sfn";
+import { useParams } from "react-router";
+import {
+    Box,
+    BreadcrumbGroup,
+    ColumnLayout,
+    Table,
+    Container,
+    Flashbar,
+    Header,
+    SpaceBetween,
+} from "@awsui/components-react";
+import ValueWithLabel from "./ValueWithLabel";
+import BadgeStatus from "./BadgeStatus";
+import axios from "axios";
 
 const cfnOutput = require("../cfn-output.json");
 const SearchApiUrl = cfnOutput.InfraStack.SearchApiUrl;
@@ -34,7 +43,7 @@ function DataProductDetailsComponent(props) {
     const [documentId, setdocumentId] = useState();
 
     const { dataProduct } = useParams();
-    var results = []
+    var results = [];
 
     const [state, setState] = useState([]);
 
@@ -43,32 +52,57 @@ function DataProductDetailsComponent(props) {
         //const credentials = await Auth.currentCredentials();
         //const sfnClient = new SFNClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
         try {
-            const baseURL = SearchApiUrl
-            const response = await axios.get(`${baseURL}document/${dataProduct}`)
-            console.log(response)
-            console.log(response.data.tableInformation)
+            const baseURL = SearchApiUrl;
+            const authToken = `Bearer ${(await Auth.currentSession())
+                .getIdToken()
+                .getJwtToken()}`;
+            const response = await axios.get(
+                `${baseURL}document/${dataProduct}`,
+                {
+                    headers: {
+                        Authorization: authToken,
+                    },
+                }
+            );
+            console.log(response);
+            console.log(response.data.tableInformation);
             if (response.data.tableInformation) {
-                setDetail(response.data.tableInformation)
+                setDetail(response.data.tableInformation);
             }
 
             //console.log(response.data[0].tableInformation.databaseName)
-
         } catch (e) {
             setdocumentId(e);
         }
-
     }, []);
 
     if (documentId) {
-        return <Flashbar items={[{ header: "Invalid Request", type: "error", content: "throw ...." }]} />;
+        return (
+            <Flashbar
+                items={[
+                    {
+                        header: "Invalid Request",
+                        type: "error",
+                        content: "throw ....",
+                    },
+                ]}
+            />
+        );
     } else if (detail.tableDescription) {
         return (
             <div>
-                <BreadcrumbGroup items={[
-                    { text: "Search", href: "/search" },
-                    { text: "Data Product Details", href: "/data-product-details/" },
-                ]} />
-                <Container header={<Header variant="h2">Data Product Details</Header>}>
+                <BreadcrumbGroup
+                    items={[
+                        { text: "Search", href: "/search" },
+                        {
+                            text: "Data Product Details",
+                            href: "/data-product-details/",
+                        },
+                    ]}
+                />
+                <Container
+                    header={<Header variant="h2">Data Product Details</Header>}
+                >
                     <ColumnLayout columns={2} variant="text-grid">
                         <SpaceBetween size="m">
                             <ValueWithLabel label="Catalog Name">
@@ -81,7 +115,8 @@ function DataProductDetailsComponent(props) {
                                 {detail.tableDescription.TableType + ""}
                             </ValueWithLabel>
                             <ValueWithLabel label="Location">
-                                {detail.tableDescription.StorageDescriptor.Location + ""}
+                                {detail.tableDescription.StorageDescriptor
+                                    .Location + ""}
                             </ValueWithLabel>
                         </SpaceBetween>
                         <SpaceBetween size="m">
@@ -93,30 +128,34 @@ function DataProductDetailsComponent(props) {
                             </ValueWithLabel>
                             <ValueWithLabel label="Update Time">
                                 {detail.tableDescription.UpdateTime + ""}
-                            
                             </ValueWithLabel>
                         </SpaceBetween>
                     </ColumnLayout>
                 </Container>
-                <Box margin={{top: "m"}}>
-                    <Table header={<Header variant="h3">Columns</Header>} items={detail.tableDescription.StorageDescriptor.Columns} columnDefinitions={[
-                        {
-                            header: "Name",
-                            cell: item => item.Name
-                        },
-                        {
-                            header: "Type",
-                            cell: item => item.Type
-                        },
-                        {
-                            header: "Description",
-                            cell: item => ""
+                <Box margin={{ top: "m" }}>
+                    <Table
+                        header={<Header variant="h3">Columns</Header>}
+                        items={
+                            detail.tableDescription.StorageDescriptor.Columns
                         }
-                    ]} />
+                        columnDefinitions={[
+                            {
+                                header: "Name",
+                                cell: (item) => item.Name,
+                            },
+                            {
+                                header: "Type",
+                                cell: (item) => item.Type,
+                            },
+                            {
+                                header: "Description",
+                                cell: (item) => "",
+                            },
+                        ]}
+                    />
                 </Box>
             </div>
         );
-
     } else {
         return null;
     }
