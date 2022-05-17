@@ -186,6 +186,7 @@ export class DataMeshUI extends Construct {
                 maxConcurrency: 2,
                 parameters: {
                     "producerAccountId.$": "$.payload.producer_acc_id",
+                    "databaseName.$": "$.payload.database_name",
                     "status.$": "$.status",
                     "createdAt.$": "$.createdAt",
                     "table.$": "$$.Map.Item.Value"
@@ -204,7 +205,7 @@ export class DataMeshUI extends Construct {
                             "S.$": "$.producerAccountId" 
                         },
                         "dbTableName": {
-                            "S.$": "States.Format('{}#{}', $.producerAccountId, $.table.name)"
+                            "S.$": "States.Format('{}_{}#{}', $.producerAccountId, $.databaseName, $.table.name)"
                         },
                         "location": {
                             "S.$": "$.table.location"
