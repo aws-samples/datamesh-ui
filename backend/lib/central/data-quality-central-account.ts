@@ -30,16 +30,6 @@ export class DataQualityCentralAccount extends Construct {
     ) {
         super(scope, id);
 
-        const productPolicyDoc = new PolicyDocument({
-            statements: [
-                new PolicyStatement({
-                    effect: Effect.ALLOW,
-                    actions: ["sts:AssumeRole"],
-                    resources: ["arn:aws:iam::*:role/ProducerWorkflowRole"],
-                }),
-            ],
-        });
-
         const dataQualityReportsRole = new Role(
             this,
             "DataQualityReportsRole",
@@ -49,8 +39,8 @@ export class DataQualityCentralAccount extends Construct {
                     ManagedPolicy.fromAwsManagedPolicyName(
                         "service-role/AWSLambdaBasicExecutionRole"
                     ),
-                ],
-                inlinePolicies: { inline0: productPolicyDoc },
+                    ManagedPolicy.fromAwsManagedPolicyName("AmazonS3ReadOnlyAccess")
+                ]
             }
         );
 
@@ -73,8 +63,8 @@ export class DataQualityCentralAccount extends Construct {
                     ManagedPolicy.fromAwsManagedPolicyName(
                         "service-role/AWSLambdaBasicExecutionRole"
                     ),
-                ],
-                inlinePolicies: { inline0: productPolicyDoc },
+                    ManagedPolicy.fromAwsManagedPolicyName("AmazonS3ReadOnlyAccess")
+                ]
             }
         );
 
