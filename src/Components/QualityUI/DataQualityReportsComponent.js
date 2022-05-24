@@ -18,7 +18,17 @@
 import { GlueClient, GetTableCommand } from "@aws-sdk/client-glue";
 import Amplify, { Auth, API } from "aws-amplify";
 import { useEffect, useState } from "react";
-import { Flashbar, BreadcrumbGroup, ColumnLayout, Container, Box, SpaceBetween, Header, Link, Table } from "@awsui/components-react";
+import {
+    Flashbar,
+    BreadcrumbGroup,
+    ColumnLayout,
+    Container,
+    Box,
+    SpaceBetween,
+    Header,
+    Link,
+    Table,
+} from "@awsui/components-react";
 import { useParams } from "react-router";
 import ValueWithLabel from "../ValueWithLabel";
 import DatabaseDetailsComponent from "../DatabaseDetailsComponent";
@@ -26,43 +36,50 @@ import DatabaseDetailsComponent from "../DatabaseDetailsComponent";
 const config = Amplify.configure();
 
 function DataQualityReportsComponent(props) {
-  
-  const [dataQualityReports, setDataQualityReports] = useState([]);
-  const [table, setTable] = useState();
-  const [tableNotFound, setTableNotFound] = useState(false);
-  const [reportsNotFound, setReportsNotFound] = useState(false);
-    
-  const {dbname, tablename} = useParams();
-  
-  
-  useEffect(async() => {
+    const [dataQualityReports, setDataQualityReports] = useState([]);
+    const [table, setTable] = useState();
+    const [tableNotFound, setTableNotFound] = useState(false);
+    const [reportsNotFound, setReportsNotFound] = useState(false);
+
+    const { dbname, tablename } = useParams();
+
+    useEffect(async () => {
         const credentials = await Auth.currentCredentials();
-        const glueClient = new GlueClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
-        
+        const glueClient = new GlueClient({
+            region: config.aws_project_region,
+            credentials: Auth.essentialCredentials(credentials),
+        });
+
         try {
-            const response = await glueClient.send(new GetTableCommand({DatabaseName: dbname, Name: tablename}));
+            const response = await glueClient.send(
+                new GetTableCommand({ DatabaseName: dbname, Name: tablename })
+            );
             const table = response.Table;
             setTable(table);
-            
-            try
-            {
+
+            try {
                 const currentSession = await Auth.currentSession();
                 const token = await currentSession.idToken.jwtToken;
-                
+
                 const requestInfo = {
                     headers: {
-                      Authorization: token
+                        Authorization: token,
                     },
                     queryStringParameters: {
-                    'owner': table.Owner,
-                    'tableLocation': encodeURIComponent(table.StorageDescriptor.Location)
+                        owner: table.Owner,
+                        tableLocation: encodeURIComponent(
+                            table.StorageDescriptor.Location
+                        ),
                     },
                 };
-                
-                const data_quality_reports = await API.get('DataQualityAPIGW', '/data_quality/data_quality_reports', requestInfo);
+
+                const data_quality_reports = await API.get(
+                    "DataQualityAPIGW",
+                    "data_quality/data_quality_reports",
+                    requestInfo
+                );
                 setDataQualityReports(data_quality_reports);
-            }
-            catch (reportsRetrievalError) {
+            } catch (reportsRetrievalError) {
                 setReportsNotFound(true);
             }
         } catch (tableRetrievalError) {
@@ -71,23 +88,46 @@ function DataQualityReportsComponent(props) {
     }, []);
 
     if (tableNotFound) {
-        return <Flashbar items={[{header: "Invalid Request", type: "error", content: "There's no table found for the given parameter."}]} />;
-    }
-    else if (reportsNotFound) {
-        return <Flashbar items={[{header: "Error retrieving reports", type: "error", content: "Unable to retrieve reports.  Please check permissions."}]} />;
-    }
-    else if (table)
-    {
+        return (
+            <Flashbar
+                items={[
+                    {
+                        header: "Invalid Request",
+                        type: "error",
+                        content:
+                            "There's no table found for the given parameter.",
+                    },
+                ]}
+            />
+        );
+    } else if (reportsNotFound) {
+        return (
+            <Flashbar
+                items={[
+                    {
+                        header: "Error retrieving reports",
+                        type: "error",
+                        content:
+                            "Unable to retrieve reports.  Please check permissions.",
+                    },
+                ]}
+            />
+        );
+    } else if (table) {
         return (
             <div>
-                <BreadcrumbGroup items={[
-                            { text: "Databases", href: "/"},
-                            { text: dbname, href: "/tables/"+dbname },
-                            { text: "Data Quality Reports ("+tablename+")" }
-                        ]} />
+                <BreadcrumbGroup
+                    items={[
+                        { text: "Databases", href: "/" },
+                        { text: dbname, href: "/tables/" + dbname },
+                        { text: "Data Quality Reports (" + tablename + ")" },
+                    ]}
+                />
                 <DatabaseDetailsComponent dbName={dbname} />
-                <Box margin={{top: "l"}}>
-                    <Container header={<Header variant="h2">Table Details</Header>}>
+                <Box margin={{ top: "l" }}>
+                    <Container
+                        header={<Header variant="h2">Table Details</Header>}
+                    >
                         <ColumnLayout columns={2} variant="text-grid">
                             <SpaceBetween size="m">
                                 <ValueWithLabel label="Table">
@@ -102,27 +142,43 @@ function DataQualityReportsComponent(props) {
                         </ColumnLayout>
                     </Container>
                 </Box>
-                <Box margin={{top: "m"}}>
+                <Box margin={{ top: "m" }}>
                     <Table
                         columnDefinitions={[
                             {
                                 header: "Report Date",
-                                cell: item => item.lastModified
-            
+                                cell: (item) => item.lastModified,
                             },
                             {
                                 header: "Actions",
-                                cell: item => <Link variant="primary" href={"/data-quality-report-results/"+dbname+"/"+tablename+"/"+encodeURIComponent(item.bucket)+"/"+encodeURIComponent(item.key)}>View Report</Link>
-                            }
+                                cell: (item) => (
+                                    <Link
+                                        variant="primary"
+                                        href={
+                                            "/data-quality-report-results/" +
+                                            dbname +
+                                            "/" +
+                                            tablename +
+                                            "/" +
+                                            encodeURIComponent(item.bucket) +
+                                            "/" +
+                                            encodeURIComponent(item.key)
+                                        }
+                                    >
+                                        View Report
+                                    </Link>
+                                ),
+                            },
                         ]}
                         items={dataQualityReports}
-                        header={<Header variant="h2">Data Quality Reports</Header>}
-                     />
+                        header={
+                            <Header variant="h2">Data Quality Reports</Header>
+                        }
+                    />
                 </Box>
             </div>
         );
-    }
-    else {
+    } else {
         return null;
     }
 }

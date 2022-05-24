@@ -284,80 +284,65 @@ exports.handler = (event, context, callback) => {
     
     const bucketArn = "arn:aws:s3:::"+bucketName;
     const roleArn = util.format("arn:aws:iam::%s:role/ProducerWorkflowRole", owner);
-    
-    
-    const assumeRolePromise = sts.assumeRole({
-        RoleArn: roleArn,
-        RoleSessionName: util.format("ProducerWorkflowRole-AssumedRole-%s", Date.now()),
-    }).promise();
+    const s3 = new AWS.S3();
 
-    assumeRolePromise.then(function(assumedRole) {
-        
-        const assumedCredentials = assumedRole.Credentials;
-        
-        const s3 = new AWS.S3({
-            accessKeyId: assumedCredentials.AccessKeyId,
-            secretAccessKey: assumedCredentials.SecretAccessKey,
-            sessionToken: assumedCredentials.SessionToken
-        });
-        
-         var params = {
-          Bucket: bucketName, 
-          Key: key
-        };
-        
-        return s3.getObject(params).promise();
-    }).then(function(reportResultsObject) {
-    
-      var jsonObject = JSON.parse(reportResultsObject.Body.toString());
-      var sampleSize =  jsonObject.sampleSize;
-      var rulesetResults = jsonObject.rulesetResults;
-      var ruleResults = rulesetResults[0].ruleResults;
-      var ruleCount = 0;
+    var params = {
+        Bucket: bucketName, 
+        Key: key
+    };
 
-      var ruleResultsArray = [];
+    s3
+        .getObject(params)
+        .promise()
+        .then(function(reportResultsObject) {
+            var jsonObject = JSON.parse(reportResultsObject.Body.toString());
+            var sampleSize =  jsonObject.sampleSize;
+            var rulesetResults = jsonObject.rulesetResults;
+            var ruleResults = rulesetResults[0].ruleResults;
+            var ruleCount = 0;
       
-      ruleResults.forEach(function(rule) {
-        
-        var ruleResult = {
+            var ruleResultsArray = [];
             
-          name: rule.name,
-          ruleset_name: rulesetResults.name,
-          status : rule.status,
-          sample_size : sampleSize,
-          definition : rule.definition,
-          failed_count : rule.failedCount,
-          column_results : rule.columnResults,
-          rule_result_string: parseRuleResult(rule)
-        }
-        
-        console.log(rule.definition);
-        
-        ruleResultsArray.push(ruleResult);
-      });
-      
-      var reportResults =
-      {
-          owner: owner,
-          sample_size: sampleSize,
-          report_status: rulesetResults[0].status,
-          job_name: jsonObject.jobName,
-          job_run_id: jsonObject.jobRunId,
-          location: jsonObject.location,
-          started_on: jsonObject.startedOn,
-          written_on: jsonObject.writtenOn,
-          rule_results : ruleResultsArray
-      }
-      
-      callback(null, {
-                statusCode: 201,
-                body: JSON.stringify(reportResults),
-                headers: {
-                    'Access-Control-Allow-Origin': '*',
-                },
+            ruleResults.forEach(function(rule) {
+              
+              var ruleResult = {
+                  
+                name: rule.name,
+                ruleset_name: rulesetResults.name,
+                status : rule.status,
+                sample_size : sampleSize,
+                definition : rule.definition,
+                failed_count : rule.failedCount,
+                column_results : rule.columnResults,
+                rule_result_string: parseRuleResult(rule)
+              }
+              
+              console.log(rule.definition);
+              
+              ruleResultsArray.push(ruleResult);
+            });
+            
+            var reportResults =
+            {
+                owner: owner,
+                sample_size: sampleSize,
+                report_status: rulesetResults[0].status,
+                job_name: jsonObject.jobName,
+                job_run_id: jsonObject.jobRunId,
+                location: jsonObject.location,
+                started_on: jsonObject.startedOn,
+                written_on: jsonObject.writtenOn,
+                rule_results : ruleResultsArray
+            }
+            
+            callback(null, {
+                      statusCode: 201,
+                      body: JSON.stringify(reportResults),
+                      headers: {
+                          'Access-Control-Allow-Origin': '*',
+                      },
+              });
+        }).catch((err) => {
+            console.error(err);
         });
-      
-    }).catch((err) => {
-        console.error(err);
-    });
 };

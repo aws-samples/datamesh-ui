@@ -29,37 +29,23 @@ exports.handler = (event, context, callback) => {
     const bucketArn = "arn:aws:s3:::"+params.Bucket;
     const roleArn = util.format("arn:aws:iam::%s:role/ProducerWorkflowRole", producerAccountId);
     
-    const assumeRolePromise = sts.assumeRole({
-        RoleArn: roleArn,
-        RoleSessionName: util.format("ProducerWorkflowRole-AssumedRole-%s", Date.now()),
-    }).promise();
-
-    assumeRolePromise.then(function(assumedRole) {
+    const s3 = new AWS.S3();
+    s3
+        .listObjectsV2(params)
+        .promise()
+        .then(function(s3ObjectList) {
+            var dataQualityReports = filterObjects(params.Bucket, s3ObjectList);
         
-        const assumedCredentials = assumedRole.Credentials;
-        
-        const s3 = new AWS.S3({
-            accessKeyId: assumedCredentials.AccessKeyId,
-            secretAccessKey: assumedCredentials.SecretAccessKey,
-            sessionToken: assumedCredentials.SessionToken
-        });
-    
-        
-        return s3.listObjectsV2(params).promise();
-    }).then(function(s3ObjectList) {
-        
-        var dataQualityReports = filterObjects(params.Bucket, s3ObjectList);
-        
-        callback(null, {
-                statusCode: 201,
-                body: JSON.stringify(dataQualityReports),
-                headers: {
-                    'Access-Control-Allow-Origin': '*',
-                },
-        });
-    }).catch((err) => {
-        console.error(err);
-    });
+            callback(null, {
+                    statusCode: 201,
+                    body: JSON.stringify(dataQualityReports),
+                    headers: {
+                        'Access-Control-Allow-Origin': '*',
+                    },
+            });
+        }).catch((err) => {
+            console.error(err);
+        }); 
 };
 
 function getDataReportsLocationParams(tableLocation)

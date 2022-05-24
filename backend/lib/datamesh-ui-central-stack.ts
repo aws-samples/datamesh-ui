@@ -63,7 +63,10 @@ export class DataMeshUICentralStack extends Stack {
 
         const dataQuality = new DataQualityCentralAccount(
             this,
-            "DataQualityCentralAccount"
+            "DataQualityCentralAccount",
+            {
+                userPool: dataMeshUIAuth.userPool,
+            }
         );
 
         const searchCatalog = new GlueCatalogSearchApi(
