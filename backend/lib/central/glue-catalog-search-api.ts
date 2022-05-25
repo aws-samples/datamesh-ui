@@ -53,7 +53,7 @@ export class GlueCatalogSearchApi extends Construct {
 
         const vpc = new Vpc(this, "SearchVpc", {
             cidr: "10.37.0.0/16",
-            maxAzs: 3,
+            maxAzs: 3
         });
 
         NagSuppressions.addResourceSuppressions(vpc, [
