@@ -2,10 +2,12 @@ import { Duration, Stack } from "aws-cdk-lib";
 import { CfnEventBusPolicy, EventBus, Rule, RuleTargetInput } from "aws-cdk-lib/aws-events";
 import { LambdaFunction, SfnStateMachine, SnsTopic } from "aws-cdk-lib/aws-events-targets";
 import { AccountPrincipal, AccountRootPrincipal, ArnPrincipal, Effect, ManagedPolicy, PolicyDocument, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
+import { Key } from "aws-cdk-lib/aws-kms";
 import { Code, Function, Runtime } from "aws-cdk-lib/aws-lambda";
 import { Topic } from "aws-cdk-lib/aws-sns";
 import { Choice, Condition, JsonPath, Map, Pass, StateMachine, Wait, WaitTime } from "aws-cdk-lib/aws-stepfunctions";
 import { CallAwsService } from "aws-cdk-lib/aws-stepfunctions-tasks";
+import { NagSuppressions } from "cdk-nag";
 import { Construct } from "constructs";
 const util = require("util");
 
@@ -18,9 +20,19 @@ export class ProducerApprovalWorkflow extends Construct {
     constructor(scope: Construct, id: string, props: ProducerApprovalWorkflowProps) {
         super(scope, id);
 
+        const topicKey = new Key(this, "DataLakeSharingApprovalTopicKey", {enableKeyRotation: true});
+
         const snsTopic = new Topic(this, "DataLakeSharingApproval", {
-            topicName: "DataLakeSharingApproval"
+            topicName: "DataLakeSharingApproval",
+            masterKey: topicKey
         });
+
+        NagSuppressions.addResourceSuppressions(snsTopic, [
+            {
+                id: "AwsSolutions-SNS3",
+                reason: "Not applicable"
+            }
+        ])
 
         //deprecated, use cross account eventbridge to send the notification
 

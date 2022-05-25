@@ -29,6 +29,7 @@ import {
 } from "aws-cdk-lib/aws-apigateway";
 import { UserPool } from "aws-cdk-lib/aws-cognito";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
+import { NagSuppressions } from "cdk-nag";
 
 export interface GlueCatalogSearchApiProps {
     accountId: string;
@@ -54,6 +55,13 @@ export class GlueCatalogSearchApi extends Construct {
             cidr: "10.37.0.0/16",
             maxAzs: 3,
         });
+
+        NagSuppressions.addResourceSuppressions(vpc, [
+            {
+                id: "AwsSolutions-VPC7",
+                reason: "Not needed"
+            }
+        ])
 
         const privateSubnetSelection = [{ subnets: vpc.privateSubnets }];
         const privateSubnets = vpc.selectSubnets({
@@ -87,6 +95,7 @@ export class GlueCatalogSearchApi extends Construct {
             encryptionAtRest: {
                 enabled: true,
             },
+            nodeToNodeEncryption: true,
             capacity: {
                 dataNodes: vpc.availabilityZones.length,
                 dataNodeInstanceType: opensearchDataNodeInstanceSize,
@@ -104,6 +113,25 @@ export class GlueCatalogSearchApi extends Construct {
                 availabilityZoneCount: vpc.availabilityZones.length,
             },
         });
+
+        NagSuppressions.addResourceSuppressions(opensearchDomain, [
+            {
+                id: "AwsSolutions-IAM5",
+                reason: "For logging purposes"
+            },
+            {
+                id: "AwsSolutions-OS3",
+                reason: "Not applicable"
+            },
+            {
+                id: "AwsSolutions-OS4",
+                reason: "Not applicable"
+            },
+            {
+                id: "AwsSolutions-OS5",
+                reason: "Not applicable"
+            }
+        ], true)
 
         opensearchDomain.node.addDependency(opensearchServiceLinkedRole);
 
@@ -163,6 +191,17 @@ export class GlueCatalogSearchApi extends Construct {
             inlinePolicies: { inline0: glueCatalogLambdaRolePolicy },
         });
 
+        NagSuppressions.addResourceSuppressions(indexDeltaLambdaRole, [
+            {
+                id: "AwsSolutions-IAM4",
+                reason: "Basic loggic and Lake Formation access"
+            },
+            {
+                id: "AwsSolutions-IAM5",
+                reason: "Permissions are handled by Lake Formation"
+            }
+        ])
+
         const indexDeltaLambda = new NodejsFunction(this, "IndexDeltaLambda", {
             entry:
                 __dirname +
@@ -216,6 +255,8 @@ export class GlueCatalogSearchApi extends Construct {
                 DOMAIN_ENDPOINT: opensearchDomain.domainEndpoint,
             },
         });
+
+
         opensearchDomain.grantIndexReadWrite(opensearchIndex, searchLambda);
 
         const cognitoAuthorizer = new CognitoUserPoolsAuthorizer(
@@ -393,5 +434,57 @@ export class GlueCatalogSearchApi extends Construct {
             indexAllLambda,
             indexAllLFSettings
         );
+
+        NagSuppressions.addResourceSuppressions(searchLambda, [
+            {
+                id: "AwsSolutions-IAM4",
+                reason: "Basic logging and VPC access"
+            },
+            {
+                id: "AwsSolutions-IAM5",
+                reason: "Permissions are managed by Lake Formation"
+            }
+        ], true)
+
+        NagSuppressions.addResourceSuppressions(searchApi, [
+            {
+                id: "AwsSolutions-APIG2",
+                reason: "Already handled"
+            },
+            {
+                id: "AwsSolutions-IAM4",
+                reason: "Logging purposes"
+            },
+            {
+                id: "AwsSolutions-APIG1",
+                reason: "Not needed"
+            },
+            {
+                id: "AwsSolutions-APIG6",
+                reason: "Not needed"
+            }
+        ], true)
+
+        NagSuppressions.addResourceSuppressions(getByDocumentIdLambda, [
+            {
+                id: "AwsSolutions-IAM4",
+                reason: "Foundational permissions"
+            },
+            {
+                id: "AwsSolutions-IAM5",
+                reason: "Permissions managed by Lake Formation"
+            }
+        ], true)
+
+        NagSuppressions.addResourceSuppressions(indexAllLambdaRole, [
+            {
+                id: "AwsSolutions-IAM4",
+                reason: "Foundational permissions"
+            },
+            {
+                id: "AwsSolutions-IAM5",
+                reason: "Permissions managed by Lake Formation"
+            }
+        ], true)
     }
 }

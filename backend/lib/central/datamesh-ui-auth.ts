@@ -1,6 +1,7 @@
 import { IdentityPool, UserPoolAuthenticationProvider } from "@aws-cdk/aws-cognito-identitypool-alpha";
 import { CfnOutput, RemovalPolicy } from "aws-cdk-lib";
 import { UserPool, UserPoolClient } from "aws-cdk-lib/aws-cognito";
+import { NagSuppressions } from "cdk-nag";
 import { Construct } from "constructs";
 
 export class DataMeshUIAuth extends Construct {
@@ -15,6 +16,13 @@ export class DataMeshUIAuth extends Construct {
                 email: {
                     required: true
                 }
+            },
+            passwordPolicy: {
+                minLength: 8,
+                requireSymbols: true,
+                requireLowercase: true,
+                requireUppercase: true,
+                requireDigits: true
             }
         });
 
@@ -36,6 +44,13 @@ export class DataMeshUIAuth extends Construct {
         identityProvider.applyRemovalPolicy(RemovalPolicy.DESTROY);
 
         this.identityPool = identityProvider;
+
+        NagSuppressions.addResourceSuppressions(userPool, [
+            {
+                id: "AwsSolutions-COG3",
+                reason: "Advanced security not required"
+            }
+        ])
 
         new CfnOutput(this, "CognitoAuthRoleArn", {
             value: identityProvider.authenticatedRole.roleArn
