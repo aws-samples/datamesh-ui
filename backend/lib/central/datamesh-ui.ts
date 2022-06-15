@@ -3,14 +3,14 @@ import { UserPool, UserPoolClient } from "aws-cdk-lib/aws-cognito";
 import { Effect, IRole, ManagedPolicy, Policy, PolicyDocument, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
 import { Construct } from "constructs";
 import {App, CodeCommitSourceCodeProvider, CustomRule, GitHubSourceCodeProvider, RedirectStatus} from "@aws-cdk/aws-amplify-alpha";
-import { CfnOutput, SecretValue, Stack } from "aws-cdk-lib";
+import { CfnOutput, RemovalPolicy, SecretValue, Stack } from "aws-cdk-lib";
 import { BuildSpec } from "aws-cdk-lib/aws-codebuild";
 import { Code, Repository } from "aws-cdk-lib/aws-codecommit";
 import { CallAwsService } from "aws-cdk-lib/aws-stepfunctions-tasks";
 import { JsonPath, Map, Pass, StateMachine, StateMachineType } from "aws-cdk-lib/aws-stepfunctions";
 import { EventField, Rule, RuleTargetInput } from "aws-cdk-lib/aws-events";
 import { SfnStateMachine } from "aws-cdk-lib/aws-events-targets";
-import { AttributeType, BillingMode, Table } from "aws-cdk-lib/aws-dynamodb";
+import { AttributeType, BillingMode, Table, TableEncryption } from "aws-cdk-lib/aws-dynamodb";
 const util = require("util");
 
 export interface DataMeshUIProps {
@@ -148,7 +148,9 @@ export class DataMeshUI extends Construct {
                     name: "dbTableName",
                     type: AttributeType.STRING
                 },
-                billingMode: BillingMode.PAY_PER_REQUEST
+                billingMode: BillingMode.PAY_PER_REQUEST,
+                encryption: TableEncryption.AWS_MANAGED,
+                removalPolicy: RemovalPolicy.DESTROY
             });
 
             const gsiStatusIndexName = "DPMRegisterProductTable-StatusIndex";
@@ -164,6 +166,7 @@ export class DataMeshUI extends Construct {
                     type: AttributeType.NUMBER
                 }
             })
+
 
             uiPayload.InfraStack.RegisterProductTable = {
                 "Name": registerProductTable.tableName,

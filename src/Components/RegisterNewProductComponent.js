@@ -56,6 +56,11 @@ function RegisterNewProductComponent() {
         if (accountId && dbName && ownerName && isProductListValid()) {
             const credentials = await Auth.currentCredentials();
             const sfnClient = new SFNClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
+            const formattedProducts = products.map((prod) => {
+                prod.location_key = prod.location.substring(5);
+
+                return prod;
+            })
             await sfnClient.send(new StartExecutionCommand({
                 stateMachineArn: dpmStateMachineArn,
                 input: JSON.stringify({
@@ -64,7 +69,7 @@ function RegisterNewProductComponent() {
                     "producer_acc_id": accountId,
                     "product_owner_name": ownerName,
                     "product_pii_flag": piiFlag.value,
-                    "tables": products
+                    "tables": formattedProducts
                 })
             }))
 
