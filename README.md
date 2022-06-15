@@ -3,7 +3,7 @@
 To deploy the UI, you need backend components from 2 locations, these are as follows:
 
 1. [Analytics Reference Architecture](https://github.com/aws-samples/aws-analytics-reference-architecture)
-2. [Backend for Data Mesh UI](https://gitlab.aws.dev/jantan/datamesh-ui)
+2. [Backend for Data Mesh UI](https://github.com/aws-samples/datamesh-ui)
 
 ## Setup
 
