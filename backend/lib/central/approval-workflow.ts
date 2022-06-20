@@ -422,6 +422,11 @@ export class ApprovalWorkflow extends Construct {
                     statements: [
                         new PolicyStatement({
                             effect: Effect.ALLOW,
+                            actions: ["events:Put*"],
+                            resources: [centralApprovalEventBus.eventBusArn]
+                        }),
+                        new PolicyStatement({
+                            effect: Effect.ALLOW,
                             actions: ["iam:PassRole"],
                             resources: [eventBridgeCrossAccountRole.roleArn]
                         })
