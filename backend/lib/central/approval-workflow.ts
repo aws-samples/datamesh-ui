@@ -303,6 +303,7 @@ export class ApprovalWorkflow extends Construct {
                       "Detail": {
                         "central_database_name.$": "$.source.database",
                         "database_name.$": "$.derivedDbName.Payload.raw_db",
+                        "producer_acc_id.$": "$.derivedDbName.Payload.producer_acc_id",
                         "table_names.$": "States.Array($.source.table)"
                       },
                       "DetailType.$": "States.Format('{}_createResourceLinks', $.target.account_id)",

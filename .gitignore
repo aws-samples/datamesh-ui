@@ -34,6 +34,9 @@ scoutsuite-report/
 
 *-output.json
 
+
+dq/*.json
+
 #amplify-do-not-edit-begin
 amplify/\#current-cloud-backend
 amplify/.config/local-*
@@ -54,5 +57,3 @@ amplifytools.xcconfig
 .secret-*
 **.sample
 #amplify-do-not-edit-end
-
-dq/*.json
