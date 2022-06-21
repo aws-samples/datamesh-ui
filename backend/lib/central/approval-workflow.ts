@@ -417,13 +417,14 @@ export class ApprovalWorkflow extends Construct {
 
             const lfAdminRole = Role.fromRoleArn(this, "DPMLFAdminRole", props.dpmStateMachineRoleArn);
 
+            const approvalRuleArn = util.format("arn:aws:events:%s:%s:rule/%s/*", Stack.of(this).region, Stack.of(this).account, centralApprovalEventBus.eventBusName);
             lfAdminRole.attachInlinePolicy(new Policy(this, "eventBridgePassRolePolicy", {
                 document: new PolicyDocument({
                     statements: [
                         new PolicyStatement({
                             effect: Effect.ALLOW,
                             actions: ["events:Put*"],
-                            resources: [centralApprovalEventBus.eventBusArn]
+                            resources: [centralApprovalEventBus.eventBusArn, approvalRuleArn]
                         }),
                         new PolicyStatement({
                             effect: Effect.ALLOW,
