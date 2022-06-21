@@ -303,6 +303,7 @@ export class ApprovalWorkflow extends Construct {
                       "Detail": {
                         "central_database_name.$": "$.source.database",
                         "database_name.$": "$.derivedDbName.Payload.raw_db",
+                        "producer_acc_id.$": "$.derivedDbName.Payload.producer_acc_id",
                         "table_names.$": "States.Array($.source.table)"
                       },
                       "DetailType.$": "States.Format('{}_createResourceLinks', $.target.account_id)",
@@ -416,9 +417,15 @@ export class ApprovalWorkflow extends Construct {
 
             const lfAdminRole = Role.fromRoleArn(this, "DPMLFAdminRole", props.dpmStateMachineRoleArn);
 
+            const approvalRuleArn = util.format("arn:aws:events:%s:%s:rule/%s/*", Stack.of(this).region, Stack.of(this).account, centralApprovalEventBus.eventBusName);
             lfAdminRole.attachInlinePolicy(new Policy(this, "eventBridgePassRolePolicy", {
                 document: new PolicyDocument({
                     statements: [
+                        new PolicyStatement({
+                            effect: Effect.ALLOW,
+                            actions: ["events:Put*"],
+                            resources: [centralApprovalEventBus.eventBusArn, approvalRuleArn]
+                        }),
                         new PolicyStatement({
                             effect: Effect.ALLOW,
                             actions: ["iam:PassRole"],
