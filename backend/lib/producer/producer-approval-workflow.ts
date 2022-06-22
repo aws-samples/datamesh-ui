@@ -97,6 +97,11 @@ export class ProducerApprovalWorkflow extends Construct {
                             effect: Effect.ALLOW,
                             actions: ["sns:Publish"],
                             resources: [snsTopic.topicArn]
+                        }),
+                        new PolicyStatement({
+                            effect: Effect.ALLOW,
+                            actions: ["kms:GenerateDataKey", "kms:Decrypt"],
+                            resources: [topicKey.keyArn]
                         })
                     ]
                 })
