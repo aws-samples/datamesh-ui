@@ -49,6 +49,17 @@ export class DataMeshUICentralStack extends Stack {
             }
         );
 
+        const centralOpensearchVpcCidrRange = new CfnParameter(
+            this,
+            "centralOpensearchSize",
+            {
+                type: "String",
+                description:
+                    "VPC CIDR range for the VPC of the OpenSearch cluster",
+                default: "10.37.0.0/16",
+            }
+        );
+
         const approvalWorkflow = new ApprovalWorkflow(
             this,
             "ApprovalWorkflow",
@@ -77,6 +88,7 @@ export class DataMeshUICentralStack extends Stack {
                 opensearchDataNodeInstanceSize:
                     centralOpensearchSize.valueAsString,
                 userPool: dataMeshUIAuth.userPool,
+                vpcCidrRange: centralOpensearchVpcCidrRange.valueAsString,
             }
         );
 
