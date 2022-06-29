@@ -49,16 +49,10 @@ export class DataMeshUICentralStack extends Stack {
             }
         );
 
-        const centralOpensearchVpcCidrRange = new CfnParameter(
-            this,
-            "centralOpensearchVpcCidrRange",
-            {
-                type: "String",
-                description:
-                    "VPC CIDR range for the VPC of the OpenSearch cluster",
-                default: "10.37.0.0/16",
-            }
-        );
+        // VPC CIDR ranges cannot be passed as CfnParameters (see https://github.com/aws/aws-cdk/issues/3617)
+        const centralOpensearchVpcCidrRange =
+            this.node.tryGetContext("centralOpensearchVpcCidrRange") ||
+            "10.37.0.0/16";
 
         const approvalWorkflow = new ApprovalWorkflow(
             this,
@@ -88,7 +82,7 @@ export class DataMeshUICentralStack extends Stack {
                 opensearchDataNodeInstanceSize:
                     centralOpensearchSize.valueAsString,
                 userPool: dataMeshUIAuth.userPool,
-                vpcCidrRange: centralOpensearchVpcCidrRange.valueAsString,
+                vpcCidrRange: centralOpensearchVpcCidrRange,
             }
         );
 
