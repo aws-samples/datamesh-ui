@@ -51,7 +51,7 @@ export class DataMeshUICentralStack extends Stack {
 
         const centralOpensearchVpcCidrRange = new CfnParameter(
             this,
-            "centralOpensearchSize",
+            "centralOpensearchVpcCidrRange",
             {
                 type: "String",
                 description:
