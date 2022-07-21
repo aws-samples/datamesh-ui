@@ -37,7 +37,7 @@
     "deploy-producer": "cd backend && yarn install && cdk deploy DataMeshUIProducerStack --require-approval never",
     "deploy-ui": "yarn install && amplify init && ./deployment/generate-ui-payload.js backend/central-output.json | amplify import auth --headless && amplify push -y && amplify add hosting && amplify publish && ./post-ui-deployment.js",
     "start": "react-scripts start",
-    "build": "set \"INLINE_RUNTIME_CHUNK=false\" && react-scripts build",
+    "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "clean-central-predestroy": "./clean-central-predestroy.js",
