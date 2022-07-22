@@ -15,7 +15,7 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import Amplify, {Auth} from "aws-amplify";
+import {Amplify, Auth} from "aws-amplify";
 import { useEffect, useState } from "react";
 import { SFNClient, ListExecutionsCommand } from "@aws-sdk/client-sfn";
 import { Header, Table, Link, Box } from "@awsui/components-react";
