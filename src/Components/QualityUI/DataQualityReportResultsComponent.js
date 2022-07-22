@@ -16,7 +16,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import { GlueClient, GetTableCommand } from "@aws-sdk/client-glue";
-import Amplify, { Auth, API } from "aws-amplify";
+import {Amplify, Auth, API } from "aws-amplify";
 import { useEffect, useState } from "react";
 import {
     Flashbar,

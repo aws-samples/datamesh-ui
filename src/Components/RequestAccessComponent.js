@@ -16,8 +16,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import { SFNClient, StartExecutionCommand } from "@aws-sdk/client-sfn";
-import { useEffect, useState } from "react";
-import Amplify, { Auth } from "aws-amplify";
+import { useState } from "react";
+import {Amplify, Auth } from "aws-amplify";
 import { Button, Container, Form, FormField, Header, Input } from "@awsui/components-react";
 const cfnOutput = require("../cfn-output.json");
 

@@ -18,16 +18,15 @@
 
 import { Box, Button, Header, Icon, SpaceBetween } from "@awsui/components-react";
 import RegisteredListComponent from "./RegisteredProductListComponent";
-import {useState, useEffect} from "react";
-import { Redirect } from "react-router-dom";
+import {useState} from "react";
 
 function ProductRegistrationListComponent() {
 
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-    const doRefresh = async(event) => {
-        setRefreshTrigger(refreshTrigger + 1);
-    }
+    // const doRefresh = async(event) => {
+    //     setRefreshTrigger(refreshTrigger + 1);
+    // }
 
     const doRegisterNew = () => {
         window.location.href="/product-registration/new"

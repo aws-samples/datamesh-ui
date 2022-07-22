@@ -16,7 +16,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import axios from "axios";
-import Amplify, { Auth } from "aws-amplify";
+import {Amplify, Auth } from "aws-amplify";
 import { useState } from "react";
 import {
     Table,

@@ -19,7 +19,7 @@ import { GlueClient, GetTablesCommand, GetDatabasesCommand, GetDatabaseCommand }
 import { ColumnLayout, Box, BreadcrumbGroup, Flashbar, Header, Link, Table } from "@awsui/components-react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
-import Amplify, { Auth } from "aws-amplify";
+import {Amplify, Auth } from "aws-amplify";
 import DatabaseDetailsComponent from "./DatabaseDetailsComponent";
 import RequestAccessComponent from "./RequestAccessComponent";
 

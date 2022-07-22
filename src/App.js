@@ -18,11 +18,11 @@
 import logo from './logo.svg';
 import './App.css';
 import awsconfig from './aws-exports';
-import {AmplifySignIn, AmplifyAuthenticator} from '@aws-amplify/ui-react'
-import Amplify from 'aws-amplify';
+import {Authenticator} from '@aws-amplify/ui-react'
+import {Amplify} from 'aws-amplify';
 import MainComponent from './Components/MainComponent';
-import { useEffect, useState } from 'react';
-import {AuthState, onAuthUIStateChange} from '@aws-amplify/ui-components';
+import '@aws-amplify/ui-react/styles.css';
+import { Box } from '@awsui/components-react';
 const cfnOutput = require("./cfn-output.json");
 
 Amplify.configure(awsconfig);
@@ -40,19 +40,25 @@ Amplify.configure({
 
 function App() {
 
-  const [authState, setAuthState] = useState();
-  const [user, setUser] = useState();
+  // const [authState, setAuthState] = useState();
+  // const [user, setUser] = useState();
 
-  useEffect(() => {
-    return onAuthUIStateChange((nextAuthState, authData) => {
-      setAuthState(nextAuthState);
-      setUser(authData);
-    })
-  }, []);
+  // useEffect(() => {
+  //   return onAuthUIStateChange((nextAuthState, authData) => {
+  //     setAuthState(nextAuthState);
+  //     setUser(authData);
+  //   })
+  // }, []);
 
-  const component = (authState === AuthState.SignedIn && user ? <MainComponent /> : <AmplifyAuthenticator><AmplifySignIn slot="sign-in" hideSignUp></AmplifySignIn></AmplifyAuthenticator>);
+  // const component = (authState === AuthState.SignedIn && user ? <MainComponent /> : <AmplifyAuthenticator><AmplifySignIn slot="sign-in" hideSignUp></AmplifySignIn></AmplifyAuthenticator>);
 
-  return component;
+  // return component;
+
+  return (
+    <Authenticator variation='modal' hideSignUp={true}>
+      <MainComponent />
+    </Authenticator>
+  )
 }
 
 export default App;

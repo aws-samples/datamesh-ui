@@ -16,7 +16,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import { useEffect, useState } from "react";
-import Amplify, { Auth } from "aws-amplify";
+import {Amplify, Auth } from "aws-amplify";
 import { GetDatabaseCommand, GlueClient } from "@aws-sdk/client-glue";
 import { Badge, ColumnLayout, Container, Header, SpaceBetween } from "@awsui/components-react";
 import ValueWithLabel from "./ValueWithLabel";

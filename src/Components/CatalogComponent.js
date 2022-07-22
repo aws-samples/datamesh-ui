@@ -15,7 +15,7 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import Amplify, { Auth } from "aws-amplify";
+import { Amplify, Auth } from "aws-amplify";
 import { useEffect, useState } from "react";
 import {GlueClient, GetDatabasesCommand} from '@aws-sdk/client-glue';
 import { Box, Header, Link, Table } from "@awsui/components-react";

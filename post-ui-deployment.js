@@ -18,12 +18,42 @@ const execPostUIDeployment = async() => {
         clientParams.credentials = fromIni({profile: awsInfo.profileName});
     }
 
+    const customHeaders = {
+        "customHeaders":[
+           {
+              "pattern":"**",
+              "headers":[
+                 {
+                    "key":"Strict-Transport-Security",
+                    "value":"max-age=31536000; includeSubDomains"
+                 },
+                 {
+                    "key":"X-Frame-Options",
+                    "value":"SAMEORIGIN"
+                 },
+                 {
+                    "key":"X-XSS-Protection",
+                    "value":"1; mode=block"
+                 },
+                 {
+                    "key":"X-Content-Type-Options",
+                    "value":"nosniff"
+                 },
+                 {
+                    "key":"Content-Security-Policy",
+                    "value":"default-src self *.amplifyapp.com *.amazonaws.com"
+                 }
+              ]
+           }
+        ]
+     }
+
     const hosting = teamProviderInfo[envName].categories.hosting.amplifyhosting;
     const amplifyClient = new AmplifyClient(clientParams);
     await amplifyClient.send(new UpdateAppCommand({
         appId: hosting.appId, 
         customRules: [{source: "</^[^.]+$|\\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff|woff2|ttf|map|json)$)([^.]+$)/>", target:"/index.html", status: 200}],
-        customHeaders: '{"customHeaders": [{"pattern": "**", headers: [{"key": "Strict-Transport-Security", "value": "max-age=31536000; includeSubDomains"}, {"key": "X-Frame-Options", "value": "SAMEORIGIN"}, {"key": "X-XSS-Protection", "value": "1; mode=block"}, {"key": "X-Content-Type-Options", "value": "nosniff"}]}]}'
+        customHeaders: JSON.stringify(customHeaders)
     }));
 }
 

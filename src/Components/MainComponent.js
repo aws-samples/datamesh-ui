@@ -15,7 +15,7 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import { AppLayout, Button, SideNavigation } from "@awsui/components-react";
+import { AppLayout, SideNavigation } from "@awsui/components-react";
 import { BrowserRouter, Switch, Route } from "react-router-dom";
 import CatalogComponent from "./CatalogComponent";
 import CatalogTablesComponent from "./CatalogTablesComponent";
