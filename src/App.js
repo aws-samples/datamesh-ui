@@ -19,7 +19,7 @@ import logo from './logo.svg';
 import './App.css';
 import awsconfig from './aws-exports';
 import {AmplifySignIn, AmplifyAuthenticator} from '@aws-amplify/ui-react'
-import Amplify from 'aws-amplify';
+import {Amplify} from 'aws-amplify';
 import MainComponent from './Components/MainComponent';
 import { useEffect, useState } from 'react';
 import {AuthState, onAuthUIStateChange} from '@aws-amplify/ui-components';
