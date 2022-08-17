@@ -27,7 +27,7 @@ import {
     SpaceBetween,
     Header,
     Table,
-} from "@awsui/components-react";
+} from "@cloudscape-design/components";
 import { useParams } from "react-router";
 import DataQualityChartComponent from "./DataQualityChartComponent";
 import DataQualityBadgeStatus from "./DataQualityBadgeStatus";

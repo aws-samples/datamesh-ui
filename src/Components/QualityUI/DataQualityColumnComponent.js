@@ -15,7 +15,7 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import { Box, Table, ExpandableSection } from "@awsui/components-react";
+import { Box, Table, ExpandableSection } from "@cloudscape-design/components";
 import DataQualityBadgeStatus from "./DataQualityBadgeStatus";
 
 export default function DataQualityColumnComponent({column_results}) {

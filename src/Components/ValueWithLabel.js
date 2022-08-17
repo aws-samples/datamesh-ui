@@ -15,7 +15,7 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import { Box } from "@awsui/components-react";
+import { Box } from "@cloudscape-design/components";
 const ValueWithLabel = ({ label, children }) => (
     <div>
       <Box margin={{ bottom: 'xxxs' }} color="text-label">

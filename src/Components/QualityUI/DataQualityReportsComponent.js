@@ -28,7 +28,7 @@ import {
     Header,
     Link,
     Table,
-} from "@awsui/components-react";
+} from "@cloudscape-design/components";
 import { useParams } from "react-router";
 import ValueWithLabel from "../ValueWithLabel";
 import DatabaseDetailsComponent from "../DatabaseDetailsComponent";

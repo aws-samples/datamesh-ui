@@ -27,7 +27,7 @@ import {
     Flashbar,
     Header,
     SpaceBetween,
-} from "@awsui/components-react";
+} from "@cloudscape-design/components";
 import ValueWithLabel from "./ValueWithLabel";
 import BadgeStatus from "./BadgeStatus";
 import axios from "axios";

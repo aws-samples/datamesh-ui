@@ -1,3 +1,4 @@
+import { HttpUserPoolAuthorizer } from "@aws-cdk/aws-apigatewayv2-authorizers-alpha";
 import { IdentityPool, UserPoolAuthenticationProvider } from "@aws-cdk/aws-cognito-identitypool-alpha";
 import { CfnOutput, RemovalPolicy } from "aws-cdk-lib";
 import { UserPool, UserPoolClient } from "aws-cdk-lib/aws-cognito";
@@ -7,6 +8,7 @@ import { Construct } from "constructs";
 export class DataMeshUIAuth extends Construct {
     readonly userPool: UserPool;
     readonly identityPool: IdentityPool;
+    readonly httpApiUserPoolAuthorizer: HttpUserPoolAuthorizer;
 
     constructor(scope: Construct, id: string) {
         super(scope, id);
@@ -67,5 +69,9 @@ export class DataMeshUIAuth extends Construct {
         new CfnOutput(this, "IdentityPoolId", {
             value: identityProvider.identityPoolId
         })
+
+        this.httpApiUserPoolAuthorizer = new HttpUserPoolAuthorizer("WorkflowHttpAPIUserPoolAuthorizer", userPool, {
+            userPoolClients: [client]
+        });
     }
 }

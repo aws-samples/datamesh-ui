@@ -1,27 +1,26 @@
-import { IdentityPool, UserPoolAuthenticationProvider } from "@aws-cdk/aws-cognito-identitypool-alpha";
-import { UserPool, UserPoolClient } from "aws-cdk-lib/aws-cognito";
-import { Effect, IRole, ManagedPolicy, Policy, PolicyDocument, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
+import { IdentityPool } from "@aws-cdk/aws-cognito-identitypool-alpha";
+import { UserPool } from "aws-cdk-lib/aws-cognito";
+import { Effect, ManagedPolicy, Policy, PolicyDocument, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
 import { Construct } from "constructs";
-import {App, CodeCommitSourceCodeProvider, CustomRule, GitHubSourceCodeProvider, RedirectStatus} from "@aws-cdk/aws-amplify-alpha";
-import { CfnOutput, RemovalPolicy, SecretValue, Stack } from "aws-cdk-lib";
-import { BuildSpec } from "aws-cdk-lib/aws-codebuild";
-import { Code, Repository } from "aws-cdk-lib/aws-codecommit";
+import { CfnOutput, RemovalPolicy, Stack } from "aws-cdk-lib";
 import { CallAwsService } from "aws-cdk-lib/aws-stepfunctions-tasks";
 import { JsonPath, Map, Pass, StateMachine, StateMachineType } from "aws-cdk-lib/aws-stepfunctions";
-import { EventField, Rule, RuleTargetInput } from "aws-cdk-lib/aws-events";
+import { Rule } from "aws-cdk-lib/aws-events";
 import { SfnStateMachine } from "aws-cdk-lib/aws-events-targets";
 import { AttributeType, BillingMode, Table, TableEncryption } from "aws-cdk-lib/aws-dynamodb";
 const util = require("util");
 
 export interface DataMeshUIProps {
-    stateMachineArn: string,
-    stateMachineName: string,
-    dpmStateMachineArn?: string,
-    dpmStateMachineRoleArn?: string,
-    searchApiUrl: string,
+    stateMachineArn: string
+    stateMachineName: string
+    searchApiUrl: string
     dataQualityHttpApiUrl: string
-    userPool: UserPool,
+    userPool: UserPool
     identityPool: IdentityPool
+    tbacSharingWorkflow: StateMachine
+    workflowApiUrl: string
+    dpmStateMachineArn?: string
+    dpmStateMachineRoleArn?: string
 }
 
 export class DataMeshUI extends Construct {
@@ -33,13 +32,11 @@ export class DataMeshUI extends Construct {
             "InfraStack": {
                 "StateMachineArn": props.stateMachineArn,
                 "DataQualityHttpApiUrl": props.dataQualityHttpApiUrl,
-                "SearchApiUrl": props.searchApiUrl
+                "SearchApiUrl": props.searchApiUrl,
+                "TbacStateMachineArn": props.tbacSharingWorkflow.stateMachineArn,
+                "WorkflowApiUrl": props.workflowApiUrl
             }
         }
-
-  
-
-        
 
         const stateMachineArn = props.stateMachineArn;
         props.identityPool.authenticatedRole.attachInlinePolicy(new Policy(this, "DataMeshUIAuthRoleInlinePolicy", {
@@ -68,6 +65,13 @@ export class DataMeshUI extends Construct {
                         "states:DescribeExecution"
                     ],
                     resources: [util.format("arn:aws:states:%s:%s:execution:%s:*", Stack.of(this).region, Stack.of(this).account, props.stateMachineName)]
+                }),
+                new PolicyStatement({
+                    effect: Effect.ALLOW,
+                    actions: [
+                        "lakeformation:GetResourceLFTags"
+                    ],
+                    resources: ["*"]
                 })
             ]
         }));

@@ -18,8 +18,9 @@
 import { useEffect, useState } from "react";
 import {Amplify, Auth } from "aws-amplify";
 import { GetDatabaseCommand, GlueClient } from "@aws-sdk/client-glue";
-import { Badge, ColumnLayout, Container, Header, SpaceBetween } from "@awsui/components-react";
+import { Badge, ColumnLayout, Container, Header, SpaceBetween } from "@cloudscape-design/components";
 import ValueWithLabel from "./ValueWithLabel";
+import ResourceLFTagsComponent from "./TBAC/ResourceLFTagsComponent";
 
 const config = Amplify.configure();
 
@@ -54,6 +55,9 @@ function DatabaseDetailsComponent({dbName}) {
                         </ValueWithLabel>
                         <ValueWithLabel label="Data Owner Account ID">
                             {(db.Parameters && "data_owner" in db.Parameters) ? db.Parameters.data_owner : "n/a"}   
+                        </ValueWithLabel>
+                        <ValueWithLabel label="Tags">
+                            <ResourceLFTagsComponent resourceType="database" resourceName={dbName} />
                         </ValueWithLabel>
                     </SpaceBetween>
                 </ColumnLayout>

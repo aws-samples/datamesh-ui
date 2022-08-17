@@ -16,7 +16,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { Box, Button, Header, Icon, SpaceBetween } from "@awsui/components-react";
+import { Box, Button, Header, Icon, SpaceBetween } from "@cloudscape-design/components";
 import RegisteredListComponent from "./RegisteredProductListComponent";
 import {useState} from "react";
 

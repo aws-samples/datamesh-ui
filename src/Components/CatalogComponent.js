@@ -18,14 +18,17 @@
 import { Amplify, Auth } from "aws-amplify";
 import { useEffect, useState } from "react";
 import {GlueClient, GetDatabasesCommand} from '@aws-sdk/client-glue';
-import { Box, Header, Link, Table } from "@awsui/components-react";
-
+import { Box, Button, Header, Link, SpaceBetween, Table } from "@cloudscape-design/components";
+import ResourceLFTagsComponent from "./TBAC/ResourceLFTagsComponent";
+const cfnOutput = require("../cfn-output.json")
 const config = Amplify.configure();
+const axios = require("axios").default;
 
 function CatalogComponent(props) {
     const [databases, setDatabases] = useState([]);
-    const [response, setResponse] = useState();
+    const [response, setResponse] = useState(null);
     const [nextToken, setNextToken] = useState(null);
+    const [refreshTrigger, setRefreshTrigger] = useState(0)
 
     useEffect(async() => {
         const credentials = await Auth.currentCredentials();
@@ -33,35 +36,59 @@ function CatalogComponent(props) {
         const results = await glue.send(new GetDatabasesCommand({NextToken: nextToken}));
         setDatabases(databases => databases.concat(results.DatabaseList));
         setResponse(results);
-    }, [nextToken]);
+    }, [refreshTrigger]);
+
+    const refreshLfTags = async() => {
+        const currentSession = await Auth.currentSession();
+        const apiUrl = cfnOutput.InfraStack.WorkflowApiUrl + "/tags/sync-permissions";
+
+        await axios({
+            method: "POST",
+            url: apiUrl,
+            headers: {
+                "Authorization": currentSession.getAccessToken().getJwtToken()
+            }
+        })
+
+        setDatabases([])
+        setNextToken(null)
+        setResponse(null)
+        setRefreshTrigger(refreshTrigger + 1)
+    }
 
     return (
         <div>
-            <Table
-                footer={<Box textAlign="center" display={(response && response.NextToken) ? "block" : "none"}><Link variant="primary" onFollow={(event) => setNextToken(response.NextToken)}>View More</Link></Box>}
-                columnDefinitions={[
-                    {
-                        header: "Name",
-                        cell: item => item.Name
+            <Box margin={{top: "l"}}>
+                <Table
+                    footer={<Box textAlign="center" display={(response && response.NextToken) ? "block" : "none"}><Link variant="primary" onFollow={(event) => {setNextToken(response.NextToken);setRefreshTrigger(refreshTrigger + 1);} }>View More</Link></Box>}
+                    columnDefinitions={[
+                        {
+                            header: "Name",
+                            cell: item => item.Name
 
-                    },
-                    {
-                        header: "Location",
-                        cell: item => item.LocationUri
-                    },
-                    {
-                        header: "Owner",
-                        cell: item => item.Parameters.data_owner_name + " ("+item.Parameters.data_owner+")"
-                    },
-                    {
-                        header: "Actions",
-                        cell: item => <Link variant="primary" href={"/tables/"+item.Name}>Request Access</Link>
-                    }
-                ]}
+                        },
+                        {
+                            header: "Tags",
+                            cell: item => <ResourceLFTagsComponent resourceType="database" resourceName={item.Name} />
+                        },
+                        {
+                            header: "Owner",
+                            cell: item => item.Parameters.data_owner_name + " ("+item.Parameters.data_owner+")"
+                        },
+                        {
+                            header: "Actions",
+                            cell: item => <Link variant="primary" href={"/tables/"+item.Name}>Request Access</Link>
+                        }
+                    ]}
 
-                items={databases}
-                header={<Header variant="h2">Products</Header>}
-             />
+                    items={databases}
+                    header={<Header variant="h2" actions={
+                        <SpaceBetween direction="horizontal" size="s">
+                            <Button iconName="refresh" onClick={refreshLfTags}>Refresh</Button>
+                        </SpaceBetween>
+                    }>Products</Header>}
+                />
+             </Box>
         </div>
     );
 }

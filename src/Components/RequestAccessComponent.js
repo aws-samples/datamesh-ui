@@ -18,7 +18,7 @@
 import { SFNClient, StartExecutionCommand } from "@aws-sdk/client-sfn";
 import { useState } from "react";
 import {Amplify, Auth } from "aws-amplify";
-import { Button, Container, Form, FormField, Header, Input } from "@awsui/components-react";
+import { Button, Container, Form, FormField, Header, Input } from "@cloudscape-design/components";
 const cfnOutput = require("../cfn-output.json");
 
 const config = Amplify.configure();

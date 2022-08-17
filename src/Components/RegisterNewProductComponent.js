@@ -16,7 +16,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import { SFNClient, StartExecutionCommand } from "@aws-sdk/client-sfn";
-import { Box, Button, Container, Form, FormField, Header, Input, Select, SpaceBetween, Table, Icon } from "@awsui/components-react";
+import { Box, Button, Container, Form, FormField, Header, Input, Select, SpaceBetween, Table, Icon } from "@cloudscape-design/components";
 import {Amplify, Auth } from "aws-amplify";
 import {useState} from 'react';
 import {v4 as uuid} from 'uuid';

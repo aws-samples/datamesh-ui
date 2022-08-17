@@ -17,7 +17,7 @@
  */
 
 import { DynamoDBClient, QueryCommand } from "@aws-sdk/client-dynamodb";
-import { Header, Table } from "@awsui/components-react";
+import { Header, Table } from "@cloudscape-design/components";
 import {Amplify, Auth } from "aws-amplify";
 import { useEffect, useState } from "react";
 const cfnOutput = require("../cfn-output.json")

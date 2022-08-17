@@ -1,7 +1,7 @@
-import { HttpApi } from "@aws-cdk/aws-apigatewayv2-alpha";
+import { CorsHttpMethod, HttpApi } from "@aws-cdk/aws-apigatewayv2-alpha";
 import { HttpLambdaIntegration } from "@aws-cdk/aws-apigatewayv2-integrations-alpha";
 import { IdentityPool, UserPoolAuthenticationProvider } from "@aws-cdk/aws-cognito-identitypool-alpha";
-import { RemovalPolicy, Stack } from "aws-cdk-lib";
+import { Duration, RemovalPolicy, Stack } from "aws-cdk-lib";
 import { UserPool } from "aws-cdk-lib/aws-cognito";
 import { EventBus, EventField, Rule, RuleTargetInput } from "aws-cdk-lib/aws-events";
 import { SfnStateMachine } from "aws-cdk-lib/aws-events-targets";
@@ -28,6 +28,9 @@ export class ApprovalWorkflow extends Construct {
     readonly workflowLambdaTableDetailsRole: Role;
     
     readonly stateMachine: StateMachine;
+    readonly centralApprovalEventBus: EventBus;
+    readonly approvalBaseUrl: string;
+    readonly httpApi: HttpApi;
 
     constructor(scope: Construct, id: string, props:ApprovalWorkflowProps) {
         super(scope, id);
@@ -36,6 +39,8 @@ export class ApprovalWorkflow extends Construct {
         const centralApprovalEventBus = new EventBus(this, "CentralApprovalEventBus", {
             eventBusName: util.format("%s_centralApprovalBus", Stack.of(this).account)
         });
+
+        this.centralApprovalEventBus = centralApprovalEventBus;
 
         centralApprovalEventBus.applyRemovalPolicy(RemovalPolicy.DESTROY);
 
@@ -192,7 +197,16 @@ export class ApprovalWorkflow extends Construct {
             role: this.workflowLambdaSMApproverRole
         });
 
-        const httpApi = new HttpApi(this, "DataLakeWorkflowAPIGW");
+        const httpApi = new HttpApi(this, "DataLakeWorkflowAPIGW", {
+            corsPreflight: {
+                allowOrigins: ["*"],
+                allowHeaders: ["Authorization"],
+                allowMethods: [
+                    CorsHttpMethod.ANY
+                ],
+                maxAge: Duration.days(1)
+            }
+        });
 
         httpApi.addRoutes({
             path: '/workflow/update-state',
@@ -234,6 +248,9 @@ export class ApprovalWorkflow extends Construct {
                 "CENTRAL_APPROVAL_BUS_NAME": centralApprovalEventBus.eventBusName
             }
         });
+
+        this.approvalBaseUrl = httpApi.apiEndpoint+"/workflow";
+        this.httpApi = httpApi;
 
         const workflowGetTableDetails = new Function(this, "WorkflowGetTableDetails", {
             runtime: Runtime.NODEJS_14_X,
