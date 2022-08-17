@@ -22,7 +22,6 @@ import {Authenticator} from '@aws-amplify/ui-react'
 import {Amplify} from 'aws-amplify';
 import MainComponent from './Components/MainComponent';
 import '@aws-amplify/ui-react/styles.css';
-import { Box } from '@awsui/components-react';
 const cfnOutput = require("./cfn-output.json");
 
 Amplify.configure(awsconfig);
@@ -39,21 +38,6 @@ Amplify.configure({
 });
 
 function App() {
-
-  // const [authState, setAuthState] = useState();
-  // const [user, setUser] = useState();
-
-  // useEffect(() => {
-  //   return onAuthUIStateChange((nextAuthState, authData) => {
-  //     setAuthState(nextAuthState);
-  //     setUser(authData);
-  //   })
-  // }, []);
-
-  // const component = (authState === AuthState.SignedIn && user ? <MainComponent /> : <AmplifyAuthenticator><AmplifySignIn slot="sign-in" hideSignUp></AmplifySignIn></AmplifyAuthenticator>);
-
-  // return component;
-
   return (
     <Authenticator variation='modal' hideSignUp={true}>
       <MainComponent />

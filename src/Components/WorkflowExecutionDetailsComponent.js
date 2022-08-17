@@ -19,7 +19,7 @@ import {Amplify, Auth} from 'aws-amplify';
 import { useEffect, useState } from 'react';
 import { SFNClient, DescribeExecutionCommand } from '@aws-sdk/client-sfn';
 import { useParams } from 'react-router';
-import { Box, BreadcrumbGroup, ColumnLayout, Container, Flashbar, Header, SpaceBetween } from '@awsui/components-react';
+import { Box, BreadcrumbGroup, ColumnLayout, Container, Flashbar, Header, SpaceBetween } from '@cloudscape-design/components';
 import ValueWithLabel from './ValueWithLabel';
 import BadgeStatus from './BadgeStatus';
 

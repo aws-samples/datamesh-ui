@@ -1,0 +1,169 @@
+import { EventBus } from "aws-cdk-lib/aws-events";
+import { Effect, IRole, ManagedPolicy, Policy, PolicyDocument, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
+import { CfnDataLakeSettings } from "aws-cdk-lib/aws-lakeformation";
+import { Code, Function, Runtime } from "aws-cdk-lib/aws-lambda";
+import { Choice, Condition, IntegrationPattern, JsonPath, StateMachine, TaskInput } from "aws-cdk-lib/aws-stepfunctions";
+import { LambdaInvoke } from "aws-cdk-lib/aws-stepfunctions-tasks";
+import { Construct } from "constructs";
+
+export interface TbacSharingWorkflowProps {
+    dataDomainTagName?: string
+    confidentialityTagName?: string
+    cognitoAuthRole: IRole
+    centralApprovalEventBus: EventBus
+    approvalBaseUrl: string
+}
+
+export class TbacSharingWorkflow extends Construct {
+
+    readonly lfTagGrantPermissionsRole: Role
+    readonly tbacSharingWorkflow: StateMachine;
+
+    constructor(scope: Construct, id: string, props: TbacSharingWorkflowProps) {
+        super(scope, id);
+
+        const adjustGlueResourcePolicyRole = new Role(this, "AdjustGlueResourcePolicyRole", {
+            assumedBy: new ServicePrincipal("lambda.amazonaws.com"),
+            managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole")],
+            inlinePolicies: {
+                "GlueStatements": new PolicyDocument({
+                    statements: [
+                        new PolicyStatement({
+                            effect: Effect.ALLOW,
+                            actions: ["glue:GetResourcePolicy", "glue:PutResourcePolicy"],
+                            resources: ["*"]
+                        })
+                    ]
+                })
+            }
+        });
+
+        const adjustGlueResourcePolicyFunction = new Function(this, "AdjustGlueResourcePolicyFunction", {
+            runtime: Runtime.NODEJS_14_X,
+            handler: "index.handler",
+            role: adjustGlueResourcePolicyRole,
+            code: Code.fromAsset(__dirname+"/resources/lambda/LFTagAdjustGlueResourcePolicy")
+        });
+
+        const checkApprovalRequirementRole = new Role(this, "CheckApprovalRequirementRole", {
+            assumedBy: new ServicePrincipal("lambda.amazonaws.com"),
+            managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole")]
+        });
+
+        const checkApprovalRequirementFunction = new Function(this, "CheckApprovalRequirementFunction", {
+            runtime: Runtime.NODEJS_14_X,
+            handler: "index.handler",
+            role: checkApprovalRequirementRole,
+            code: Code.fromAsset(__dirname+"/resources/lambda/LFTagCheckApprovalRequirement")
+        });        
+
+        const grantPermissionRole = new Role(this, "LFTagGrantPermissionRole", {
+            assumedBy: new ServicePrincipal("lambda.amazonaws.com"),
+            managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole")],
+            inlinePolicies: {
+                "LakeFormationPermissions": new PolicyDocument({
+                    statements: [
+                        new PolicyStatement({
+                            effect: Effect.ALLOW,
+                            actions: ["lakeformation:GrantPermissions"],
+                            resources: ["*"]
+                        })
+                    ]
+                })
+            }
+        });
+
+        const grantPermissionFunction = new Function(this, "LFTagGrantPermissions", {
+            runtime: Runtime.NODEJS_14_X,
+            handler: "index.handler",
+            role: grantPermissionRole,
+            code: Code.fromAsset(__dirname+"/resources/lambda/LFTagGrantPermissions")
+        });
+
+        const invokeAdjustGlueResourcePolicy = new LambdaInvoke(this, "InvokeAdjustGlueResourcePolicy", {
+            lambdaFunction: adjustGlueResourcePolicyFunction,
+            resultPath: JsonPath.DISCARD,
+            payload: TaskInput.fromObject({
+                "accountId.$": "$.targetAccountId"
+            })
+        });
+
+        const invokeCheckApprovalRequirement = new LambdaInvoke(this, "InvokeCheckApprovalRequirement", {
+            lambdaFunction: checkApprovalRequirementFunction,
+            resultPath: "$.approvalCheck"
+        })
+
+        const invokeGrantPermissions = new LambdaInvoke(this, "InvokeGrantPermissions", {
+            lambdaFunction: grantPermissionFunction,
+            resultPath: JsonPath.DISCARD
+        
+        })
+
+        const sendApprovalRole = new Role(this, "SendApprovalRole", {
+            assumedBy: new ServicePrincipal("lambda.amazonaws.com"),
+            managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole")],
+            inlinePolicies: {
+                "AllowCentralApprovalBus": new PolicyDocument({
+                    statements: [
+                        new PolicyStatement({
+                            effect: Effect.ALLOW,
+                            actions: ["events:PutEvents"],
+                            resources: [props.centralApprovalEventBus.eventBusArn]
+                        })
+                    ]
+                })
+            }
+        });
+
+        const sendApprovalFunction = new Function(this, "SendApprovalFunction", {
+            runtime: Runtime.NODEJS_14_X,
+            handler: 'index.handler',
+            code: Code.fromAsset(__dirname+"/resources/lambda/LFTagSendApproval"),
+            role: sendApprovalRole,
+            environment: {
+                "API_GATEWAY_BASE_URL": props.approvalBaseUrl,
+                "CENTRAL_APPROVAL_BUS_NAME": props.centralApprovalEventBus.eventBusName
+            }
+        });
+
+        const invokeSendApprovalFunction = new LambdaInvoke(this, "InvokeSendApprovalFunction", {
+            lambdaFunction: sendApprovalFunction,
+            integrationPattern: IntegrationPattern.WAIT_FOR_TASK_TOKEN,
+            payload: TaskInput.fromObject({
+                "Input.$": "$",
+                "TaskToken": JsonPath.taskToken
+            }),
+            resultPath: JsonPath.DISCARD
+        })
+
+        const approvalChoice = new Choice(this, "approvalRequirementCheck");
+        approvalChoice.when(Condition.booleanEquals("$.approvalCheck.Payload.requires_approval", true), invokeSendApprovalFunction.next(invokeGrantPermissions))
+            .otherwise(invokeGrantPermissions)
+
+        invokeAdjustGlueResourcePolicy.next(invokeCheckApprovalRequirement).next(approvalChoice);
+
+        this.tbacSharingWorkflow = new StateMachine(this, "TbacSharingWorkflow", {
+            definition: invokeAdjustGlueResourcePolicy
+        });
+
+        this.lfTagGrantPermissionsRole = grantPermissionRole
+
+        props.cognitoAuthRole.attachInlinePolicy(new Policy(this, "TbacWorkflowPermission", {
+            statements: [
+                new PolicyStatement({
+                    effect: Effect.ALLOW,
+                    actions: ["states:StartExecution"],
+                    resources: [this.tbacSharingWorkflow.stateMachineArn]
+                })
+            ]
+        }))
+
+        new CfnDataLakeSettings(this, "LakeFormationSettings", {
+            admins: [
+                {
+                    dataLakePrincipalIdentifier: grantPermissionRole.roleArn
+                }
+            ]
+        });
+    }
+}

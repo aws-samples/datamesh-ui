@@ -25,7 +25,7 @@ import {
     Header,
     Link,
     Autosuggest,
-} from "@awsui/components-react";
+} from "@cloudscape-design/components";
 
 const cfnOutput = require("../cfn-output.json");
 const SearchApiUrl = cfnOutput.InfraStack.SearchApiUrl;

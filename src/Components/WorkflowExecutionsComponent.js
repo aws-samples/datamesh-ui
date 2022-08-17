@@ -18,7 +18,7 @@
 import {Amplify, Auth} from "aws-amplify";
 import { useEffect, useState } from "react";
 import { SFNClient, ListExecutionsCommand } from "@aws-sdk/client-sfn";
-import { Header, Table, Link, Box } from "@awsui/components-react";
+import { Header, Table, Link, Box } from "@cloudscape-design/components";
 import BadgeStatus from "./BadgeStatus";
 const cfnOutput = require("../cfn-output.json");
 

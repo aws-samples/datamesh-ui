@@ -19,10 +19,15 @@ import {Amplify, Auth} from "aws-amplify";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { GlueClient, GetTableCommand } from "@aws-sdk/client-glue";
-import { ColumnLayout, Container, Flashbar, Header, Link, Box, SpaceBetween, BreadcrumbGroup, Table, Button, Form, FormField, Input, Badge} from "@awsui/components-react";
+import { ColumnLayout, Container, Flashbar, Header, Link, Box, SpaceBetween, BreadcrumbGroup, Table, Button, Form, FormField, Input, Badge} from "@cloudscape-design/components";
 import ValueWithLabel from "./ValueWithLabel";
 import RequestAccessComponent from "./RequestAccessComponent";
 import DatabaseDetailsComponent from "./DatabaseDetailsComponent";
+import ResourceLFTagsComponent from "./TBAC/ResourceLFTagsComponent";
+import ResourceLFTagsWrapper from "./TBAC/ResourceLFTagsWrapper";
+import DisplayLFTagsComponent from "./TBAC/DisplayLFTagsComponent";
+import ResourceTagContext from "./TBAC/ResourceTagContext";
+import DisplayLFTagsFromContextComponent from "./TBAC/DisplayLFTagsFromContextComponent";
 
 const config = Amplify.configure();
 
@@ -64,38 +69,47 @@ function TableDetailsComponent(props) {
                     <Flashbar items={[{type: "success", header: "Request Submitted ("+executionArn+")", content: "Successfully submitted request, once approved please accept RAM request."}]}></Flashbar>
                 </Box>
                 <DatabaseDetailsComponent dbName={dbname} />
-                <Box margin={{top: "l"}}>
-                    <Container header={<Header variant="h2">Table Details</Header>}>
-                        <ColumnLayout columns={2} variant="text-grid">
-                            <SpaceBetween size="m">
-                                <ValueWithLabel label="Table">
-                                    {tablename}
-                                </ValueWithLabel>
-                            </SpaceBetween>
-                            <SpaceBetween size="m">
-                                <ValueWithLabel label="Location">
-                                    {table.StorageDescriptor.Location}
-                                </ValueWithLabel>
-                            </SpaceBetween>
-                        </ColumnLayout>
-                    </Container>
-                </Box>
-                <Box margin={{top: "m"}}>
-                    <Table header={<Header variant="h3">Columns</Header>} items={table.StorageDescriptor.Columns} columnDefinitions={[
-                        {
-                            header: "Name",
-                            cell: item => item.Name
-                        },
-                        {
-                            header: "Type",
-                            cell: item => item.Type
-                        },
-                        {
-                            header: "Is PII",
-                            cell: item => (item.Parameters && "pii_flag" in item.Parameters && item.Parameters.pii_flag === "true") ? <Badge color="red">Yes</Badge> : <Badge color="green">No</Badge>
-                        }
-                    ]} />
-                </Box>
+                <ResourceLFTagsWrapper resourceName={tablename} resourceDatabaseName={dbname}>
+                    <Box margin={{top: "l"}}>
+                        <Container header={<Header variant="h2">Table Details</Header>}>
+                            <ColumnLayout columns={2} variant="text-grid">
+                                <SpaceBetween size="m">
+                                    <ValueWithLabel label="Table">
+                                        {tablename}
+                                    </ValueWithLabel>
+                                    <ValueWithLabel label="Tags">
+                                        <DisplayLFTagsFromContextComponent resourceType="table" showDataDomain />
+                                    </ValueWithLabel>
+                                </SpaceBetween>
+                                <SpaceBetween size="m">
+                                    <ValueWithLabel label="Location">
+                                        {table.StorageDescriptor.Location}
+                                    </ValueWithLabel>
+                                </SpaceBetween>
+                            </ColumnLayout>
+                        </Container>
+                    </Box>
+                    <Box margin={{top: "m"}}>
+                        <Table header={<Header variant="h3">Columns</Header>} items={table.StorageDescriptor.Columns} columnDefinitions={[
+                            {
+                                header: "Name",
+                                cell: item => item.Name
+                            },
+                            {
+                                header: "Type",
+                                cell: item => item.Type
+                            },
+                            {
+                                header: "Tags",
+                                cell: item => <DisplayLFTagsFromContextComponent resourceType="column" resourceColumnName={item.Name} />
+                            },
+                            {
+                                header: "Is PII",
+                                cell: item => (item.Parameters && "pii_flag" in item.Parameters && item.Parameters.pii_flag === "true") ? <Badge color="red">Yes</Badge> : <Badge color="green">No</Badge>
+                            }
+                        ]} />
+                    </Box>
+                </ResourceLFTagsWrapper>
                 <Box margin={{top: "m"}}>
                     <RequestAccessComponent dbName={dbname} tableName={tablename} successHandler={requestAccessSuccessHandler} />
                 </Box>  

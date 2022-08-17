@@ -4,7 +4,10 @@ import { ApprovalWorkflow } from "./central/approval-workflow";
 import { DataQualityCentralAccount } from "./central/data-quality-central-account";
 import { DataMeshUI } from "./central/datamesh-ui";
 import { DataMeshUIAuth } from "./central/datamesh-ui-auth";
+import DataMeshUILFTagPermissions from "./central/datamesh-ui-lftag-permissions";
 import { GlueCatalogSearchApi } from "./central/glue-catalog-search-api";
+import { TbacSharingWorkflow } from "./central/tbac-sharing-workflow";
+const tbacConfig = require(__dirname+"/../../src/tbac-config.json");
 
 export class DataMeshUICentralStack extends Stack {
     constructor(scope: Construct, id: string) {
@@ -86,6 +89,12 @@ export class DataMeshUICentralStack extends Stack {
             }
         );
 
+        const tbacSharingWorkflow = new TbacSharingWorkflow(this, "TbacSharingWorkflow", {
+            cognitoAuthRole: dataMeshUIAuth.identityPool.authenticatedRole,
+            centralApprovalEventBus: approvalWorkflow.centralApprovalEventBus,
+            approvalBaseUrl: approvalWorkflow.approvalBaseUrl
+        });
+
         new DataMeshUI(this, "DataMeshUI", {
             stateMachineArn: approvalWorkflow.stateMachine.stateMachineArn,
             stateMachineName: approvalWorkflow.stateMachine.stateMachineName,
@@ -95,6 +104,20 @@ export class DataMeshUICentralStack extends Stack {
             searchApiUrl: searchCatalog.osEndpoint,
             userPool: dataMeshUIAuth.userPool,
             identityPool: dataMeshUIAuth.identityPool,
+            tbacSharingWorkflow: tbacSharingWorkflow.tbacSharingWorkflow,
+            workflowApiUrl: approvalWorkflow.httpApi.apiEndpoint
         });
+
+        new DataMeshUILFTagPermissions(this, "LFTagPermissionManagement", {
+            rolesToGrant: [
+                dataMeshUIAuth.identityPool.authenticatedRole.roleArn
+            ],
+            tagsToSync: [
+                tbacConfig.TagKeys.DataDomain,
+                tbacConfig.TagKeys.Confidentiality
+            ],
+            httpApi: approvalWorkflow.httpApi,
+            httpiApiUserPoolAuthorizer: dataMeshUIAuth.httpApiUserPoolAuthorizer
+        })
     }
 }

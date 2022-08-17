@@ -15,7 +15,7 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import { Badge } from "@awsui/components-react";
+import { Badge } from "@cloudscape-design/components";
 const DataQualityBadgeStatus = ({status}) => {
     let color = "orange"; // ERROR
 
