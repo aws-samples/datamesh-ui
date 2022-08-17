@@ -86,7 +86,7 @@ function CatalogComponent(props) {
                         <SpaceBetween direction="horizontal" size="s">
                             <Button iconName="refresh" onClick={refreshLfTags}>Refresh</Button>
                         </SpaceBetween>
-                    }>Products</Header>}
+                    }>Data Domains</Header>}
                 />
              </Box>
         </div>
