@@ -93,28 +93,30 @@ function DisplayLFTagsComponent(props) {
     }
 
     if (props.lfTags && props.lfTags.length > 0) {
-        <Container>
-            <ColumnLayout columns={2} variant="text-grid">
-                <SpaceBetween size="m">
-                    {props.lfTags ? props.lfTags.map((tagRow) => {
-                        return (renderTagRow(tagRow, props))
-                    }): "n/a"}
-                </SpaceBetween>
-            </ColumnLayout>
-            <Modal onDismiss={() => setModalVisible(false)} visible={modalVisible} header="Request Tag Access" footer={
-                <SpaceBetween direction="horizontal" size="xs">
-                    <Button variant="link" onClick={cancelModal}>Cancel</Button>
-                    <Button variant="primary" onClick={requestAccess}>Request Access</Button>
-                </SpaceBetween>}>
-                <Box margin={{bottom: "l"}}>
-                    You're requesting access to <strong>{shareTagKey}</strong> = <strong>{shareTagValue}</strong>
-                </Box>
-                <FormField label="Target Account ID" errorText={error}>
-                    <Input type="number" value={targetAccountId} onChange={event => setTargetAccountId(event.detail.value)} />
-                </FormField>
-                {success ? <StatusIndicator>{success}</StatusIndicator> : null}
-            </Modal>
-        </Container>
+        return (
+            <Container>
+                <ColumnLayout columns={2} variant="text-grid">
+                    <SpaceBetween size="m">
+                        {props.lfTags ? props.lfTags.map((tagRow) => {
+                            return (renderTagRow(tagRow, props))
+                        }): "n/a"}
+                    </SpaceBetween>
+                </ColumnLayout>
+                <Modal onDismiss={() => setModalVisible(false)} visible={modalVisible} header="Request Tag Access" footer={
+                    <SpaceBetween direction="horizontal" size="xs">
+                        <Button variant="link" onClick={cancelModal}>Cancel</Button>
+                        <Button variant="primary" onClick={requestAccess}>Request Access</Button>
+                    </SpaceBetween>}>
+                    <Box margin={{bottom: "l"}}>
+                        You're requesting access to <strong>{shareTagKey}</strong> = <strong>{shareTagValue}</strong>
+                    </Box>
+                    <FormField label="Target Account ID" errorText={error}>
+                        <Input type="number" value={targetAccountId} onChange={event => setTargetAccountId(event.detail.value)} />
+                    </FormField>
+                    {success ? <StatusIndicator>{success}</StatusIndicator> : null}
+                </Modal>
+            </Container>
+        )
     } else {
         return (
             <Badge color="grey">
