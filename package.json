@@ -28,9 +28,11 @@
     "react-dom": "^18.2.0",
     "react-router": "^6.3.0",
     "react-router-dom": "^6.3.0",
-    "react-scripts": "^5.0.1",
     "uuid": "^8.3.2",
     "web-vitals": "^1.0.1"
+  },
+  "devDependencies": {
+    "react-scripts": "^5.0.1"
   },
   "scripts": {
     "init-ui": "yarn install && amplify init",
