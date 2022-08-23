@@ -16,7 +16,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import { AppLayout, SideNavigation, Box, TopNavigation, Link } from "@cloudscape-design/components";
-import { BrowserRouter, Switch, Route } from "react-router-dom";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 import CatalogComponent from "./CatalogComponent";
 import CatalogTablesComponent from "./CatalogTablesComponent";
 import {Auth} from "aws-amplify";
@@ -29,7 +29,6 @@ import SearchComponent from "./SearchComponent";
 import DataProductDetailsComponent from "./DataProductDetailsComponent"
 import DataQualityReportsComponent from "./QualityUI/DataQualityReportsComponent";
 import DataQualityReportResultsComponent from "./QualityUI/DataQualityReportResultsComponent";
-import {applyMode, Mode} from "@cloudscape-design/global-styles"
 import { useEffect, useState } from "react";
 
 function MainComponent(props) {
@@ -96,7 +95,7 @@ function MainComponent(props) {
                 />
         } content={
             <BrowserRouter>
-                <Switch>
+                <Routes>
                     <Route exact path="/">
                         <CatalogComponent />
                     </Route>
@@ -130,7 +129,7 @@ function MainComponent(props) {
                     <Route exact path="/data-quality-report-results/:dbname/:tablename/:bucket/:key">
                         <DataQualityReportResultsComponent />
                     </Route>
-                </Switch>
+                </Routes>
             </BrowserRouter>
         } tools={
             <Box variant="p" padding={{vertical: "m", horizontal: "m"}}>
