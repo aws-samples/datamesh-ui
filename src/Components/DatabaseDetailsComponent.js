@@ -27,11 +27,15 @@ const config = Amplify.configure();
 function DatabaseDetailsComponent({dbName}) {
     const [db, setDb] = useState();
 
-    useEffect(async() => {
-        const credentials = await Auth.currentCredentials();
-        const glueClient = new GlueClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
-        const db = await glueClient.send(new GetDatabaseCommand({Name: dbName}));
-        setDb(db.Database);
+    useEffect(() => {
+        async function run() {
+            const credentials = await Auth.currentCredentials();
+            const glueClient = new GlueClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
+            const db = await glueClient.send(new GetDatabaseCommand({Name: dbName}));
+            setDb(db.Database);
+        }
+
+        run()
     }, []);
 
     if (db) {

@@ -30,12 +30,16 @@ function CatalogComponent(props) {
     const [nextToken, setNextToken] = useState(null);
     const [refreshTrigger, setRefreshTrigger] = useState(0)
 
-    useEffect(async() => {
-        const credentials = await Auth.currentCredentials();
-        const glue = new GlueClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
-        const results = await glue.send(new GetDatabasesCommand({NextToken: nextToken}));
-        setDatabases(databases => databases.concat(results.DatabaseList));
-        setResponse(results);
+    useEffect(() => {
+        async function run() {
+            const credentials = await Auth.currentCredentials();
+            const glue = new GlueClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
+            const results = await glue.send(new GetDatabasesCommand({NextToken: nextToken}));
+            setDatabases(databases => databases.concat(results.DatabaseList));
+            setResponse(results);
+        }
+
+        run()
     }, [refreshTrigger]);
 
     const refreshLfTags = async() => {

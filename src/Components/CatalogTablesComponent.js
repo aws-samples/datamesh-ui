@@ -40,12 +40,16 @@ function CatalogTablesComponent(props) {
         setRequestSuccessful(true);
     }
 
-    useEffect(async() => {
-        const credentials = await Auth.currentCredentials();
-        const glue = new GlueClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
-        const results = await glue.send(new GetTablesCommand({DatabaseName: dbname, NextToken: nextToken}));
-        setTables(tables => tables.concat(results.TableList));
-        setResponse(results);
+    useEffect(() => {
+        async function run() {
+            const credentials = await Auth.currentCredentials();
+            const glue = new GlueClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
+            const results = await glue.send(new GetTablesCommand({DatabaseName: dbname, NextToken: nextToken}));
+            setTables(tables => tables.concat(results.TableList));
+            setResponse(results);
+        }
+
+        run()
     }, [nextToken]);
 
     return(

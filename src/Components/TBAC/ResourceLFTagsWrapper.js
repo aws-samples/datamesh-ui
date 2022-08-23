@@ -8,23 +8,27 @@ const config = Amplify.configure();
 function ResourceLFTagsWrapper(props) {
     const [context, setContext] = useState(null);
 
-    useEffect(async() => {
-        const credentials = await Auth.currentCredentials();
-        const lfClient = new LakeFormationClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
-
-        let payload = {
-            Resource: {
-                Table: {
-                    DatabaseName: props.resourceDatabaseName,
-                    Name: props.resourceName
+    useEffect(() => {
+        async function run() {
+            const credentials = await Auth.currentCredentials();
+            const lfClient = new LakeFormationClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
+    
+            let payload = {
+                Resource: {
+                    Table: {
+                        DatabaseName: props.resourceDatabaseName,
+                        Name: props.resourceName
+                    }
                 }
             }
+    
+            setContext({
+                resourceTag: await lfClient.send(new GetResourceLFTagsCommand(payload)),
+                databaseName: props.resourceDatabaseName
+            })
         }
 
-        setContext({
-            resourceTag: await lfClient.send(new GetResourceLFTagsCommand(payload)),
-            databaseName: props.resourceDatabaseName
-        })
+        run()
     }, []);
 
     return (

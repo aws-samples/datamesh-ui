@@ -46,33 +46,34 @@ function DataProductDetailsComponent(props) {
 
     const [state, setState] = useState([]);
 
-    //console.log(dataProduct)
-    useEffect(async () => {
-        //const credentials = await Auth.currentCredentials();
-        //const sfnClient = new SFNClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
-        try {
-            const baseURL = SearchApiUrl;
-            const authToken = `Bearer ${(await Auth.currentSession())
-                .getIdToken()
-                .getJwtToken()}`;
-            const response = await axios.get(
-                `${baseURL}document/${dataProduct}`,
-                {
-                    headers: {
-                        Authorization: authToken,
-                    },
+    useEffect(() => {
+        async function run() {
+            try {
+                const baseURL = SearchApiUrl;
+                const authToken = `Bearer ${(await Auth.currentSession())
+                    .getIdToken()
+                    .getJwtToken()}`;
+                const response = await axios.get(
+                    `${baseURL}document/${dataProduct}`,
+                    {
+                        headers: {
+                            Authorization: authToken,
+                        },
+                    }
+                );
+                console.log(response);
+                console.log(response.data.tableInformation);
+                if (response.data.tableInformation) {
+                    setDetail(response.data.tableInformation);
                 }
-            );
-            console.log(response);
-            console.log(response.data.tableInformation);
-            if (response.data.tableInformation) {
-                setDetail(response.data.tableInformation);
+    
+                //console.log(response.data[0].tableInformation.databaseName)
+            } catch (e) {
+                setdocumentId(e);
             }
-
-            //console.log(response.data[0].tableInformation.databaseName)
-        } catch (e) {
-            setdocumentId(e);
         }
+
+        run()
     }, []);
 
     if (documentId) {

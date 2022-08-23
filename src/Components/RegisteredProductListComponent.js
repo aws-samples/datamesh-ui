@@ -30,34 +30,38 @@ function RegisteredListComponent(props) {
     const [products, setProducts] = useState([]);
     const title = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
         
-    useEffect(async() => {
-        const credentials = await Auth.currentCredentials();
-        const client = new DynamoDBClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
-        const commandResponse = await client.send(new QueryCommand({
-            IndexName: tableParam["GSI-StatusIndex"],
-            TableName: tableParam["Name"],
-            KeyConditionExpression: "#status = :status",
-            ExpressionAttributeNames: {
-                "#status": "status"
-            },
-            ExpressionAttributeValues: {
-                ":status": {"S": status}
+    useEffect(() => {
+        async function run() {
+            const credentials = await Auth.currentCredentials();
+            const client = new DynamoDBClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
+            const commandResponse = await client.send(new QueryCommand({
+                IndexName: tableParam["GSI-StatusIndex"],
+                TableName: tableParam["Name"],
+                KeyConditionExpression: "#status = :status",
+                ExpressionAttributeNames: {
+                    "#status": "status"
+                },
+                ExpressionAttributeValues: {
+                    ":status": {"S": status}
+                }
+            }));
+    
+            const tempProducts = [];
+            for (const item of commandResponse.Items) {
+                const [dbName, tableName] = item.dbTableName.S.split("#");
+                tempProducts.push({
+                    accountId: item.accountId.S,
+                    dbName: dbName,
+                    tableName: tableName,
+                    status: item.status.S,
+                    createdAt: item.createdAt.N
+                })
             }
-        }));
-
-        const tempProducts = [];
-        for (const item of commandResponse.Items) {
-            const [dbName, tableName] = item.dbTableName.S.split("#");
-            tempProducts.push({
-                accountId: item.accountId.S,
-                dbName: dbName,
-                tableName: tableName,
-                status: item.status.S,
-                createdAt: item.createdAt.N
-            })
+    
+            setProducts(tempProducts);
         }
 
-        setProducts(tempProducts);
+        run()
     });
 
     return (

@@ -96,33 +96,15 @@ function MainComponent(props) {
         } content={
             <BrowserRouter>
                 <Routes>
-                    <Route exact path="/">
-                        <CatalogComponent />
-                    </Route>
-                    <Route exact path="/tables/:dbname">
-                        <CatalogTablesComponent />
-                    </Route>
-                    <Route exact path="/request-access/:dbname/:tablename">
-                        <TableDetailsComponent />
-                    </Route>
-                    <Route exact path="/workflow-executions">
-                        <WorkflowExecutionsComponent />
-                    </Route>
-                    <Route exact path="/search">
-                        <SearchComponent />
-                    </Route>
-                    <Route exact path="/data-product-details/:dataProduct">
-                        <DataProductDetailsComponent />
-                    </Route>
-                    <Route exact path="/execution-details/:execArn">
-                        <WorkflowExecutionDetailsComponent />
-                    </Route>
-                    <Route exact path="/product-registration/list">
-                        <ProductRegistrationListComponent />
-                    </Route>
-                    <Route exact path="/product-registration/new">
-                        <RegisterNewProductComponent />
-                    </Route>
+                    <Route exact path="/" element={<CatalogComponent />} />
+                    <Route exact path="/tables/:dbname" element={<CatalogTablesComponent />} />
+                    <Route exact path="/request-access/:dbname/:tablename" element={<TableDetailsComponent />} />
+                    <Route exact path="/workflow-executions" element={<WorkflowExecutionsComponent />} />
+                    <Route exact path="/search" element={<SearchComponent />} />
+                    <Route exact path="/data-product-details/:dataProduct" element={<DataProductDetailsComponent />} />
+                    <Route exact path="/execution-details/:execArn" element={<WorkflowExecutionDetailsComponent />} />
+                    <Route exact path="/product-registration/list" element={<ProductRegistrationListComponent />} />
+                    <Route exact path="/product-registration/new" element={<RegisterNewProductComponent />} />
                     {/* <Route exact path="/data-quality-reports/:dbname/:tablename">
                         <DataQualityReportsComponent />
                     </Route>

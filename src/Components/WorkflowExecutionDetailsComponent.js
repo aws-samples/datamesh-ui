@@ -32,17 +32,20 @@ function WorkflowExecutionDetailsComponent(props) {
     
     const {execArn} = useParams();
 
-    useEffect(async() => {
-        const credentials = await Auth.currentCredentials();
-        const sfnClient = new SFNClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
-        try {
-            const response = await sfnClient.send(new DescribeExecutionCommand({executionArn: execArn}));
-            setInput(JSON.parse(response.input));
-            setDetail(response);
-        } catch (e) {
-            setArnError(e);
+    useEffect(() => {
+        async function run() {
+            const credentials = await Auth.currentCredentials();
+            const sfnClient = new SFNClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
+            try {
+                const response = await sfnClient.send(new DescribeExecutionCommand({executionArn: execArn}));
+                setInput(JSON.parse(response.input));
+                setDetail(response);
+            } catch (e) {
+                setArnError(e);
+            }
         }
-        
+
+        run()        
     }, []);
 
     if (arnError) {

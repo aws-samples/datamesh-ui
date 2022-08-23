@@ -30,17 +30,21 @@ function WorkflowExecutionsComponent(props) {
     const [response, setResponse] = useState();
     const [nextToken, setNextToken] = useState(null);
 
-    useEffect(async() => {
-        const credentials = await Auth.currentCredentials();
-        const sfnClient = new SFNClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
-        const result = await sfnClient.send(new ListExecutionsCommand({
-            maxResults: 20,
-            nextToken: nextToken,
-            stateMachineArn: SM_ARN
-        }));
-        
-        setResponse(result);
-        setExecutions(executions.concat(result.executions));
+    useEffect(() => {
+        async function run() {
+            const credentials = await Auth.currentCredentials();
+            const sfnClient = new SFNClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
+            const result = await sfnClient.send(new ListExecutionsCommand({
+                maxResults: 20,
+                nextToken: nextToken,
+                stateMachineArn: SM_ARN
+            }));
+            
+            setResponse(result);
+            setExecutions(executions.concat(result.executions));
+        }
+
+        run()
     }, [nextToken]);
 
     return (

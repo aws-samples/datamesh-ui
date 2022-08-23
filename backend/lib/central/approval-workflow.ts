@@ -191,7 +191,7 @@ export class ApprovalWorkflow extends Construct {
         });
 
         const workflowActivityApprover = new Function(this, "WorkflowActivityApprover", {
-            runtime: Runtime.NODEJS_14_X,
+            runtime: Runtime.NODEJS_16_X,
             handler: 'index.handler',
             code: Code.fromAsset(__dirname+"/resources/lambda/WorkflowActivityApprover"),
             role: this.workflowLambdaSMApproverRole
@@ -226,7 +226,7 @@ export class ApprovalWorkflow extends Construct {
         ], true)
 
         const deriveBaseDatabaseName = new Function(this, "DeriveBaseDatabaseName", {
-            runtime: Runtime.NODEJS_14_X,
+            runtime: Runtime.NODEJS_16_X,
             handler: 'index.handler',
             code: Code.fromAsset(__dirname+"/resources/lambda/DeriveBaseDatabaseName")
         });
@@ -239,7 +239,7 @@ export class ApprovalWorkflow extends Construct {
         ], true);
 
         const workflowSendApprovalNotification = new Function(this, "WorkflowSendApprovalNotification", {
-            runtime: Runtime.NODEJS_14_X,
+            runtime: Runtime.NODEJS_16_X,
             handler: 'index.handler',
             code: Code.fromAsset(__dirname+"/resources/lambda/WorkflowSendApprovalNotification"),
             role: this.workflowLambdaSendApprovalEmailRole,
@@ -253,14 +253,14 @@ export class ApprovalWorkflow extends Construct {
         this.httpApi = httpApi;
 
         const workflowGetTableDetails = new Function(this, "WorkflowGetTableDetails", {
-            runtime: Runtime.NODEJS_14_X,
+            runtime: Runtime.NODEJS_16_X,
             handler: 'index.handler',
             code: Code.fromAsset(__dirname+"/resources/lambda/WorkflowGetTableDetails"),
             role: this.workflowLambdaTableDetailsRole
         });
 
         const workflowShareCatalogItem = new Function(this, "WorkflowShareCatalogItem", {
-            runtime: Runtime.NODEJS_14_X,
+            runtime: Runtime.NODEJS_16_X,
             handler: 'index.handler',
             code: Code.fromAsset(__dirname+"/resources/lambda/WorkflowShareCatalogItem"),
             role: this.workflowLambdaShareCatalogItemRole
