@@ -123,12 +123,12 @@ function MainComponent(props) {
                     <Route exact path="/product-registration/new">
                         <RegisterNewProductComponent />
                     </Route>
-                    <Route exact path="/data-quality-reports/:dbname/:tablename">
+                    {/* <Route exact path="/data-quality-reports/:dbname/:tablename">
                         <DataQualityReportsComponent />
                     </Route>
                     <Route exact path="/data-quality-report-results/:dbname/:tablename/:bucket/:key">
                         <DataQualityReportResultsComponent />
-                    </Route>
+                    </Route> */}
                 </Routes>
             </BrowserRouter>
         } tools={

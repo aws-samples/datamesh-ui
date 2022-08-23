@@ -14,7 +14,6 @@ export interface DataMeshUIProps {
     stateMachineArn: string
     stateMachineName: string
     searchApiUrl: string
-    dataQualityHttpApiUrl: string
     userPool: UserPool
     identityPool: IdentityPool
     tbacSharingWorkflow: StateMachine
@@ -31,7 +30,6 @@ export class DataMeshUI extends Construct {
         let uiPayload : any = {
             "InfraStack": {
                 "StateMachineArn": props.stateMachineArn,
-                "DataQualityHttpApiUrl": props.dataQualityHttpApiUrl,
                 "SearchApiUrl": props.searchApiUrl,
                 "TbacStateMachineArn": props.tbacSharingWorkflow.stateMachineArn,
                 "WorkflowApiUrl": props.workflowApiUrl
