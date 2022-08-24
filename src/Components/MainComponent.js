@@ -15,7 +15,7 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import { AppLayout, SideNavigation, Box, TopNavigation, Link } from "@cloudscape-design/components";
+import { AppLayout, SideNavigation, Box, TopNavigation, Link, Input, Autosuggest } from "@cloudscape-design/components";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import CatalogComponent from "./CatalogComponent";
 import CatalogTablesComponent from "./CatalogTablesComponent";
@@ -23,16 +23,20 @@ import {Auth} from "aws-amplify";
 import WorkflowExecutionsComponent from "./WorkflowExecutionsComponent";
 import WorkflowExecutionDetailsComponent from "./WorkflowExecutionDetailsComponent";
 import TableDetailsComponent from "./TableDetailsComponent";
-import ProductRegistrationListComponent from "./ProductRegistrationListComponent";
 import RegisterNewProductComponent from "./RegisterNewProductComponent";
 import SearchComponent from "./SearchComponent";
 import DataProductDetailsComponent from "./DataProductDetailsComponent"
-import DataQualityReportsComponent from "./QualityUI/DataQualityReportsComponent";
-import DataQualityReportResultsComponent from "./QualityUI/DataQualityReportResultsComponent";
 import { useEffect, useState } from "react";
+const cfnOutput = require("../cfn-output.json");
+const searchApiUrl = cfnOutput.InfraStack.SearchApiUrl;
+const MIN_SEARCH_STRING_LENGTH = 1;
+const axios = require("axios")
 
 function MainComponent(props) {
     const [navUtilities, setNavUtilities] = useState([]);
+    const [searchInput, setSearchInput] = useState("");
+    const [searchStatusType, setSearchStatusType] = useState("pending");
+    const [searchOptions, setSearchOptions] = useState([]);
 
     const i18nStrings = {
         searchIconAriaLabel: "Search",
@@ -55,37 +59,112 @@ function MainComponent(props) {
         }
     }
 
-    useEffect(async() => {
-        const userInfo = await Auth.currentUserInfo();
+    useEffect(() => {
+        (async function run() {
+            const userInfo = await Auth.currentUserInfo();
 
-        setNavUtilities([
-            {
-                type: "menu-dropdown",
-                text: userInfo.username,
-                description: userInfo.attributes.email,
-                iconName: "user-profile",
-                items: [
-                    {
-                        id: "signout",
-                        text: "Logout"
-                    }
-                ],
-                onItemClick: handleMenuClick
-            }
-        ])
-
+            setNavUtilities([
+                {
+                    type: "menu-dropdown",
+                    text: userInfo.username,
+                    description: userInfo.attributes.email,
+                    iconName: "user-profile",
+                    items: [
+                        {
+                            id: "signout",
+                            text: "Logout"
+                        }
+                    ],
+                    onItemClick: handleMenuClick
+                }
+            ])
+        })()
     }, [])
+
+    const searchLoadItems = async() => {
+        if (searchInput.length >= 3) {
+            setSearchStatusType("loading")
+            const searchUrl = `${searchApiUrl}/search/${searchInput}`
+            const session = await Auth.currentSession()
+
+            const results = await axios.get(searchUrl, {
+                headers: {
+                    Authorization: `Bearer ${session.getIdToken().getJwtToken()}`,
+                },
+            });
+
+            const searchResults = results.data;
+            if (!searchResults) {
+                setSearchOptions([])    
+            } else {
+                const lowerCaseSearchTerm = searchInput.toLowerCase();
+                const searchOptionsFormatted = searchResults.map((searchResult) => {
+                    const resultArray = [];
+
+                    const databaseName = searchResult.tableInformation.databaseName;
+                    if (databaseName.toLowerCase().includes(lowerCaseSearchTerm)) {
+                        resultArray.push({
+                            label: databaseName,
+                            tags: ["Database"],
+                            value: JSON.stringify({type: "database", db: databaseName, label: databaseName})
+                        });
+                    }
+            
+                    const tableName = searchResult.tableInformation.tableName;
+                    if (tableName.toLowerCase().includes(lowerCaseSearchTerm)) {
+                        resultArray.push({
+                            label: tableName,
+                            description: `${databaseName}.${tableName}`,
+                            tags: ["Table"],
+                            value: JSON.stringify({type: "table", db: databaseName, table: tableName, label: tableName})
+                        });
+                    }
+            
+                    const columnNames = searchResult.tableInformation.columnNames;
+                    columnNames.forEach((columnName) => {
+                        if (columnName.toLowerCase().includes(lowerCaseSearchTerm)) {
+                            resultArray.push({
+                                label: columnName,
+                                description: `${databaseName}.${tableName}.${columnName}`,
+                                tags: ["Column"],
+                                value: JSON.stringify({type: "table", db: databaseName, table: tableName, label: columnName})
+                            });
+                        }
+                    });
+            
+                    return resultArray;
+                })
+
+                setSearchOptions(searchOptionsFormatted.flat())
+            }
+            setSearchStatusType("finished")
+        } else {
+            setSearchOptions([])
+        }
+        
+    }
+
+    const onSearchSelect = ({detail}) => {
+        const payload = JSON.parse(detail.value)
+        setSearchInput(payload.label)
+        if (payload.type == "database") {
+            window.location.href = `/tables/${payload.db}`
+        } else {
+            window.location.href = `/request-access/${payload.db}/${payload.table}`
+        }
+    }
 
     return (
         <Box>
-            <TopNavigation identity={identity} i18nStrings={i18nStrings} utilities={navUtilities} />
+            <TopNavigation identity={identity} i18nStrings={i18nStrings} utilities={navUtilities} search={
+                <Autosuggest onSelect={onSearchSelect} onLoadItems={searchLoadItems} options={searchOptions} statusType={searchStatusType} loadingText="Search objects" errorText="Error fetching objects" enteredTextLabel={(value) => value} onChange={({detail}) => {setSearchInput(detail.value)}} value={searchInput} />
+            }  />
             <AppLayout navigation={
             <SideNavigation 
                 activeHref={window.location.pathname} 
                 items={[
                     {type: "link", text: "Data Domains", href: "/"},
                     {type: "link", text: "Sharing Workflow Executions", href: "/workflow-executions"},
-                    {type: "link", text: "Search", href: "/search"}
                 ]}
                 onFollow={async(event) => {
                     event.preventDefault();
