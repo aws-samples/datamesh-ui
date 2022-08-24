@@ -38,9 +38,10 @@ exports.handler = async(event) => {
                     DataLakePrincipalIdentifier: roleToGrant
                 },
                 Resource: {
-                    Database: {
-                        Name: row.Name,
-                        CatalogId: row.CatalogId
+                    Table: {
+                        DatabaseName: row.Name,
+                        CatalogId: row.CatalogId,
+                        TableWildcard: {}
                     }
                 }
             }
