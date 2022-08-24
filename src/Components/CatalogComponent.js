@@ -50,14 +50,14 @@ function CatalogComponent(props) {
         const refreshDataDomainPermissionsUrl = cfnOutput.InfraStack.WorkflowApiUrl + "/data-domains/sync-permissions";
 
         await Promise.all([
-            await axios({
+            axios({
                 method: "POST",
                 url: refreshLfTagUrl,
                 headers: {
                     "Authorization": currentSession.getAccessToken().getJwtToken()
                 }
             }),
-            await axios({
+            axios({
                 method: "POST",
                 url: refreshDataDomainPermissionsUrl,
                 headers: {
