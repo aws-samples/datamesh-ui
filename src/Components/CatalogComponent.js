@@ -18,7 +18,7 @@
 import { Amplify, Auth } from "aws-amplify";
 import { useEffect, useState } from "react";
 import {GlueClient, GetDatabasesCommand} from '@aws-sdk/client-glue';
-import { Box, Button, ButtonDropdown, Header, Link, SpaceBetween, Table } from "@cloudscape-design/components";
+import { Box, Button, ButtonDropdown, Header, Link, SpaceBetween, Spinner, Table } from "@cloudscape-design/components";
 import ResourceLFTagsComponent from "./TBAC/ResourceLFTagsComponent";
 const cfnOutput = require("../cfn-output.json")
 const config = Amplify.configure();
@@ -29,6 +29,7 @@ function CatalogComponent(props) {
     const [response, setResponse] = useState(null);
     const [nextToken, setNextToken] = useState(null);
     const [refreshTrigger, setRefreshTrigger] = useState(0)
+    const [spinnerVisibility, setSpinnerVisibility] = useState(false)
 
     useEffect(() => {
         async function run() {
@@ -42,22 +43,47 @@ function CatalogComponent(props) {
         run()
     }, [refreshTrigger]);
 
-    const refreshLfTags = async() => {
+    const refresh = async() => {
+        setSpinnerVisibility(true)
         const currentSession = await Auth.currentSession();
-        const apiUrl = cfnOutput.InfraStack.WorkflowApiUrl + "/tags/sync-permissions";
+        const refreshLfTagUrl = cfnOutput.InfraStack.WorkflowApiUrl + "/tags/sync-permissions";
+        const refreshDataDomainPermissionsUrl = cfnOutput.InfraStack.WorkflowApiUrl + "/data-domains/sync-permissions";
 
-        await axios({
-            method: "POST",
-            url: apiUrl,
-            headers: {
-                "Authorization": currentSession.getAccessToken().getJwtToken()
-            }
-        })
+        await Promise.all([
+            await axios({
+                method: "POST",
+                url: refreshLfTagUrl,
+                headers: {
+                    "Authorization": currentSession.getAccessToken().getJwtToken()
+                }
+            }),
+            await axios({
+                method: "POST",
+                url: refreshDataDomainPermissionsUrl,
+                headers: {
+                    "Authorization": currentSession.getAccessToken().getJwtToken()
+                }
+            })
+        ])
+
 
         setDatabases([])
         setNextToken(null)
         setResponse(null)
         setRefreshTrigger(refreshTrigger + 1)
+        setSpinnerVisibility(false)
+    }
+
+    const renderRefresh = () => {
+        if (spinnerVisibility) {
+            return (
+                <Button disabled="true"><Spinner /> Refresh</Button>
+            )
+        } else {
+            return (
+                <Button iconName="refresh" onClick={refresh}>Refresh</Button>
+            )
+        }
     }
 
     return (
@@ -91,7 +117,7 @@ function CatalogComponent(props) {
                     items={databases}
                     header={<Header variant="h2" actions={
                         <SpaceBetween direction="horizontal" size="s">
-                            <Button iconName="refresh" onClick={refreshLfTags}>Refresh</Button>
+                            {renderRefresh()}
                         </SpaceBetween>
                     }>Data Domains</Header>}
                 />

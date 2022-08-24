@@ -67,7 +67,9 @@ export class DataMeshUICentralStack extends Stack {
             }
         );
 
-        const dataMeshUIAuth = new DataMeshUIAuth(this, "DataMeshUIAuth");
+        const dataMeshUIAuth = new DataMeshUIAuth(this, "DataMeshUIAuth", {
+            httpApi: approvalWorkflow.httpApi
+        });
 
         // const dataQuality = new DataQualityCentralAccount(
         //     this,

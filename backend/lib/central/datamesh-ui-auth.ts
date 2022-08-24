@@ -1,7 +1,10 @@
+import { HttpApi } from "@aws-cdk/aws-apigatewayv2-alpha";
 import { HttpUserPoolAuthorizer } from "@aws-cdk/aws-apigatewayv2-authorizers-alpha";
+import { HttpLambdaIntegration } from "@aws-cdk/aws-apigatewayv2-integrations-alpha";
 import { IdentityPool, UserPoolAuthenticationProvider } from "@aws-cdk/aws-cognito-identitypool-alpha";
 import { CfnOutput, CustomResource, RemovalPolicy } from "aws-cdk-lib";
 import { UserPool, UserPoolClient } from "aws-cdk-lib/aws-cognito";
+import { HttpMethod } from "aws-cdk-lib/aws-events";
 import { ManagedPolicy, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
 import { CfnDataLakeSettings } from "aws-cdk-lib/aws-lakeformation";
 import { Code, Function, Runtime } from "aws-cdk-lib/aws-lambda";
@@ -9,12 +12,16 @@ import { Provider } from "aws-cdk-lib/custom-resources";
 import { NagSuppressions } from "cdk-nag";
 import { Construct } from "constructs";
 
+export interface DataMeshUIAuthProps {
+    httpApi: HttpApi
+}
+
 export class DataMeshUIAuth extends Construct {
     readonly userPool: UserPool;
     readonly identityPool: IdentityPool;
     readonly httpApiUserPoolAuthorizer: HttpUserPoolAuthorizer;
 
-    constructor(scope: Construct, id: string) {
+    constructor(scope: Construct, id: string, props: DataMeshUIAuthProps) {
         super(scope, id);
 
         const userPool = new UserPool(this, "DataMeshUICognitoUserPool", {
@@ -107,5 +114,23 @@ export class DataMeshUIAuth extends Construct {
         this.httpApiUserPoolAuthorizer = new HttpUserPoolAuthorizer("WorkflowHttpAPIUserPoolAuthorizer", userPool, {
             userPoolClients: [client]
         });
+
+        const syncDataDomainUIPermissionsFunction = new Function(this, "SyncDataDomainUIPermissionsFunction", {
+            runtime: Runtime.NODEJS_16_X,
+            handler: "index.handler",
+            role: crDataDomainUIAccessRole,
+            code: Code.fromAsset(__dirname+"/resources/lambda/SyncDataDomainUIPermissions"),
+            memorySize: 256,
+            environment: {
+                ROLE_TO_GRANT: identityProvider.authenticatedRole.roleArn
+            }
+        });
+
+        props.httpApi.addRoutes({
+            path: "/data-domains/sync-permissions",
+            methods: [HttpMethod.POST],
+            integration: new HttpLambdaIntegration("SyncDataDomainUIPermissionsIntegration", syncDataDomainUIPermissionsFunction),
+            authorizer: this.httpApiUserPoolAuthorizer
+        })
     }
 }
