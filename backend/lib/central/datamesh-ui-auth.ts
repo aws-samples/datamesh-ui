@@ -1,7 +1,11 @@
 import { HttpUserPoolAuthorizer } from "@aws-cdk/aws-apigatewayv2-authorizers-alpha";
 import { IdentityPool, UserPoolAuthenticationProvider } from "@aws-cdk/aws-cognito-identitypool-alpha";
-import { CfnOutput, RemovalPolicy } from "aws-cdk-lib";
+import { CfnOutput, CustomResource, RemovalPolicy } from "aws-cdk-lib";
 import { UserPool, UserPoolClient } from "aws-cdk-lib/aws-cognito";
+import { ManagedPolicy, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
+import { CfnDataLakeSettings } from "aws-cdk-lib/aws-lakeformation";
+import { Code, Function, Runtime } from "aws-cdk-lib/aws-lambda";
+import { Provider } from "aws-cdk-lib/custom-resources";
 import { NagSuppressions } from "cdk-nag";
 import { Construct } from "constructs";
 
@@ -53,6 +57,36 @@ export class DataMeshUIAuth extends Construct {
                 reason: "Advanced security not required"
             }
         ])
+
+        const crDataDomainUIAccessRole = new Role(this, "CRDataDomainUIAccessRole", {
+            assumedBy: new ServicePrincipal("lambda.amazonaws.com"),
+            managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole"), ManagedPolicy.fromAwsManagedPolicyName("AWSLakeFormationDataAdmin")],
+        });
+
+        new CfnDataLakeSettings(this, "LakeFormationSettings", {
+            admins: [
+                {
+                    dataLakePrincipalIdentifier: crDataDomainUIAccessRole.roleArn
+                }
+            ]
+        });
+
+        const crDataDomainUIAccessFunction = new Function(this, "CRDataDomainUIAccessFunction", {
+            runtime: Runtime.NODEJS_16_X,
+            handler: "index.handler",
+            role: crDataDomainUIAccessRole,
+            code: Code.fromAsset(__dirname+"/resources/lambda/CRDataDomainUIAccess"),
+            memorySize: 256,
+            environment: {
+                ROLE_TO_GRANT: identityProvider.authenticatedRole.roleArn
+            }
+        });
+
+        const crDataDomainUIAccessProvider = new Provider(this, "CRDataDomainUIAccessProvider", {
+            onEventHandler: crDataDomainUIAccessFunction
+        })
+
+        new CustomResource(this, "CRDataDomainUIAccessResource", {serviceToken: crDataDomainUIAccessProvider.serviceToken})
 
         new CfnOutput(this, "CognitoAuthRoleArn", {
             value: identityProvider.authenticatedRole.roleArn

@@ -18,7 +18,7 @@
 import { Amplify, Auth } from "aws-amplify";
 import { useEffect, useState } from "react";
 import {GlueClient, GetDatabasesCommand} from '@aws-sdk/client-glue';
-import { Box, Button, Header, Link, SpaceBetween, Table } from "@cloudscape-design/components";
+import { Box, Button, ButtonDropdown, Header, Link, SpaceBetween, Table } from "@cloudscape-design/components";
 import ResourceLFTagsComponent from "./TBAC/ResourceLFTagsComponent";
 const cfnOutput = require("../cfn-output.json")
 const config = Amplify.configure();
@@ -68,7 +68,7 @@ function CatalogComponent(props) {
                     columnDefinitions={[
                         {
                             header: "Name",
-                            cell: item => item.Name
+                            cell: item => <Link variant="primary" href={"/tables/"+item.Name}>{item.Name}</Link>
 
                         },
                         {
@@ -81,7 +81,10 @@ function CatalogComponent(props) {
                         },
                         {
                             header: "Actions",
-                            cell: item => <Link variant="primary" href={"/tables/"+item.Name}>Request Access</Link>
+                            cell: item => <ButtonDropdown expandToViewport="true" items={[
+                                {text: "Register Data Product", href: `/product-registration/${item.Name}/new`},
+                                {text: "View Tables", href: `/tables/${item.Name}`}
+                            ]}>Actions</ButtonDropdown>
                         }
                     ]}
 

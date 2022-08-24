@@ -319,7 +319,7 @@ export class ApprovalWorkflow extends Construct {
                     {
                       "Detail": {
                         "central_database_name.$": "$.source.database",
-                        "database_name.$": "$.derivedDbName.Payload.raw_db",
+                        "database_name": "data-products",
                         "producer_acc_id.$": "$.derivedDbName.Payload.producer_acc_id",
                         "table_names.$": "States.Array($.source.table)"
                       },
@@ -378,7 +378,7 @@ export class ApprovalWorkflow extends Construct {
                     },
                     "Resource": {
                         "Table": {
-                          "DatabaseName.$": "States.Format('{}_{}', $.producer_acc_id, $.database_name)",
+                          "DatabaseName.$": "$.database_name",
                           "TableWildcard": {}
                         }
                     }
@@ -405,7 +405,7 @@ export class ApprovalWorkflow extends Construct {
                     },
                     "Resource": {
                         "Table": {
-                          "DatabaseName.$": "States.Format('{}_{}', $.producer_acc_id, $.database_name)",
+                          "DatabaseName.$": "$.database_name",
                           "TableWildcard": {}
                         }
                     }

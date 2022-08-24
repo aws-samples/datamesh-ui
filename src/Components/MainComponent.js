@@ -85,7 +85,6 @@ function MainComponent(props) {
                 items={[
                     {type: "link", text: "Data Domains", href: "/"},
                     {type: "link", text: "Sharing Workflow Executions", href: "/workflow-executions"},
-                    {type: "link", text: "Product Registration", href: "/product-registration/list"},
                     {type: "link", text: "Search", href: "/search"}
                 ]}
                 onFollow={async(event) => {
@@ -103,8 +102,7 @@ function MainComponent(props) {
                     <Route exact path="/search" element={<SearchComponent />} />
                     <Route exact path="/data-product-details/:dataProduct" element={<DataProductDetailsComponent />} />
                     <Route exact path="/execution-details/:execArn" element={<WorkflowExecutionDetailsComponent />} />
-                    <Route exact path="/product-registration/list" element={<ProductRegistrationListComponent />} />
-                    <Route exact path="/product-registration/new" element={<RegisterNewProductComponent />} />
+                    <Route exact path="/product-registration/:domainId/new" element={<RegisterNewProductComponent />} />
                     {/* <Route exact path="/data-quality-reports/:dbname/:tablename">
                         <DataQualityReportsComponent />
                     </Route>

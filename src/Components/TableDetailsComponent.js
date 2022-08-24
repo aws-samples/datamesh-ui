@@ -65,7 +65,7 @@ function TableDetailsComponent(props) {
         return (
             <div>
                 <BreadcrumbGroup items={[
-                            { text: "Products", href: "/"},
+                            { text: "Data Domains", href: "/"},
                             { text: dbname, href: "/tables/"+dbname },
                             { text: "Request Access ("+tablename+")", href: "/request-access/"+dbname+"/"+tablename }
                         ]} />
