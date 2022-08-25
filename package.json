@@ -34,6 +34,9 @@
   "devDependencies": {
     "react-scripts": "^5.0.1"
   },
+  "resolutions": {
+    "nth-check": "^2.1.1"
+  },
   "scripts": {
     "init-ui": "yarn install && amplify init",
     "deploy-central": "cd backend && yarn install && cdk deploy DataMeshUICentralStack --require-approval never --outputs-file central-output.json",
