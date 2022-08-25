@@ -15,28 +15,29 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+import { GetDatabaseCommand, GlueClient } from "@aws-sdk/client-glue";
 import { SFNClient, StartExecutionCommand } from "@aws-sdk/client-sfn";
-import { Box, Button, Container, Form, FormField, Header, Input, Select, SpaceBetween, Table, Icon } from "@cloudscape-design/components";
+import { Box, Button, Container, Form, FormField, Header, Input, Select, SpaceBetween, Table, Icon, Alert, ColumnLayout, BreadcrumbGroup } from "@cloudscape-design/components";
 import {Amplify, Auth } from "aws-amplify";
-import {useState} from 'react';
+import {useEffect, useState} from 'react';
+import { useParams } from "react-router";
 import {v4 as uuid} from 'uuid';
+import ResourceLFTagsComponent from "./TBAC/ResourceLFTagsComponent";
+import ValueWithLabel from "./ValueWithLabel";
 const cfnOutput = require("../cfn-output.json");
 
 const config = Amplify.configure();
 const dpmStateMachineArn = cfnOutput.InfraStack.DPMStateMachineArn;
 
 function RegisterNewProductComponent() {
+    const {domainId} = useParams()
     const [error, setError] = useState();
-
+    const [database, setDatabase] = useState(null)
     const [products, setProducts] = useState([{"id": uuid(), "name": "", "location": "", "firstRow": true}])
-    const [accountId, setAccountId] = useState(0);
-    const [dbName, setDbName] = useState("");
-    const [ownerName, setOwnerName] = useState("");
-    const [piiFlag, setPiiFlag] = useState({label: "Contains PII Data", value: "true"});
  
-    const onCancel = () => {
-        window.location.href="/product-registration/list";
-    }
+    // const onCancel = () => {
+    //     window.location.href="/product-registration/list";
+    // }
 
     const addProductRow = () => {
         setProducts([...products, {"id": uuid(), "name": "", "location": "", "firstRow": false}])
@@ -53,27 +54,25 @@ function RegisterNewProductComponent() {
     }
 
     const onSubmit = async() => {
-        if (accountId && dbName && ownerName && isProductListValid()) {
+        if (database && isProductListValid()) {
             const credentials = await Auth.currentCredentials();
             const sfnClient = new SFNClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
             const formattedProducts = products.map((prod) => {
+                prod.location = `${database.Database.LocationUri}/${prod.location}`
                 prod.location_key = prod.location.substring(5);
-
+                
                 return prod;
             })
             await sfnClient.send(new StartExecutionCommand({
                 stateMachineArn: dpmStateMachineArn,
                 input: JSON.stringify({
-                    "data_product_s3": extractDatabaseS3Location(),
-                    "database_name": dbName,
-                    "producer_acc_id": accountId,
-                    "product_owner_name": ownerName,
-                    "product_pii_flag": piiFlag.value,
+                    "producer_acc_id": database.Database.Parameters.data_owner,
+                    "database_name": domainId,
                     "tables": formattedProducts
                 })
             }))
 
-            window.location.href = "/product-registration/list"
+            window.location.href = `/tables/${domainId}`
         } else {
             setError("Missing required fields.");
         }
@@ -81,7 +80,7 @@ function RegisterNewProductComponent() {
 
     const isProductListValid = () => {
         for (const p of products) {
-            if (!p.name || p.name.length == 0 || !p.location || p.location.length == 0 || !p.location.startsWith("s3://")) {
+            if (!p.name || p.name.length == 0 || !p.location || p.location.length == 0 || p.location.startsWith("s3://")) {
                 return false;
             }
         }
@@ -89,39 +88,66 @@ function RegisterNewProductComponent() {
         return true;
     }
 
-    const extractDatabaseS3Location = () => {
-        const row = products[0];
-        const extractBucket = /s3:\/\/(.+?)\//;
-        return extractBucket.exec(row.location)[1];
+    const renderDatabaseDetails = () => {
+        if (database) {
+            return (
+                <ColumnLayout columns={2} variant="text-grid">
+                    <SpaceBetween size="m">
+                        <ValueWithLabel label="Data Domain">
+                            {database.Database.Name}
+                        </ValueWithLabel>
+                        <ValueWithLabel label="Location">
+                            {database.Database.LocationUri}
+                        </ValueWithLabel>
+                    </SpaceBetween>
+                    <SpaceBetween size="m">
+                        <ValueWithLabel label="Data Owner">
+                            {(database.Database.Parameters && "data_owner_name" in database.Database.Parameters) ? database.Database.Parameters.data_owner_name : "n/a"}
+                        </ValueWithLabel>
+                        <ValueWithLabel label="Data Owner Account ID">
+                            {(database.Database.Parameters && "data_owner" in database.Database.Parameters) ? database.Database.Parameters.data_owner : "n/a"}   
+                        </ValueWithLabel>
+                        <ValueWithLabel label="Tags">
+                            <ResourceLFTagsComponent resourceType="database" resourceName={database.Database.Name} />
+                        </ValueWithLabel>
+                    </SpaceBetween>
+                </ColumnLayout>   
+            )
+        }
+
+        return (
+            <Alert header="Object Not Found" type="error">
+                The requested Data Domain object can't be found. Please go back to the previous page.
+            </Alert>
+        )
     }
+
+    useEffect(() => {
+        (async function run() {
+            
+            const credentials = await Auth.currentCredentials()
+            const glueClient = new GlueClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)})
+            setDatabase(await glueClient.send(new GetDatabaseCommand({Name: domainId})))
+        })()
+    }, [])
 
     return (
         <Box>
-            <Header variant="h1">Register New Product</Header>
+            <BreadcrumbGroup items={[
+                        { text: "Data Domains", href: "/"},
+                        { text: domainId, href: `/tables/${domainId}`},
+                        { text: "Register New Data Products" }
+                    ]} />
             <Box margin={{top: "m"}}>
                 <Form errorText={error} actions={
                     <SpaceBetween direction="horizontal" size="s">
-                        <Button variant="link" onClick={onCancel}>Cancel</Button>
-                        <Button variant="primary" onClick={onSubmit}>Submit</Button>
+                        <Button variant="link" href={`/tables/${domainId}`}>Cancel</Button>
+                        <Button variant="primary" onClick={onSubmit} disabled={!database}>Submit</Button>
                     </SpaceBetween>
                 }>
                     <Box margin={{top: "m"}}>
-                        <Container header={<Header variant="h4" description="Metadata about the product.">Product Details</Header>}>
-                            <FormField label="Product Account ID" constraintText="Must have the ProducerWorkflow IAM role already setup.">
-                                <Input type="number" value={accountId} onChange={(event) => {setAccountId(event.detail.value)}} />
-                            </FormField>
-                            <FormField label="Database Name">
-                                <Input type="text" value={dbName} onChange={(event) => {setDbName(event.detail.value)}} />
-                            </FormField>
-                            <FormField label="Owner Name">
-                            <Input type="text" value={ownerName} onChange={(event) => {setOwnerName(event.detail.value)}} />
-                            </FormField>
-                            <FormField label="PII Data">
-                                <Select selectedOption={piiFlag} options={[
-                                                {label: "Contains PII Data", value: "true"},
-                                                {label: "Does NOT Contain PII Data", value: "false"}
-                                            ]} onChange={(event) => {setPiiFlag(event.detail.selectedOption)}} />
-                            </FormField>
+                        <Container header={<Header variant="h3">Register Data Products into Data Domain</Header>}>
+                            {renderDatabaseDetails()}
                         </Container>
                     </Box>
                     <Box margin={{top: "m"}}>
@@ -131,8 +157,8 @@ function RegisterNewProductComponent() {
                                 cell: e => <Input type="text" placeholder="Enter Name" value={e.name} onChange={(event) => updateField(e.id, "name", event.detail.value)} />
                             },
                             {
-                                header: "S3 Location",
-                                cell: e => <Input type="text" placeholder="Input the full path, example: s3://example-bucket/prefix/product-name/" value={e.location}  onChange={(event) => updateField(e.id, "location", event.detail.value)} />
+                                header: "S3 Location (Prefix)",
+                                cell: e => <Input type="text" placeholder="Input prefix relative to Data Domain Location URI" value={e.location}  onChange={(event) => updateField(e.id, "location", event.detail.value)} />
                             },
                             {
                                 header: "",

@@ -26,16 +26,16 @@ const cfnOutput = require("./cfn-output.json");
 
 Amplify.configure(awsconfig);
 
-Amplify.configure({
-    API: {
-        endpoints: [
-            {
-                name: "DataQualityAPIGW",
-                endpoint: cfnOutput.InfraStack.DataQualityHttpApiUrl
-            }
-        ]
-    }
-});
+// Amplify.configure({
+//     API: {
+//         endpoints: [
+//             {
+//                 name: "DataQualityAPIGW",
+//                 endpoint: cfnOutput.InfraStack.DataQualityHttpApiUrl
+//             }
+//         ]
+//     }
+// });
 
 function App() {
   return (

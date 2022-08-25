@@ -23,14 +23,19 @@
     "chart.js": "^3.7.1",
     "inquirer": "^8.1.2",
     "minimist": "^1.2.5",
-    "react": "^17.0.2",
+    "react": "^18.2.0",
     "react-chartjs-2": "^4.0.1",
-    "react-dom": "^17.0.2",
-    "react-router": "^5.2.0",
-    "react-router-dom": "^5.2.0",
-    "react-scripts": "^5.0.0",
+    "react-dom": "^18.2.0",
+    "react-router": "^6.3.0",
+    "react-router-dom": "^6.3.0",
     "uuid": "^8.3.2",
     "web-vitals": "^1.0.1"
+  },
+  "devDependencies": {
+    "react-scripts": "^5.0.1"
+  },
+  "resolutions": {
+    "nth-check": "^2.1.1"
   },
   "scripts": {
     "init-ui": "yarn install && amplify init",

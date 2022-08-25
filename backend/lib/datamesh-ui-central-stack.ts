@@ -67,15 +67,17 @@ export class DataMeshUICentralStack extends Stack {
             }
         );
 
-        const dataMeshUIAuth = new DataMeshUIAuth(this, "DataMeshUIAuth");
+        const dataMeshUIAuth = new DataMeshUIAuth(this, "DataMeshUIAuth", {
+            httpApi: approvalWorkflow.httpApi
+        });
 
-        const dataQuality = new DataQualityCentralAccount(
-            this,
-            "DataQualityCentralAccount",
-            {
-                userPool: dataMeshUIAuth.userPool,
-            }
-        );
+        // const dataQuality = new DataQualityCentralAccount(
+        //     this,
+        //     "DataQualityCentralAccount",
+        //     {
+        //         userPool: dataMeshUIAuth.userPool,
+        //     }
+        // );
 
         const searchCatalog = new GlueCatalogSearchApi(
             this,
@@ -100,7 +102,6 @@ export class DataMeshUICentralStack extends Stack {
             stateMachineName: approvalWorkflow.stateMachine.stateMachineName,
             dpmStateMachineArn: centralStateMachineArn.valueAsString,
             dpmStateMachineRoleArn: centralLfAdminRoleArn.valueAsString,
-            dataQualityHttpApiUrl: dataQuality.dataQualityEndpoint,
             searchApiUrl: searchCatalog.osEndpoint,
             userPool: dataMeshUIAuth.userPool,
             identityPool: dataMeshUIAuth.identityPool,

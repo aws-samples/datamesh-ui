@@ -43,16 +43,20 @@ function TableDetailsComponent(props) {
         setRequestSuccessful(true);
     }
 
-    useEffect(async() => {
-        const credentials = await Auth.currentCredentials();
-        const glueClient = new GlueClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
-        try {
-            const response = await glueClient.send(new GetTableCommand({DatabaseName: dbname, Name: tablename}));
-            const table = response.Table;
-            setTable(table);
-        } catch (e) {
-            setTableNotFound(true);
+    useEffect(() => {
+        async function run() {
+            const credentials = await Auth.currentCredentials();
+            const glueClient = new GlueClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
+            try {
+                const response = await glueClient.send(new GetTableCommand({DatabaseName: dbname, Name: tablename}));
+                const table = response.Table;
+                setTable(table);
+            } catch (e) {
+                setTableNotFound(true);
+            }
         }
+
+        run()
     }, []);
 
     if (tableNotFound) {
@@ -61,7 +65,7 @@ function TableDetailsComponent(props) {
         return (
             <div>
                 <BreadcrumbGroup items={[
-                            { text: "Products", href: "/"},
+                            { text: "Data Domains", href: "/"},
                             { text: dbname, href: "/tables/"+dbname },
                             { text: "Request Access ("+tablename+")", href: "/request-access/"+dbname+"/"+tablename }
                         ]} />

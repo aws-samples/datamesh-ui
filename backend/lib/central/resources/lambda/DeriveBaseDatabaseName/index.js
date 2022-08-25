@@ -1,10 +1,7 @@
 exports.handler = async (event) => {
     const centralDbName = event.source.database;
-    const exploded = centralDbName.split("_");
-    const producerAccountId = exploded[0];
-    const rawDb = exploded[1];
+    const exploded = centralDbName.split("data-domain-");
     return {
-        "producer_acc_id": producerAccountId,
-        "raw_db": rawDb
+        "producer_acc_id": exploded[1],
     }
 };

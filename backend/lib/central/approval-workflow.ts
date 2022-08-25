@@ -191,7 +191,7 @@ export class ApprovalWorkflow extends Construct {
         });
 
         const workflowActivityApprover = new Function(this, "WorkflowActivityApprover", {
-            runtime: Runtime.NODEJS_14_X,
+            runtime: Runtime.NODEJS_16_X,
             handler: 'index.handler',
             code: Code.fromAsset(__dirname+"/resources/lambda/WorkflowActivityApprover"),
             role: this.workflowLambdaSMApproverRole
@@ -226,7 +226,7 @@ export class ApprovalWorkflow extends Construct {
         ], true)
 
         const deriveBaseDatabaseName = new Function(this, "DeriveBaseDatabaseName", {
-            runtime: Runtime.NODEJS_14_X,
+            runtime: Runtime.NODEJS_16_X,
             handler: 'index.handler',
             code: Code.fromAsset(__dirname+"/resources/lambda/DeriveBaseDatabaseName")
         });
@@ -239,7 +239,7 @@ export class ApprovalWorkflow extends Construct {
         ], true);
 
         const workflowSendApprovalNotification = new Function(this, "WorkflowSendApprovalNotification", {
-            runtime: Runtime.NODEJS_14_X,
+            runtime: Runtime.NODEJS_16_X,
             handler: 'index.handler',
             code: Code.fromAsset(__dirname+"/resources/lambda/WorkflowSendApprovalNotification"),
             role: this.workflowLambdaSendApprovalEmailRole,
@@ -253,14 +253,14 @@ export class ApprovalWorkflow extends Construct {
         this.httpApi = httpApi;
 
         const workflowGetTableDetails = new Function(this, "WorkflowGetTableDetails", {
-            runtime: Runtime.NODEJS_14_X,
+            runtime: Runtime.NODEJS_16_X,
             handler: 'index.handler',
             code: Code.fromAsset(__dirname+"/resources/lambda/WorkflowGetTableDetails"),
             role: this.workflowLambdaTableDetailsRole
         });
 
         const workflowShareCatalogItem = new Function(this, "WorkflowShareCatalogItem", {
-            runtime: Runtime.NODEJS_14_X,
+            runtime: Runtime.NODEJS_16_X,
             handler: 'index.handler',
             code: Code.fromAsset(__dirname+"/resources/lambda/WorkflowShareCatalogItem"),
             role: this.workflowLambdaShareCatalogItemRole
@@ -319,7 +319,7 @@ export class ApprovalWorkflow extends Construct {
                     {
                       "Detail": {
                         "central_database_name.$": "$.source.database",
-                        "database_name.$": "$.derivedDbName.Payload.raw_db",
+                        "database_name": "data-products",
                         "producer_acc_id.$": "$.derivedDbName.Payload.producer_acc_id",
                         "table_names.$": "States.Array($.source.table)"
                       },
@@ -378,7 +378,7 @@ export class ApprovalWorkflow extends Construct {
                     },
                     "Resource": {
                         "Table": {
-                          "DatabaseName.$": "States.Format('{}_{}', $.producer_acc_id, $.database_name)",
+                          "DatabaseName.$": "$.database_name",
                           "TableWildcard": {}
                         }
                     }
@@ -405,7 +405,7 @@ export class ApprovalWorkflow extends Construct {
                     },
                     "Resource": {
                         "Table": {
-                          "DatabaseName.$": "States.Format('{}_{}', $.producer_acc_id, $.database_name)",
+                          "DatabaseName.$": "$.database_name",
                           "TableWildcard": {}
                         }
                     }

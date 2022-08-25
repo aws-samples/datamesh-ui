@@ -14,7 +14,6 @@ export interface DataMeshUIProps {
     stateMachineArn: string
     stateMachineName: string
     searchApiUrl: string
-    dataQualityHttpApiUrl: string
     userPool: UserPool
     identityPool: IdentityPool
     tbacSharingWorkflow: StateMachine
@@ -31,7 +30,6 @@ export class DataMeshUI extends Construct {
         let uiPayload : any = {
             "InfraStack": {
                 "StateMachineArn": props.stateMachineArn,
-                "DataQualityHttpApiUrl": props.dataQualityHttpApiUrl,
                 "SearchApiUrl": props.searchApiUrl,
                 "TbacStateMachineArn": props.tbacSharingWorkflow.stateMachineArn,
                 "WorkflowApiUrl": props.workflowApiUrl
@@ -104,7 +102,7 @@ export class DataMeshUI extends Construct {
                     },
                     "Resource": {
                         "Table": {
-                          "DatabaseName.$": "States.Format('{}_{}', $.producer_acc_id, $.database_name)",
+                          "DatabaseName.$": "$.database_name",
                           "TableWildcard": {}
                         }
                     }
@@ -143,110 +141,110 @@ export class DataMeshUI extends Construct {
 
             dpmAddProdEventBridgeRule.addTarget(new SfnStateMachine(dataMeshUINewProductAuthFlow))
 
-            const registerProductTable = new Table(this, "DPMRegisterProductTable", {
-                partitionKey: {
-                    name: "accountId",
-                    type: AttributeType.STRING
-                },
-                sortKey: {
-                    name: "dbTableName",
-                    type: AttributeType.STRING
-                },
-                billingMode: BillingMode.PAY_PER_REQUEST,
-                encryption: TableEncryption.AWS_MANAGED,
-                removalPolicy: RemovalPolicy.DESTROY
-            });
+            // const registerProductTable = new Table(this, "DPMRegisterProductTable", {
+            //     partitionKey: {
+            //         name: "accountId",
+            //         type: AttributeType.STRING
+            //     },
+            //     sortKey: {
+            //         name: "dbTableName",
+            //         type: AttributeType.STRING
+            //     },
+            //     billingMode: BillingMode.PAY_PER_REQUEST,
+            //     encryption: TableEncryption.AWS_MANAGED,
+            //     removalPolicy: RemovalPolicy.DESTROY
+            // });
 
-            const gsiStatusIndexName = "DPMRegisterProductTable-StatusIndex";
+            // const gsiStatusIndexName = "DPMRegisterProductTable-StatusIndex";
 
-            registerProductTable.addGlobalSecondaryIndex({
-                indexName: gsiStatusIndexName,
-                partitionKey: {
-                    name: "status",
-                    type: AttributeType.STRING
-                },
-                sortKey: {
-                    name: "createdAt",
-                    type: AttributeType.NUMBER
-                }
-            })
+            // registerProductTable.addGlobalSecondaryIndex({
+            //     indexName: gsiStatusIndexName,
+            //     partitionKey: {
+            //         name: "status",
+            //         type: AttributeType.STRING
+            //     },
+            //     sortKey: {
+            //         name: "createdAt",
+            //         type: AttributeType.NUMBER
+            //     }
+            // })
 
 
-            uiPayload.InfraStack.RegisterProductTable = {
-                "Name": registerProductTable.tableName,
-                "Arn": registerProductTable.tableArn,
-                "GSI-StatusIndex": gsiStatusIndexName
-            }
+            // uiPayload.InfraStack.RegisterProductTable = {
+            //     "Name": registerProductTable.tableName,
+            //     "Arn": registerProductTable.tableArn,
+            //     "GSI-StatusIndex": gsiStatusIndexName
+            // }
 
             uiPayload.InfraStack.DPMStateMachineArn = props.dpmStateMachineArn;
 
-            const registerProductInitialState = new Pass(this, "RegisterProductInitialState", {
-                parameters: {
-                    "payload.$": "States.StringToJson($.detail.input)",
-                    "status.$": "$.detail.status",
-                    "createdAt.$": "$.detail.startDate"
-                }
-            });
+            // const registerProductInitialState = new Pass(this, "RegisterProductInitialState", {
+            //     parameters: {
+            //         "payload.$": "States.StringToJson($.detail.input)",
+            //         "status.$": "$.detail.status",
+            //         "createdAt.$": "$.detail.startDate"
+            //     }
+            // });
 
-            const mapTables = new Map(this, "TraverseTableArray", {
-                itemsPath: "$.payload.tables",
-                maxConcurrency: 2,
-                parameters: {
-                    "producerAccountId.$": "$.payload.producer_acc_id",
-                    "databaseName.$": "$.payload.database_name",
-                    "status.$": "$.status",
-                    "createdAt.$": "$.createdAt",
-                    "table.$": "$$.Map.Item.Value"
-                }
-            });
+            // const mapTables = new Map(this, "TraverseTableArray", {
+            //     itemsPath: "$.payload.tables",
+            //     maxConcurrency: 2,
+            //     parameters: {
+            //         "producerAccountId.$": "$.payload.producer_acc_id",
+            //         "databaseName.$": "$.payload.database_name",
+            //         "status.$": "$.status",
+            //         "createdAt.$": "$.createdAt",
+            //         "table.$": "$$.Map.Item.Value"
+            //     }
+            // });
 
-            const putRegisterProductData = new CallAwsService(this, "PutRegisterProductData", {
-                service: "dynamodb",
-                action: "putItem",
-                iamResources: [registerProductTable.tableArn],
-                resultPath: JsonPath.DISCARD,
-                parameters: {
-                    "TableName": registerProductTable.tableName,
-                    "Item": {
-                        "accountId": {
-                            "S.$": "$.producerAccountId" 
-                        },
-                        "dbTableName": {
-                            "S.$": "States.Format('{}_{}#{}', $.producerAccountId, $.databaseName, $.table.name)"
-                        },
-                        "location": {
-                            "S.$": "$.table.location"
-                        },
-                        "status": {
-                            "S.$": "$.status"
-                        },
-                        "createdAt": {
-                            "N.$": "States.Format('{}', $.createdAt)"
-                        }
-                    }
-                }
-            })
+            // const putRegisterProductData = new CallAwsService(this, "PutRegisterProductData", {
+            //     service: "dynamodb",
+            //     action: "putItem",
+            //     iamResources: [registerProductTable.tableArn],
+            //     resultPath: JsonPath.DISCARD,
+            //     parameters: {
+            //         "TableName": registerProductTable.tableName,
+            //         "Item": {
+            //             "accountId": {
+            //                 "S.$": "$.producerAccountId" 
+            //             },
+            //             "dbTableName": {
+            //                 "S.$": "States.Format('{}_{}#{}', $.producerAccountId, $.databaseName, $.table.name)"
+            //             },
+            //             "location": {
+            //                 "S.$": "$.table.location"
+            //             },
+            //             "status": {
+            //                 "S.$": "$.status"
+            //             },
+            //             "createdAt": {
+            //                 "N.$": "States.Format('{}', $.createdAt)"
+            //             }
+            //         }
+            //     }
+            // })
 
-            putRegisterProductData.endStates;
-            mapTables.iterator(putRegisterProductData).endStates;
-            registerProductInitialState.next(mapTables)
+            // putRegisterProductData.endStates;
+            // mapTables.iterator(putRegisterProductData).endStates;
+            // registerProductInitialState.next(mapTables)
 
-            const registerProductSM = new StateMachine(this, "RegisterProductMetadata", {
-                definition: registerProductInitialState,
-                stateMachineType: StateMachineType.STANDARD
-            });
+            // const registerProductSM = new StateMachine(this, "RegisterProductMetadata", {
+            //     definition: registerProductInitialState,
+            //     stateMachineType: StateMachineType.STANDARD
+            // });
 
-            const registerProductUIRule = new Rule(this, 'RegisterProductUIRule', {
-                eventPattern: {
-                    source: ["aws.states"],
-                    detailType: ["Step Functions Execution Status Change"],
-                    detail: {
-                        "stateMachineArn": [props.dpmStateMachineArn]
-                    }
-                }
-            });
+            // const registerProductUIRule = new Rule(this, 'RegisterProductUIRule', {
+            //     eventPattern: {
+            //         source: ["aws.states"],
+            //         detailType: ["Step Functions Execution Status Change"],
+            //         detail: {
+            //             "stateMachineArn": [props.dpmStateMachineArn]
+            //         }
+            //     }
+            // });
 
-            registerProductUIRule.addTarget(new SfnStateMachine(registerProductSM));
+            // registerProductUIRule.addTarget(new SfnStateMachine(registerProductSM));
 
             props.identityPool.authenticatedRole.attachInlinePolicy(new Policy(this, "UIDPMStateMachinePolicy", {
                 statements: [   
@@ -264,18 +262,6 @@ export class DataMeshUI extends Construct {
                             "states:DescribeExecution"
                         ],
                         resources: [util.format("arn:aws:states:%s:%s:execution:%s:*", Stack.of(this).region, Stack.of(this).account, props.dpmStateMachineArn.substring(props.dpmStateMachineArn.lastIndexOf(":")+1))]
-                    }),
-                    new PolicyStatement({
-                        effect: Effect.ALLOW,
-                        actions: [
-                            "dynamodb:Query",
-                            "dynamodb:Scan",
-                            "dynamodb:GetItem"
-                        ],
-                        resources: [
-                            registerProductTable.tableArn,
-                            registerProductTable.tableArn+"/index/*"
-                        ]
                     })
                 ]
             }));

@@ -18,7 +18,7 @@
 import { Amplify, Auth } from "aws-amplify";
 import { useEffect, useState } from "react";
 import {GlueClient, GetDatabasesCommand} from '@aws-sdk/client-glue';
-import { Box, Button, Header, Link, SpaceBetween, Table } from "@cloudscape-design/components";
+import { Box, Button, ButtonDropdown, Header, Link, SpaceBetween, Spinner, Table } from "@cloudscape-design/components";
 import ResourceLFTagsComponent from "./TBAC/ResourceLFTagsComponent";
 const cfnOutput = require("../cfn-output.json")
 const config = Amplify.configure();
@@ -29,31 +29,61 @@ function CatalogComponent(props) {
     const [response, setResponse] = useState(null);
     const [nextToken, setNextToken] = useState(null);
     const [refreshTrigger, setRefreshTrigger] = useState(0)
+    const [spinnerVisibility, setSpinnerVisibility] = useState(false)
 
-    useEffect(async() => {
-        const credentials = await Auth.currentCredentials();
-        const glue = new GlueClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
-        const results = await glue.send(new GetDatabasesCommand({NextToken: nextToken}));
-        setDatabases(databases => databases.concat(results.DatabaseList));
-        setResponse(results);
+    useEffect(() => {
+        async function run() {
+            const credentials = await Auth.currentCredentials();
+            const glue = new GlueClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
+            const results = await glue.send(new GetDatabasesCommand({NextToken: nextToken}));
+            setDatabases(databases => databases.concat(results.DatabaseList));
+            setResponse(results);
+        }
+
+        run()
     }, [refreshTrigger]);
 
-    const refreshLfTags = async() => {
+    const refresh = async() => {
+        setSpinnerVisibility(true)
         const currentSession = await Auth.currentSession();
-        const apiUrl = cfnOutput.InfraStack.WorkflowApiUrl + "/tags/sync-permissions";
+        const refreshLfTagUrl = cfnOutput.InfraStack.WorkflowApiUrl + "/tags/sync-permissions";
+        const refreshDataDomainPermissionsUrl = cfnOutput.InfraStack.WorkflowApiUrl + "/data-domains/sync-permissions";
 
-        await axios({
-            method: "POST",
-            url: apiUrl,
-            headers: {
-                "Authorization": currentSession.getAccessToken().getJwtToken()
-            }
-        })
+        await Promise.all([
+            axios({
+                method: "POST",
+                url: refreshLfTagUrl,
+                headers: {
+                    "Authorization": currentSession.getAccessToken().getJwtToken()
+                }
+            }),
+            axios({
+                method: "POST",
+                url: refreshDataDomainPermissionsUrl,
+                headers: {
+                    "Authorization": currentSession.getAccessToken().getJwtToken()
+                }
+            })
+        ])
+
 
         setDatabases([])
         setNextToken(null)
         setResponse(null)
         setRefreshTrigger(refreshTrigger + 1)
+        setSpinnerVisibility(false)
+    }
+
+    const renderRefresh = () => {
+        if (spinnerVisibility) {
+            return (
+                <Button disabled="true"><Spinner /> Refresh</Button>
+            )
+        } else {
+            return (
+                <Button iconName="refresh" onClick={refresh}>Refresh</Button>
+            )
+        }
     }
 
     return (
@@ -64,7 +94,7 @@ function CatalogComponent(props) {
                     columnDefinitions={[
                         {
                             header: "Name",
-                            cell: item => item.Name
+                            cell: item => <Link variant="primary" href={"/tables/"+item.Name}>{item.Name}</Link>
 
                         },
                         {
@@ -77,14 +107,17 @@ function CatalogComponent(props) {
                         },
                         {
                             header: "Actions",
-                            cell: item => <Link variant="primary" href={"/tables/"+item.Name}>Request Access</Link>
+                            cell: item => <ButtonDropdown expandToViewport="true" items={[
+                                {text: "Register Data Product", href: `/product-registration/${item.Name}/new`},
+                                {text: "View Tables", href: `/tables/${item.Name}`}
+                            ]}>Actions</ButtonDropdown>
                         }
                     ]}
 
                     items={databases}
                     header={<Header variant="h2" actions={
                         <SpaceBetween direction="horizontal" size="s">
-                            <Button iconName="refresh" onClick={refreshLfTags}>Refresh</Button>
+                            {renderRefresh()}
                         </SpaceBetween>
                     }>Data Domains</Header>}
                 />

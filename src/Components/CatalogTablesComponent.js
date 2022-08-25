@@ -16,7 +16,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import { GlueClient, GetTablesCommand, GetDatabasesCommand, GetDatabaseCommand } from "@aws-sdk/client-glue";
-import { ColumnLayout, Box, BreadcrumbGroup, Flashbar, Header, Link, Table } from "@cloudscape-design/components";
+import { ColumnLayout, Box, BreadcrumbGroup, Flashbar, Header, Link, Table, SpaceBetween, Button } from "@cloudscape-design/components";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import {Amplify, Auth } from "aws-amplify";
@@ -40,18 +40,22 @@ function CatalogTablesComponent(props) {
         setRequestSuccessful(true);
     }
 
-    useEffect(async() => {
-        const credentials = await Auth.currentCredentials();
-        const glue = new GlueClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
-        const results = await glue.send(new GetTablesCommand({DatabaseName: dbname, NextToken: nextToken}));
-        setTables(tables => tables.concat(results.TableList));
-        setResponse(results);
+    useEffect(() => {
+        async function run() {
+            const credentials = await Auth.currentCredentials();
+            const glue = new GlueClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
+            const results = await glue.send(new GetTablesCommand({DatabaseName: dbname, NextToken: nextToken}));
+            setTables(tables => tables.concat(results.TableList));
+            setResponse(results);
+        }
+
+        run()
     }, [nextToken]);
 
     return(
         <div>
             <BreadcrumbGroup items={[
-                { text: "Products", href: "/"},
+                { text: "Data Domains", href: "/"},
                 { text: dbname, href: "/tables/"+dbname }
             ]} />
             <Box margin={{top: "s", bottom: "s"}} display={requestSuccessful ? "block" : "none"}>
@@ -77,7 +81,11 @@ function CatalogTablesComponent(props) {
                     ]}
 
                     items={tables}
-                    header={<Header variant="h2">Tables in {dbname}</Header>}
+                    header={<Header variant="h2" actions={
+                        <SpaceBetween direction="horizontal" size="s">
+                            <Button iconName="add-plus" href={`/product-registration/${dbname}/new`}>Register Data Products</Button>
+                        </SpaceBetween>
+                    }>Tables in {dbname}</Header>}
                 />
             </Box>
         </div>
