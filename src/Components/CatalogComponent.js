@@ -36,7 +36,8 @@ function CatalogComponent(props) {
             const credentials = await Auth.currentCredentials();
             const glue = new GlueClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
             const results = await glue.send(new GetDatabasesCommand({NextToken: nextToken}));
-            setDatabases(databases => databases.concat(results.DatabaseList));
+            const filteredResults = results.DatabaseList.filter(row => row.Parameters && row.Parameters.data_owner && row.Parameters.data_owner_name)
+            setDatabases(databases => databases.concat(filteredResults));
             setResponse(results);
         }
 
