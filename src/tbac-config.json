@@ -1,7 +1,9 @@
 {
     "TagKeys": {
-        "LineOfBusiness": "LineOfBusiness",
-        "DataDomain": "DataDomain",
+        "LineOfBusiness": "LoB",
         "Confidentiality": "confidentiality"
+    },
+    "DefaultValues": {
+        "confidentiality": "non-sensitive"
     }
 }

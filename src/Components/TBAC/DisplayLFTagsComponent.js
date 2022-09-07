@@ -23,7 +23,7 @@ function DisplayLFTagsComponent(props) {
     }
 
     const requestAccess = async() => {
-        const dataDomain = props.lfTags.find((row) => row.TagKey == tbacConfig.TagKeys.DataDomain)
+        const dataDomain = props.lfTags.find((row) => row.TagKey == tbacConfig.TagKeys.LineOfBusiness)
         if (!targetAccountId) {
             setError("Target Account ID is required");
         } else {
@@ -39,7 +39,7 @@ function DisplayLFTagsComponent(props) {
                     "databaseName": props.database,
                     "lfTags": [
                         {
-                            "TagKey": tbacConfig.TagKeys.DataDomain,
+                            "TagKey": tbacConfig.TagKeys.LineOfBusiness,
                             "TagValues": [dataDomain.TagValues[0]]
                         },
                         {
@@ -77,9 +77,9 @@ function DisplayLFTagsComponent(props) {
     }
 
     const renderTagRow = (tagRow, props) => {
-        if (tagRow.TagKey == tbacConfig.TagKeys.DataDomain && props.showDataDomain) {
+        if (tagRow.TagKey == tbacConfig.TagKeys.LineOfBusiness && props.showDataDomain) {
             return (<ValueWithLabel label={tagRow.TagKey}><StatusIndicator type="info">{tagRow.TagValues[0]}</StatusIndicator></ValueWithLabel>);
-        } else if (tagRow.TagKey != tbacConfig.TagKeys.DataDomain) {
+        } else if (tagRow.TagKey != tbacConfig.TagKeys.LineOfBusiness) {
             return (
                 <ValueWithLabel label={tagRow.TagKey}>
                     <Link onFollow={() => showShareDialog(tagRow.TagKey, tagRow.TagValues[0])}>

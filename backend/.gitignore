@@ -5,6 +5,7 @@
 !lib/central/resources/lambda/Workflow*/*
 !lib/central/resources/lambda/Derive*/*
 !lib/central/resources/lambda/DataQuality*/*
+!lib/central/resources/lambda/Register*/*
 !lib/producer/resources/lambda/*/*
 !jest.config.js
 *.d.ts

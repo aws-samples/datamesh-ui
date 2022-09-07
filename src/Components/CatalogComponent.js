@@ -33,6 +33,9 @@ function CatalogComponent(props) {
 
     useEffect(() => {
         async function run() {
+            const authSession = await Auth.currentSession();
+            console.log(authSession.getAccessToken().getJwtToken())
+
             const credentials = await Auth.currentCredentials();
             const glue = new GlueClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
             const results = await glue.send(new GetDatabasesCommand({NextToken: nextToken}));
