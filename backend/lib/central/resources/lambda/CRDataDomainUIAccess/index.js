@@ -28,7 +28,7 @@ exports.handler = async(event) => {
     } while (nextToken != null);
 
     if (databases.length > 0) {
-        const entriesFlat = databases.filter((row) => row.Name.startsWith("data-domain")).map((row, index) => {
+        const entriesFlat = databases.filter((row) => row.Name.includes("data-domain")).map((row, index) => {
             return {
                 Id: index+"",
                 Permissions: [

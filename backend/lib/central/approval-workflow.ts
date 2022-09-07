@@ -200,7 +200,7 @@ export class ApprovalWorkflow extends Construct {
         const httpApi = new HttpApi(this, "DataLakeWorkflowAPIGW", {
             corsPreflight: {
                 allowOrigins: ["*"],
-                allowHeaders: ["Authorization"],
+                allowHeaders: ["Authorization", "Content-Type"],
                 allowMethods: [
                     CorsHttpMethod.ANY
                 ],

@@ -18,7 +18,7 @@
 import { Amplify, Auth } from "aws-amplify";
 import { useEffect, useState } from "react";
 import {GlueClient, GetDatabasesCommand} from '@aws-sdk/client-glue';
-import { Box, Button, ButtonDropdown, Header, Link, SpaceBetween, Spinner, Table } from "@cloudscape-design/components";
+import { Alert, Box, Button, ButtonDropdown, FormField, Header, Input, Link, Modal, SpaceBetween, Spinner, Table } from "@cloudscape-design/components";
 import ResourceLFTagsComponent from "./TBAC/ResourceLFTagsComponent";
 const cfnOutput = require("../cfn-output.json")
 const config = Amplify.configure();
@@ -30,6 +30,12 @@ function CatalogComponent(props) {
     const [nextToken, setNextToken] = useState(null);
     const [refreshTrigger, setRefreshTrigger] = useState(0)
     const [spinnerVisibility, setSpinnerVisibility] = useState(false)
+    const [modalVisible, setModalVisible] = useState(false)
+    const [modalError, setModalError] = useState(null)
+    const [modalSuccess, setModalSuccess] = useState(null)
+    const [domainName, setDomainName] = useState(null)
+    const [domainSecretArn, setDomainSecretArn] = useState(null)
+    const [registerSpinnerVisible, setRegisterSpinnerVisible] = useState(false)
 
     useEffect(() => {
         async function run() {
@@ -75,6 +81,52 @@ function CatalogComponent(props) {
         setSpinnerVisibility(false)
     }
 
+    const cancelModal = () => {
+        setModalError(null);
+        setModalSuccess(null);
+        setDomainName(null)
+        setDomainSecretArn(null)
+        setModalVisible(false);
+        setRegisterSpinnerVisible(false);
+    }
+
+    const registerDataDomain = async() => {
+        if (domainName && domainSecretArn) {
+            const registerUrl = cfnOutput.InfraStack.WorkflowApiUrl + "/data-domain/register"
+            const session = await Auth.currentSession()
+            const domainId = domainSecretArn.split(":")[4]
+
+            try {
+                setRegisterSpinnerVisible(true)
+                await axios({
+                    method: "POST",
+                    url: registerUrl,
+                    headers: {
+                        "Authorization": session.getAccessToken().getJwtToken(),
+                        "Content-Type": "application/json"
+                    },
+                    data: {
+                        "domainId": domainId,
+                        "domainName": domainName,
+                        "domainSecretArn": domainSecretArn
+                    }
+                })
+
+                cancelModal()
+                await refresh()
+            } catch(e) {
+                setModalError("An unexpected error has occurred, please verify if values are correct")
+            }
+        } else {
+            setModalError("Missing required fields")
+        }
+
+    }
+
+    const showRegisterDataDomainModal = () => {
+        setModalVisible(true)
+    }
+
     const renderRefresh = () => {
         if (spinnerVisibility) {
             return (
@@ -83,6 +135,16 @@ function CatalogComponent(props) {
         } else {
             return (
                 <Button iconName="refresh" onClick={refresh}>Refresh</Button>
+            )
+        }
+    }
+
+    const renderRegisterDataDomain = () => {
+        if (registerSpinnerVisible) {
+            <Button disabled="true"><Spinner /> Register Data Domain</Button>
+        } else {
+            return (
+                <Button iconName="add-plus" onClick={showRegisterDataDomainModal}>Register Data Domain</Button>
             )
         }
     }
@@ -119,10 +181,24 @@ function CatalogComponent(props) {
                     header={<Header variant="h2" actions={
                         <SpaceBetween direction="horizontal" size="s">
                             {renderRefresh()}
+                            {renderRegisterDataDomain()}
                         </SpaceBetween>
                     }>Data Domains</Header>}
                 />
              </Box>
+             <Modal onDismiss={() => {setModalVisible(false)}} visible={modalVisible} header="Register Data Domain" footer={
+                <SpaceBetween direction="horizontal" size="xs">
+                    <Button variant="link" onClick={cancelModal}>Cancel</Button>
+                    <Button variant="primary" onClick={registerDataDomain}>Request Access</Button>
+                </SpaceBetween>}>
+                <Alert type="error" header="Error" visible={modalError}>{modalError}</Alert>
+                <FormField label="Domain Name">
+                    <Input type="text" value={domainName} onChange={event => setDomainName(event.detail.value)} />
+                </FormField>
+                <FormField label="Domain Secret ARN">
+                    <Input type="text" value={domainSecretArn} onChange={event => setDomainSecretArn(event.detail.value)} />
+                </FormField>
+            </Modal>
         </div>
     );
 }

@@ -96,6 +96,18 @@ exports.handler = async(event) => {
                 }
             }
         }).promise()
+
+        await lfClient.grantPermissions({
+            Permissions: ["DESCRIBE"],
+            Principal: {
+                DataLakePrincipalIdentifier: UI_AUTH_ROLE_ARN
+            },
+            Resource: {
+                Database: {
+                    Name: dbName
+                }
+            }
+        }).promise()
     }
 
     await createOrUpdateLFTags(lfClient, confidentialityTagKey, null, process.env.LAMBDA_EXEC_ROLE_ARN, "ASSOCIATE")
