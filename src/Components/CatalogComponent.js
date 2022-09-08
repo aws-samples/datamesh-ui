@@ -170,6 +170,18 @@ function CatalogComponent(props) {
         }
     }
 
+    const renderModalRegisterButton = () => {
+        if (registerSpinnerVisible) {
+            return (
+                <Button disabled="true"><Spinner /> Register</Button>
+            )
+        } else {
+            return (
+                <Button variant="primary" onClick={registerDataDomain}>Register</Button>
+            )
+        }
+    }
+
     const updateTagsField = (id, fieldName, value) => {
         const index = domainTags.findIndex(p => p.id == id);
         domainTags[index][fieldName] = value;
@@ -224,7 +236,7 @@ function CatalogComponent(props) {
              <Modal size="large" onDismiss={() => {setModalVisible(false)}} visible={modalVisible} header="Register Data Domain" footer={
                 <SpaceBetween direction="horizontal" size="xs">
                     <Button variant="link" onClick={cancelModal} disabled={registerDisabled}>Cancel</Button>
-                    <Button variant="primary" onClick={registerDataDomain} disabled={registerDisabled}>Register</Button>
+                    {renderModalRegisterButton()}
                 </SpaceBetween>}>
                 <Alert type="error" header="Error" visible={modalError}>{modalError}</Alert>
                 <FormField label="Domain Name">
