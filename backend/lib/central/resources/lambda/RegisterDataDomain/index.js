@@ -298,31 +298,39 @@ exports.handler = async(event) => {
     }).promise()
 
     if (customLfTags && customLfTags.length > 0) {
+        const finalCustomLfTags = []
         for (let customLfTag of customLfTags) {
-            await createOrUpdateLFTags(lfClient, customLfTag.TagKey, customLfTag.TagValues);
-            await createOrUpdateLFTags(lfClient, customLfTag.TagKey, null, process.env.LAMBDA_EXEC_ROLE_ARN, "ASSOCIATE")
-            await lfClient.grantPermissions({
-                Permissions: ["ASSOCIATE"],
-                PermissionsWithGrantOption: ["ASSOCIATE"],
-                Principal: {
-                    DataLakePrincipalIdentifier: domainId
-                },
+            if (customLfTag.TagKey != domainTagKey && customLfTag.TagKey != confidentialityTagKey) {
+                await createOrUpdateLFTags(lfClient, customLfTag.TagKey, customLfTag.TagValues);
+                await createOrUpdateLFTags(lfClient, customLfTag.TagKey, null, process.env.LAMBDA_EXEC_ROLE_ARN, "ASSOCIATE")
+                await lfClient.grantPermissions({
+                    Permissions: ["ASSOCIATE"],
+                    PermissionsWithGrantOption: ["ASSOCIATE"],
+                    Principal: {
+                        DataLakePrincipalIdentifier: domainId
+                    },
+                    Resource: {
+                        LFTag: {
+                            TagKey: customLfTag.TagKey,
+                            TagValues: customLfTag.TagValues
+                        }
+                    }
+                }).promise()
+
+                finalCustomLfTags.push(customLfTag)
+            }
+        }
+
+        if (finalCustomLfTags.length > 0) {
+            await lfClient.addLFTagsToResource({
+                LFTags: finalCustomLfTags,
                 Resource: {
-                    LFTag: {
-                        TagKey: customLfTag.TagKey,
-                        TagValues: customLfTag.TagValues
+                    Database: {
+                        Name: `${LF_MODE_TBAC}-${DOMAIN_DATABASE_PREFIX}-${domainId}`
                     }
                 }
             }).promise()
         }
-        await lfClient.addLFTagsToResource({
-            LFTags: customLfTags,
-            Resource: {
-                Database: {
-                    Name: `${LF_MODE_TBAC}-${DOMAIN_DATABASE_PREFIX}-${domainId}`
-                }
-            }
-        }).promise()
     }
 
     await ebClient.putPermission({
