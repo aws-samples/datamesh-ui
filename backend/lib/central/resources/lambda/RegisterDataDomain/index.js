@@ -213,17 +213,7 @@ exports.handler = async(event) => {
             {
                 TagKey: domainTagKey,
                 TagValues: [domainName]
-            }
-        ],
-        Resource: {
-            Database: {
-                Name: `${LF_MODE_TBAC}-${DOMAIN_DATABASE_PREFIX}-${domainId}`
-            }
-        }
-    }).promise()
-
-    await lfClient.addLFTagsToResource({
-        LFTags: [
+            },
             {
                 TagKey: confidentialityTagKey,
                 TagValues: [defaultConfidentiality]
@@ -310,7 +300,7 @@ exports.handler = async(event) => {
     if (customLfTags && customLfTags.length > 0) {
         for (let customLfTag of customLfTags) {
             await createOrUpdateLFTags(lfClient, customLfTag.TagKey, customLfTag.TagValues);
-
+            await createOrUpdateLFTags(lfClient, customLfTag.TagKey, null, process.env.LAMBDA_EXEC_ROLE_ARN, "ASSOCIATE")
             await lfClient.grantPermissions({
                 Permissions: ["ASSOCIATE"],
                 PermissionsWithGrantOption: ["ASSOCIATE"],
@@ -325,6 +315,14 @@ exports.handler = async(event) => {
                 }
             }).promise()
         }
+        await lfClient.addLFTagsToResource({
+            LFTags: customLfTags,
+            Resource: {
+                Database: {
+                    Name: `${LF_MODE_TBAC}-${DOMAIN_DATABASE_PREFIX}-${domainId}`
+                }
+            }
+        }).promise()
     }
 
     await ebClient.putPermission({
