@@ -49,6 +49,13 @@ const createOrUpdateLFTags = async(lfClient, key, values, targetRole, permission
 }
 
 exports.handler = async(event) => {
+    const returnPayload = {
+        "statusCode": 200,
+        "headers": {
+            "Content-Type": "application/json",
+            'Access-Control-Allow-Origin': '*'
+        }
+    }
     const workflowRoleArn = process.env.WORKFLOW_ROLE_ARN
     const domainTagKey = process.env.DOMAIN_TAG_KEY
     const confidentialityTagKey = process.env.CONFIDENTIALITY_TAG_KEY
@@ -68,6 +75,17 @@ exports.handler = async(event) => {
 
     const {SecretString} = await secretsManagerClient.getSecretValue({SecretId: domainSecretArn}).promise()
     const {BucketName, Prefix, KmsKeyId} = JSON.parse(SecretString)
+
+    const validationCheck = await Promise.allSettled([
+        glueClient.getDatabase({Name: `${LF_MODE_NRAC}-${DOMAIN_DATABASE_PREFIX}-${domainId}`}).promise(),
+        glueClient.getDatabase({Name: `${LF_MODE_TBAC}-${DOMAIN_DATABASE_PREFIX}-${domainId}`}).promise()
+    ])
+
+    if (validationCheck[0].status == "fulfilled" || validationCheck[1].status == "fulfilled") {
+        returnPayload.statusCode = 400
+        returnPayload.body = JSON.stringify({"error": "Data domain has already been registered."})
+        return returnPayload
+    }
 
     for (let mode of lfModes) {
         const dbName = `${mode}-${DOMAIN_DATABASE_PREFIX}-${domainId}`;
@@ -336,14 +354,6 @@ exports.handler = async(event) => {
         EventBusName: centralEventBusName
     }).promise()
 
-    return {
-        "statusCode": 200,
-        "headers": {
-            "Content-Type": "application/json",
-            'Access-Control-Allow-Origin': '*'
-        },
-        "body": JSON.stringify({
-            "status": "200 OK"
-        })
-    }
+    returnPayload.body = JSON.stringify({"status": "200 OK"})
+    return returnPayload
 }

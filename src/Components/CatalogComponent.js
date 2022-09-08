@@ -115,7 +115,12 @@ function CatalogComponent(props) {
                 cancelModal()
                 await refresh()
             } catch(e) {
-                setModalError("An unexpected error has occurred, please verify if values are correct")
+                if (e.response.data && e.response.data.error) {
+                    setModalError(e.response.data.error)
+                } else {
+                    setModalError("An unexpected error has occurred, please verify if values are correct")
+                }
+                setRegisterSpinnerVisible(false);
             }
         } else {
             setModalError("Missing required fields")
@@ -141,7 +146,9 @@ function CatalogComponent(props) {
 
     const renderRegisterDataDomain = () => {
         if (registerSpinnerVisible) {
-            <Button disabled="true"><Spinner /> Register Data Domain</Button>
+            return (
+                <Button disabled="true"><Spinner /> Register Data Domain</Button>
+            )
         } else {
             return (
                 <Button iconName="add-plus" onClick={showRegisterDataDomainModal}>Register Data Domain</Button>
