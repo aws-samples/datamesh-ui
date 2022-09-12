@@ -24,6 +24,7 @@ import { v4 as uuid } from 'uuid';
 const cfnOutput = require("../cfn-output.json")
 const config = Amplify.configure();
 const axios = require("axios").default;
+const SECRETS_MANAGER_ARN_REGEX_PATTERN = /^arn:aws:secretsmanager:.+?:\d{12}:secret:domain\-config.*$/
 
 function CatalogComponent(props) {
     const [databases, setDatabases] = useState([]);
@@ -101,39 +102,43 @@ function CatalogComponent(props) {
 
     const registerDataDomain = async() => {
         if (domainName && domainSecretArn) {
-            const registerUrl = cfnOutput.InfraStack.WorkflowApiUrl + "/data-domain/register"
-            const session = await Auth.currentSession()
-            const domainId = domainSecretArn.split(":")[4]
-
-            try {
-                setRegisterSpinnerVisible(true)
-                setRegisterDisabled(true)
-
-                await axios({
-                    method: "POST",
-                    url: registerUrl,
-                    headers: {
-                        "Authorization": session.getAccessToken().getJwtToken(),
-                        "Content-Type": "application/json"
-                    },
-                    data: {
-                        "domainId": domainId,
-                        "domainName": domainName,
-                        "domainSecretArn": domainSecretArn,
-                        "customLfTags": domainTags.map((tag) => ({TagKey: tag.TagKey, TagValues: [tag.TagValues]}))
+            if (SECRETS_MANAGER_ARN_REGEX_PATTERN.test(domainSecretArn)) {
+                const registerUrl = cfnOutput.InfraStack.WorkflowApiUrl + "/data-domain/register"
+                const session = await Auth.currentSession()
+                const domainId = domainSecretArn.split(":")[4]
+    
+                try {
+                    setRegisterSpinnerVisible(true)
+                    setRegisterDisabled(true)
+    
+                    await axios({
+                        method: "POST",
+                        url: registerUrl,
+                        headers: {
+                            "Authorization": session.getAccessToken().getJwtToken(),
+                            "Content-Type": "application/json"
+                        },
+                        data: {
+                            "domainId": domainId,
+                            "domainName": domainName,
+                            "domainSecretArn": domainSecretArn,
+                            "customLfTags": domainTags.map((tag) => ({TagKey: tag.TagKey, TagValues: [tag.TagValues]}))
+                        }
+                    })
+    
+                    cancelModal()
+                    await refresh()
+                } catch(e) {
+                    if (e.response.data && e.response.data.error) {
+                        setModalError(e.response.data.error)
+                    } else {
+                        setModalError("An unexpected error has occurred, please verify if values are correct")
                     }
-                })
-
-                cancelModal()
-                await refresh()
-            } catch(e) {
-                if (e.response.data && e.response.data.error) {
-                    setModalError(e.response.data.error)
-                } else {
-                    setModalError("An unexpected error has occurred, please verify if values are correct")
+                    setRegisterSpinnerVisible(false);
+                    setRegisterDisabled(false)
                 }
-                setRegisterSpinnerVisible(false);
-                setRegisterDisabled(false)
+            } else {
+                setModalError("Invalid data domain secret arn")
             }
         } else {
             setModalError("Missing required fields")

@@ -73,8 +73,18 @@ exports.handler = async(event) => {
     const lfClient = new AWS.LakeFormation()
     const ebClient = new AWS.EventBridge()
 
-    const {SecretString} = await secretsManagerClient.getSecretValue({SecretId: domainSecretArn}).promise()
-    const {BucketName, Prefix, KmsKeyId} = JSON.parse(SecretString)
+    let SecretString, BucketName, Prefix, KmsKeyId = null;
+
+    try {
+        ({SecretString} = await secretsManagerClient.getSecretValue({SecretId: domainSecretArn}).promise())
+    } catch (e) {
+        console.log(e)
+        returnPayload.statusCode = 400
+        returnPayload.body = JSON.stringify({"error": "Invalid data domain secret."})
+        return returnPayload
+    }
+
+    ({BucketName, Prefix, KmsKeyId} = JSON.parse(SecretString))
 
     const validationCheck = await Promise.allSettled([
         glueClient.getDatabase({Name: `${LF_MODE_NRAC}-${DOMAIN_DATABASE_PREFIX}-${domainId}`}).promise(),
@@ -86,6 +96,42 @@ exports.handler = async(event) => {
         returnPayload.body = JSON.stringify({"error": "Data domain has already been registered."})
         return returnPayload
     }
+
+    const createRoleResult = await iamClient.createRole({
+        RoleName: `${DOMAIN_DATABASE_PREFIX}-${domainId}-accessRole`,
+        AssumeRolePolicyDocument: JSON.stringify({
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Principal": {
+                        "Service": "lakeformation.amazonaws.com"
+                    },
+                    "Action": "sts:AssumeRole"
+                }
+            ]
+        })
+    }).promise()
+
+    // await iamClient.putRolePolicy({
+    //     PolicyName: `AllowRoleAccess_${domainId}`,
+    //     PolicyDocument: JSON.stringify({
+    //         "Version": "2012-10-17",
+    //         "Statement": [
+    //             {
+    //                 "Effect": "Allow",
+    //                 "Action": [
+    //                     "iam:GetRole",
+    //                     "iam:PassRole"
+    //                 ],
+    //                 "Resource": [
+    //                     createRoleResult.Role.Arn
+    //                 ]
+    //             }
+    //         ]
+    //     }),
+    //     RoleName: process.env.LAMBDA_EXEC_ROLE_NAME
+    // }).promise()
 
     for (let mode of lfModes) {
         const dbName = `${mode}-${DOMAIN_DATABASE_PREFIX}-${domainId}`;
@@ -129,22 +175,6 @@ exports.handler = async(event) => {
     }
 
     await createOrUpdateLFTags(lfClient, confidentialityTagKey, null, process.env.LAMBDA_EXEC_ROLE_ARN, "ASSOCIATE")
-
-    const createRoleResult = await iamClient.createRole({
-        RoleName: `${DOMAIN_DATABASE_PREFIX}-${domainId}-accessRole`,
-        AssumeRolePolicyDocument: JSON.stringify({
-            "Version": "2012-10-17",
-            "Statement": [
-                {
-                    "Effect": "Allow",
-                    "Principal": {
-                        "Service": "lakeformation.amazonaws.com"
-                    },
-                    "Action": "sts:AssumeRole"
-                }
-            ]
-        })
-    }).promise()
 
     await iamClient.putRolePolicy({
         PolicyName: "AllowDataAccess",

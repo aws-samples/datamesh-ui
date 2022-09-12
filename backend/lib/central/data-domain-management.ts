@@ -33,15 +33,31 @@ export class DataDomainManagement extends Construct {
                             "glue:*",
                             "iam:CreateRole",
                             "iam:PutRolePolicy",
-                            "iam:GetRole",
-                            "iam:PassRole",
                             "events:PutRule",
                             "events:PutPermission",
                             "events:PutTargets",
-                            "secretsmanager:GetSecretValue",
                             "kms:Decrypt"
                         ],
                         resources: ["*"]
+                    }),
+                    new PolicyStatement({
+                        effect: Effect.ALLOW,
+                        actions: [
+                            "secretsmanager:GetSecretValue"
+                        ],
+                        resources: [
+                            "arn:aws:secretsmanager:*:*:secret:domain-config-*"
+                        ]
+                    }),
+                    new PolicyStatement({
+                        effect: Effect.ALLOW,
+                        actions: [
+                            "iam:GetRole",
+                            "iam:PassRole"
+                        ],
+                        resources: [
+                            "arn:aws:iam::*:role/data-domain-*-accessRole"
+                        ]
                     })
                 ]
             })}
