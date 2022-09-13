@@ -375,8 +375,8 @@ exports.handler = async(event) => {
         Name: `${domainId}_createResourceLinks_rule`,
         EventBusName: centralEventBusName,
         EventPattern: JSON.stringify({
-            source: ["com.central.stepfunction"],
-            detailType: [`${domainId}_createResourceLinks`]
+            "source": ["com.central.stepfunction"],
+            "detail-type": [`${domainId}_createResourceLinks`]
         })
     }).promise()
 

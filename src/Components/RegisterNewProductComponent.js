@@ -57,7 +57,7 @@ function RegisterNewProductComponent() {
         if (database && isProductListValid()) {
             const credentials = await Auth.currentCredentials();
             const sfnClient = new SFNClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
-            const accessMode = (database.Parameters && database.Parameters.access_mode) ? database.Parameters.access_mode : "nrac";
+            const accessMode = (database.Database.Parameters && database.Database.Parameters.access_mode) ? database.Database.Parameters.access_mode : "nrac";
             const formattedProducts = products.map((prod) => {
                 prod.location = `${database.Database.LocationUri}/${prod.location}`
                 prod.location_key = prod.location.substring(5);
