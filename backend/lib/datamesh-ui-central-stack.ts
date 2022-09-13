@@ -96,7 +96,8 @@ export class DataMeshUICentralStack extends Stack {
         const tbacSharingWorkflow = new TbacSharingWorkflow(this, "TbacSharingWorkflow", {
             cognitoAuthRole: dataMeshUIAuth.identityPool.authenticatedRole,
             centralApprovalEventBus: approvalWorkflow.centralApprovalEventBus,
-            approvalBaseUrl: approvalWorkflow.approvalBaseUrl
+            approvalBaseUrl: approvalWorkflow.approvalBaseUrl,
+            centralEventBusArn: centralEventBusArn.valueAsString
         });
 
         new DataMeshUI(this, "DataMeshUI", {
