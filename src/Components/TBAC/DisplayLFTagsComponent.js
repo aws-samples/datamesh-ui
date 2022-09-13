@@ -55,8 +55,6 @@ function DisplayLFTagsComponent(props) {
                 }));
 
 
-                setShareTagKey(null);
-                setShareTagValue(null);
                 setTargetAccountId(null);
                 setError(null);
                 setSuccess("Request for access sent successfully")
