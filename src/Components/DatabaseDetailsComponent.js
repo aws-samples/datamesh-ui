@@ -24,7 +24,7 @@ import ResourceLFTagsComponent from "./TBAC/ResourceLFTagsComponent";
 
 const config = Amplify.configure();
 
-function DatabaseDetailsComponent({dbName}) {
+function DatabaseDetailsComponent({dbName, accessModeCallback}) {
     const [db, setDb] = useState();
 
     useEffect(() => {
@@ -33,6 +33,11 @@ function DatabaseDetailsComponent({dbName}) {
             const glueClient = new GlueClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
             const db = await glueClient.send(new GetDatabaseCommand({Name: dbName}));
             setDb(db.Database);
+            const parameters = db.Database.Parameters
+
+            if (accessModeCallback) {
+                accessModeCallback((parameters && "access_mode" in parameters) ? parameters.access_mode : "nrac")
+            }
         }
 
         run()
@@ -51,6 +56,9 @@ function DatabaseDetailsComponent({dbName}) {
                         </ValueWithLabel>
                         <ValueWithLabel label="Has PII">
                             {(db.Parameters && "pii_flag" in db.Parameters && db.Parameters.pii_flag === "true") ? <Badge color="red">Yes</Badge> : <Badge color="green">No</Badge>}
+                        </ValueWithLabel>
+                        <ValueWithLabel label="Access Mode">
+                            {(db.Parameters && "access_mode" in db.Parameters) ? db.Parameters.access_mode : "n/a"}
                         </ValueWithLabel>
                     </SpaceBetween>
                     <SpaceBetween size="m">

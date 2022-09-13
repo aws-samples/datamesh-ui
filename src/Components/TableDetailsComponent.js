@@ -37,6 +37,7 @@ function TableDetailsComponent(props) {
     const [tableNotFound, setTableNotFound] = useState(false);
     const [requestSuccessful, setRequestSuccessful] = useState(false);
     const [executionArn, setExecutionArn] = useState();
+    const [accessMode, setAccessMode] = useState("nrac")
 
     const requestAccessSuccessHandler = async(executionArn) => {
         setExecutionArn(executionArn);
@@ -59,6 +60,18 @@ function TableDetailsComponent(props) {
         run()
     }, []);
 
+    const renderRequestAccess = () => {
+        if (accessMode == "nrac") {
+            return (
+                <Box margin={{top: "m"}}>
+                    <RequestAccessComponent dbName={dbname} tableName={tablename} successHandler={requestAccessSuccessHandler} />
+                </Box>  
+            )
+        }
+
+        return null
+    }
+
     if (tableNotFound) {
         return <Flashbar items={[{header: "Invalid Request", type: "error", content: "There's no table found for the given parameter."}]} />;
     } else if (table) {
@@ -72,7 +85,7 @@ function TableDetailsComponent(props) {
                 <Box margin={{top: "s", bottom: "s"}} display={requestSuccessful ? "block" : "none"}>
                     <Flashbar items={[{type: "success", header: "Request Submitted ("+executionArn+")", content: "Successfully submitted request, once approved please accept RAM request."}]}></Flashbar>
                 </Box>
-                <DatabaseDetailsComponent dbName={dbname} />
+                <DatabaseDetailsComponent dbName={dbname} accessModeCallback={setAccessMode} />
                 <ResourceLFTagsWrapper resourceName={tablename} resourceDatabaseName={dbname}>
                     <Box margin={{top: "l"}}>
                         <Container header={<Header variant="h2">Table Details</Header>}>
@@ -114,9 +127,7 @@ function TableDetailsComponent(props) {
                         ]} />
                     </Box>
                 </ResourceLFTagsWrapper>
-                <Box margin={{top: "m"}}>
-                    <RequestAccessComponent dbName={dbname} tableName={tablename} successHandler={requestAccessSuccessHandler} />
-                </Box>  
+                {renderRequestAccess()}
             </div>
         );
     } else {

@@ -21,7 +21,7 @@ function ResourceLFTagsWrapper(props) {
                     }
                 }
             }
-    
+
             setContext({
                 resourceTag: await lfClient.send(new GetResourceLFTagsCommand(payload)),
                 databaseName: props.resourceDatabaseName

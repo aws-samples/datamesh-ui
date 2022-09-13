@@ -35,7 +35,6 @@ function CatalogComponent(props) {
     const [modalVisible, setModalVisible] = useState(false)
     const [modalError, setModalError] = useState(null)
     const [modalSuccess, setModalSuccess] = useState(null)
-    const [domainName, setDomainName] = useState(null)
     const [domainSecretArn, setDomainSecretArn] = useState(null)
     const [registerSpinnerVisible, setRegisterSpinnerVisible] = useState(false)
     const [domainTags, setDomainTags] = useState([])
@@ -94,14 +93,13 @@ function CatalogComponent(props) {
     const clearRegisterDomainState = () => {
         setModalError(null);
         setModalSuccess(null);
-        setDomainName(null)
         setDomainSecretArn(null)
         setDomainTags([])
         setRegisterDisabled(false)
     }
 
     const registerDataDomain = async() => {
-        if (domainName && domainSecretArn) {
+        if (domainSecretArn) {
             if (SECRETS_MANAGER_ARN_REGEX_PATTERN.test(domainSecretArn)) {
                 const registerUrl = cfnOutput.InfraStack.WorkflowApiUrl + "/data-domain/register"
                 const session = await Auth.currentSession()
@@ -120,7 +118,6 @@ function CatalogComponent(props) {
                         },
                         data: {
                             "domainId": domainId,
-                            "domainName": domainName,
                             "domainSecretArn": domainSecretArn,
                             "customLfTags": domainTags.map((tag) => ({TagKey: tag.TagKey, TagValues: [tag.TagValues]}))
                         }
@@ -244,9 +241,6 @@ function CatalogComponent(props) {
                     {renderModalRegisterButton()}
                 </SpaceBetween>}>
                 <Alert type="error" header="Error" visible={modalError}>{modalError}</Alert>
-                <FormField label="Domain Name">
-                    <Input type="text" value={domainName} onChange={event => setDomainName(event.detail.value)} />
-                </FormField>
                 <FormField label="Domain Secret ARN">
                     <Input type="text" value={domainSecretArn} onChange={event => setDomainSecretArn(event.detail.value)} />
                 </FormField>

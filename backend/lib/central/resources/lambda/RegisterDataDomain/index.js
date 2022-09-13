@@ -60,7 +60,7 @@ exports.handler = async(event) => {
     const domainTagKey = process.env.DOMAIN_TAG_KEY
     const confidentialityTagKey = process.env.CONFIDENTIALITY_TAG_KEY
     const defaultConfidentiality = process.env.DEFAULT_CONFIDENTIALITY
-    const {domainId, domainName, domainSecretArn, customLfTags} = JSON.parse(event.body)
+    const {domainId, domainSecretArn, customLfTags} = JSON.parse(event.body)
     const lfModes = [LF_MODE_TBAC, LF_MODE_NRAC]
     const awsRegion = process.env.AWS_REGION
     const centralEventBusArn = process.env.CENTRAL_EVENT_BUS_ARN
@@ -73,7 +73,7 @@ exports.handler = async(event) => {
     const lfClient = new AWS.LakeFormation()
     const ebClient = new AWS.EventBridge()
 
-    let SecretString, BucketName, Prefix, KmsKeyId = null;
+    let SecretString, BucketName, Prefix, KmsKeyId, DomainName, domainName = null;
 
     try {
         const secretsResult = await secretsManagerClient.getSecretValue({SecretId: domainSecretArn}).promise()
@@ -85,7 +85,9 @@ exports.handler = async(event) => {
         return returnPayload
     }
 
-    ({BucketName, Prefix, KmsKeyId} = JSON.parse(SecretString))
+    ({DomainName, BucketName, Prefix, KmsKeyId} = JSON.parse(SecretString))
+
+    domainName = DomainName
 
     const validationCheck = await Promise.allSettled([
         glueClient.getDatabase({Name: `${LF_MODE_NRAC}-${DOMAIN_DATABASE_PREFIX}-${domainId}`}).promise(),

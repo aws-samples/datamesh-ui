@@ -97,7 +97,7 @@ function CatalogTablesComponent(props) {
                         },
                         {
                             header: "Actions",
-                            cell: item => <ColumnLayout columns={2} variant="text-grid"><div><Link variant="primary" href={"/request-access/"+dbname+"/"+item.Name}>Request Per Table Access</Link></div></ColumnLayout>
+                            cell: item => <ColumnLayout columns={2} variant="text-grid"><div><Link variant="primary" href={"/request-access/"+dbname+"/"+item.Name}>View or Request Per Table Access</Link></div></ColumnLayout>
                         }
                     ]}
 
