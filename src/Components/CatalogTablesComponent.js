@@ -16,7 +16,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import { GlueClient, GetTablesCommand, GetDatabasesCommand, GetDatabaseCommand } from "@aws-sdk/client-glue";
-import { ColumnLayout, Box, BreadcrumbGroup, Flashbar, Header, Link, Table, SpaceBetween, Button } from "@cloudscape-design/components";
+import { ColumnLayout, Box, BreadcrumbGroup, Flashbar, Header, Link, Table, SpaceBetween, Button, Spinner } from "@cloudscape-design/components";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import {Amplify, Auth } from "aws-amplify";
@@ -34,6 +34,8 @@ function CatalogTablesComponent(props) {
     const [response, setResponse] = useState();
     const [executionArn, setExecutionArn] = useState();
     const [requestSuccessful, setRequestSuccessful] = useState(false);
+    const [spinnerVisibility, setSpinnerVisibility] = useState(false)
+    const [forceRefresh, setForceRefresh] = useState(0)
 
     const requestAccessSuccessHandler = async(executionArn) => {
         setExecutionArn(executionArn);
@@ -47,10 +49,29 @@ function CatalogTablesComponent(props) {
             const results = await glue.send(new GetTablesCommand({DatabaseName: dbname, NextToken: nextToken}));
             setTables(tables => tables.concat(results.TableList));
             setResponse(results);
+            setSpinnerVisibility(false)
         }
 
         run()
-    }, [nextToken]);
+    }, [nextToken, forceRefresh]);
+
+    const refresh = () => {
+        setSpinnerVisibility(true)
+        setTables([])
+        setForceRefresh(forceRefresh + 1)
+    }
+
+    const renderRefresh = () => {
+        if (spinnerVisibility) {
+            return (
+                <Button disabled="true"><Spinner /> Refresh</Button>
+            )
+        } else {
+            return (
+                <Button iconName="refresh" onClick={refresh}>Refresh</Button>
+            )
+        }
+    }
 
     return(
         <div>
@@ -76,13 +97,14 @@ function CatalogTablesComponent(props) {
                         },
                         {
                             header: "Actions",
-                            cell: item => <ColumnLayout columns={2} variant="text-grid"><div><Link variant="primary" href={"/request-access/"+dbname+"/"+item.Name}>Request Per Table Access</Link></div></ColumnLayout>
+                            cell: item => <ColumnLayout columns={2} variant="text-grid"><div><Link variant="primary" href={"/request-access/"+dbname+"/"+item.Name}>View or Request Per Table Access</Link></div></ColumnLayout>
                         }
                     ]}
 
                     items={tables}
                     header={<Header variant="h2" actions={
                         <SpaceBetween direction="horizontal" size="s">
+                            {renderRefresh()}
                             <Button iconName="add-plus" href={`/product-registration/${dbname}/new`}>Register Data Products</Button>
                         </SpaceBetween>
                     }>Tables in {dbname}</Header>}

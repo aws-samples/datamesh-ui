@@ -200,7 +200,7 @@ export class ApprovalWorkflow extends Construct {
         const httpApi = new HttpApi(this, "DataLakeWorkflowAPIGW", {
             corsPreflight: {
                 allowOrigins: ["*"],
-                allowHeaders: ["Authorization"],
+                allowHeaders: ["Authorization", "Content-Type"],
                 allowMethods: [
                     CorsHttpMethod.ANY
                 ],
@@ -321,7 +321,8 @@ export class ApprovalWorkflow extends Construct {
                         "central_database_name.$": "$.source.database",
                         "database_name": "data-products",
                         "producer_acc_id.$": "$.derivedDbName.Payload.producer_acc_id",
-                        "table_names.$": "States.Array($.source.table)"
+                        "table_names.$": "States.Array($.source.table)",
+                        "lf_access_mode": "nrac"
                       },
                       "DetailType.$": "States.Format('{}_createResourceLinks', $.target.account_id)",
                       "EventBusName": centralEventBus.eventBusName,

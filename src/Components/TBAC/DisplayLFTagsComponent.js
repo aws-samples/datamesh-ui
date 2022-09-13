@@ -1,5 +1,5 @@
 import { SFNClient, StartExecutionCommand } from "@aws-sdk/client-sfn";
-import { Box, Button, ColumnLayout, Container, FormField, Grid, Header, Icon, Input, Link, Modal, SpaceBetween, StatusIndicator, Badge } from "@cloudscape-design/components";
+import { Box, Button, ColumnLayout, Container, FormField, Grid, Header, Icon, Input, Link, Modal, SpaceBetween, StatusIndicator, Badge, ExpandableSection, Table } from "@cloudscape-design/components";
 import {Amplify, Auth } from "aws-amplify";
 import { useState } from "react";
 import ValueWithLabel from "../ValueWithLabel";
@@ -23,7 +23,7 @@ function DisplayLFTagsComponent(props) {
     }
 
     const requestAccess = async() => {
-        const dataDomain = props.lfTags.find((row) => row.TagKey == tbacConfig.TagKeys.DataDomain)
+        const dataDomain = props.lfTags.find((row) => row.TagKey == tbacConfig.TagKeys.LineOfBusiness)
         if (!targetAccountId) {
             setError("Target Account ID is required");
         } else {
@@ -39,7 +39,7 @@ function DisplayLFTagsComponent(props) {
                     "databaseName": props.database,
                     "lfTags": [
                         {
-                            "TagKey": tbacConfig.TagKeys.DataDomain,
+                            "TagKey": tbacConfig.TagKeys.LineOfBusiness,
                             "TagValues": [dataDomain.TagValues[0]]
                         },
                         {
@@ -55,8 +55,6 @@ function DisplayLFTagsComponent(props) {
                 }));
 
 
-                setShareTagKey(null);
-                setShareTagValue(null);
                 setTargetAccountId(null);
                 setError(null);
                 setSuccess("Request for access sent successfully")
@@ -77,9 +75,9 @@ function DisplayLFTagsComponent(props) {
     }
 
     const renderTagRow = (tagRow, props) => {
-        if (tagRow.TagKey == tbacConfig.TagKeys.DataDomain && props.showDataDomain) {
+        if (tagRow.TagKey == tbacConfig.TagKeys.LineOfBusiness && props.showDataDomain) {
             return (<ValueWithLabel label={tagRow.TagKey}><StatusIndicator type="info">{tagRow.TagValues[0]}</StatusIndicator></ValueWithLabel>);
-        } else if (tagRow.TagKey != tbacConfig.TagKeys.DataDomain) {
+        } else if (tagRow.TagKey != tbacConfig.TagKeys.LineOfBusiness) {
             return (
                 <ValueWithLabel label={tagRow.TagKey}>
                     <Link onFollow={() => showShareDialog(tagRow.TagKey, tagRow.TagValues[0])}>
@@ -92,16 +90,41 @@ function DisplayLFTagsComponent(props) {
         return null;
     }
 
+    const renderTagValue = (tagRow) => {
+        if (tagRow.TagKey == tbacConfig.TagKeys.LineOfBusiness) {
+            return (tagRow.TagValues[0])
+        } else {
+            return (
+                <Link onFollow={() => showShareDialog(tagRow.TagKey, tagRow.TagValues[0])}>
+                    {tagRow.TagValues[0]}
+                </Link>
+            )
+        }
+    }
+
     if (props.lfTags && props.lfTags.length > 0) {
         return (
-            <Container>
-                <ColumnLayout columns={2} variant="text-grid">
-                    <SpaceBetween size="m">
-                        {props.lfTags ? props.lfTags.map((tagRow) => {
-                            return (renderTagRow(tagRow, props))
-                        }): "n/a"}
-                    </SpaceBetween>
-                </ColumnLayout>
+            <Box>
+                <ExpandableSection header={<Header variant="h4">View Associated Tags</Header>}>
+                    {/* <ColumnLayout columns={2} variant="text-grid">
+                        <SpaceBetween size="m">
+                            {props.lfTags ? props.lfTags.map((tagRow) => {
+                                return (renderTagRow(tagRow, props))
+                            }): "n/a"}
+                        </SpaceBetween>
+                    </ColumnLayout>                     */}
+                    <Table items={props.lfTags} columnDefinitions={[
+                        {
+                            header: "Tag Key",
+                            cell: e => e.TagKey
+                        },
+                        {
+                            header: "Tag Value",
+                            cell: e => renderTagValue(e)
+                        }
+                    ]}></Table>
+                </ExpandableSection>
+
                 <Modal onDismiss={() => setModalVisible(false)} visible={modalVisible} header="Request Tag Access" footer={
                     <SpaceBetween direction="horizontal" size="xs">
                         <Button variant="link" onClick={cancelModal}>Cancel</Button>
@@ -115,7 +138,7 @@ function DisplayLFTagsComponent(props) {
                     </FormField>
                     {success ? <StatusIndicator>{success}</StatusIndicator> : null}
                 </Modal>
-            </Container>
+            </Box>
         )
     } else {
         return (

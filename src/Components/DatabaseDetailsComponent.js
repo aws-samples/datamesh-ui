@@ -24,7 +24,7 @@ import ResourceLFTagsComponent from "./TBAC/ResourceLFTagsComponent";
 
 const config = Amplify.configure();
 
-function DatabaseDetailsComponent({dbName}) {
+function DatabaseDetailsComponent({dbName, accessModeCallback}) {
     const [db, setDb] = useState();
 
     useEffect(() => {
@@ -33,6 +33,11 @@ function DatabaseDetailsComponent({dbName}) {
             const glueClient = new GlueClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
             const db = await glueClient.send(new GetDatabaseCommand({Name: dbName}));
             setDb(db.Database);
+            const parameters = db.Database.Parameters
+
+            if (accessModeCallback) {
+                accessModeCallback((parameters && "access_mode" in parameters) ? parameters.access_mode : "nrac")
+            }
         }
 
         run()
@@ -40,10 +45,10 @@ function DatabaseDetailsComponent({dbName}) {
 
     if (db) {
         return (
-            <Container header={<Header variant="h2">Product Details</Header>}>
+            <Container header={<Header variant="h2">Data Domain Details</Header>}>
                 <ColumnLayout columns={2} variant="text-grid">
                     <SpaceBetween size="m">
-                        <ValueWithLabel label="Product">
+                        <ValueWithLabel label="Data Domain Database Name">
                             {dbName}
                         </ValueWithLabel>
                         <ValueWithLabel label="Location">
@@ -52,12 +57,15 @@ function DatabaseDetailsComponent({dbName}) {
                         <ValueWithLabel label="Has PII">
                             {(db.Parameters && "pii_flag" in db.Parameters && db.Parameters.pii_flag === "true") ? <Badge color="red">Yes</Badge> : <Badge color="green">No</Badge>}
                         </ValueWithLabel>
+                        <ValueWithLabel label="Access Mode">
+                            {(db.Parameters && "access_mode" in db.Parameters) ? db.Parameters.access_mode : "n/a"}
+                        </ValueWithLabel>
                     </SpaceBetween>
                     <SpaceBetween size="m">
-                        <ValueWithLabel label="Data Owner">
+                        <ValueWithLabel label="Data Domain Name">
                             {(db.Parameters && "data_owner_name" in db.Parameters) ? db.Parameters.data_owner_name : "n/a"}
                         </ValueWithLabel>
-                        <ValueWithLabel label="Data Owner Account ID">
+                        <ValueWithLabel label="Data Domain Account ID">
                             {(db.Parameters && "data_owner" in db.Parameters) ? db.Parameters.data_owner : "n/a"}   
                         </ValueWithLabel>
                         <ValueWithLabel label="Tags">

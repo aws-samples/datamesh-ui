@@ -1,9 +1,10 @@
+import { Stack } from "aws-cdk-lib";
 import { EventBus } from "aws-cdk-lib/aws-events";
 import { Effect, IRole, ManagedPolicy, Policy, PolicyDocument, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
 import { CfnDataLakeSettings } from "aws-cdk-lib/aws-lakeformation";
 import { Code, Function, Runtime } from "aws-cdk-lib/aws-lambda";
 import { Choice, Condition, IntegrationPattern, JsonPath, StateMachine, TaskInput } from "aws-cdk-lib/aws-stepfunctions";
-import { LambdaInvoke } from "aws-cdk-lib/aws-stepfunctions-tasks";
+import { CallAwsService, LambdaInvoke } from "aws-cdk-lib/aws-stepfunctions-tasks";
 import { Construct } from "constructs";
 
 export interface TbacSharingWorkflowProps {
@@ -12,6 +13,7 @@ export interface TbacSharingWorkflowProps {
     cognitoAuthRole: IRole
     centralApprovalEventBus: EventBus
     approvalBaseUrl: string
+    centralEventBusArn: string
 }
 
 export class TbacSharingWorkflow extends Construct {
@@ -135,6 +137,33 @@ export class TbacSharingWorkflow extends Construct {
             }),
             resultPath: JsonPath.DISCARD
         })
+
+        const centralEventBus = EventBus.fromEventBusArn(this, "CentralEventBus", props.centralEventBusArn);
+        const sfnEmitToCentralEventBus = new CallAwsService(this, "EmitToCentralEventBus", {
+            service: "eventbridge",
+            action: "putEvents",
+            iamResources: ["*"],
+            iamAction: "events:PutEvents",
+            parameters: {
+                "Entries": [
+                    {
+                      "Detail": {
+                        "central_account_id": Stack.of(this).account,
+                        "central_database_name.$": "$.databaseName",
+                        "database_name": "tbac-data-domain",
+                        "lf_access_mode": "tbac"
+                      },
+                      "DetailType.$": "States.Format('{}_createResourceLinks', $.targetAccountId)",
+                      "EventBusName": centralEventBus.eventBusName,
+                      "Source": "com.central.stepfunction"
+                    }
+                ]
+            },
+            resultPath: JsonPath.DISCARD
+        });
+
+
+        invokeGrantPermissions.next(sfnEmitToCentralEventBus)
 
         const approvalChoice = new Choice(this, "approvalRequirementCheck");
         approvalChoice.when(Condition.booleanEquals("$.approvalCheck.Payload.requires_approval", true), invokeSendApprovalFunction.next(invokeGrantPermissions))

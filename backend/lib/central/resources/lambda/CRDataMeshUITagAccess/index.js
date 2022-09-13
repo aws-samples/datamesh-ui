@@ -2,14 +2,18 @@ const AWS = require("aws-sdk");
 
 exports.handler = async(event) => {
     const rolesToGrant = JSON.parse(process.env.ROLES_TO_GRANT);
-    const tags = JSON.parse(process.env.LF_TAGS);
-
     const lf = new AWS.LakeFormation();
+    let NextToken = null
+    let LFTags = null
+    let tags = []
+
+    do {
+        ({LFTags, NextToken} = await lf.listLFTags({NextToken}).promise())
+        tags = tags.concat(LFTags)
+    } while (NextToken);
 
     for (let t of tags) {
         try {
-            const tagDetails = await lf.getLFTag({TagKey: t}).promise();
-
             if (event.RequestType == "Create" || event.RequestType == "Update") {
                 for (let roleArn of rolesToGrant) {
                     await lf.grantPermissions({
@@ -19,8 +23,8 @@ exports.handler = async(event) => {
                         },
                         Resource: {
                             LFTag: {
-                                TagKey: t,
-                                TagValues: tagDetails.TagValues
+                                TagKey: t.TagKey,
+                                TagValues: t.TagValues
                             }
                         }
                     }).promise();
@@ -34,8 +38,8 @@ exports.handler = async(event) => {
                         },
                         Resource: {
                             LFTag: {
-                                TagKey: t,
-                                TagValues: tagDetails.TagValues
+                                TagKey: t.TagKey,
+                                TagValues: t.TagValues
                             }
                         }
                     }).promise();

@@ -1,6 +1,8 @@
 import { Aws, CfnParameter, Stack } from "aws-cdk-lib";
+import { Role } from "aws-cdk-lib/aws-iam";
 import { Construct } from "constructs";
 import { ApprovalWorkflow } from "./central/approval-workflow";
+import { DataDomainManagement } from "./central/data-domain-management";
 import { DataQualityCentralAccount } from "./central/data-quality-central-account";
 import { DataMeshUI } from "./central/datamesh-ui";
 import { DataMeshUIAuth } from "./central/datamesh-ui-auth";
@@ -94,7 +96,8 @@ export class DataMeshUICentralStack extends Stack {
         const tbacSharingWorkflow = new TbacSharingWorkflow(this, "TbacSharingWorkflow", {
             cognitoAuthRole: dataMeshUIAuth.identityPool.authenticatedRole,
             centralApprovalEventBus: approvalWorkflow.centralApprovalEventBus,
-            approvalBaseUrl: approvalWorkflow.approvalBaseUrl
+            approvalBaseUrl: approvalWorkflow.approvalBaseUrl,
+            centralEventBusArn: centralEventBusArn.valueAsString
         });
 
         new DataMeshUI(this, "DataMeshUI", {
@@ -113,12 +116,16 @@ export class DataMeshUICentralStack extends Stack {
             rolesToGrant: [
                 dataMeshUIAuth.identityPool.authenticatedRole.roleArn
             ],
-            tagsToSync: [
-                tbacConfig.TagKeys.DataDomain,
-                tbacConfig.TagKeys.Confidentiality
-            ],
             httpApi: approvalWorkflow.httpApi,
             httpiApiUserPoolAuthorizer: dataMeshUIAuth.httpApiUserPoolAuthorizer
+        })
+
+        new DataDomainManagement(this, "DataDomainManagement", {
+            centralWorkflowRole: Role.fromRoleArn(this, "CentralWorkflowRole", centralLfAdminRoleArn.valueAsString),
+            uiAuthenticatedRole: dataMeshUIAuth.identityPool.authenticatedRole,
+            httpApi: approvalWorkflow.httpApi,
+            httpiApiUserPoolAuthorizer: dataMeshUIAuth.httpApiUserPoolAuthorizer,
+            centralEventBusArn: centralEventBusArn.valueAsString
         })
     }
 }

@@ -2,8 +2,6 @@ import { HttpApi, HttpMethod } from "@aws-cdk/aws-apigatewayv2-alpha";
 import { HttpLambdaIntegration } from "@aws-cdk/aws-apigatewayv2-integrations-alpha";
 import { HttpUserPoolAuthorizer } from "@aws-cdk/aws-apigatewayv2-authorizers-alpha";
 import { CustomResource } from "aws-cdk-lib";
-import { UserPool } from "aws-cdk-lib/aws-cognito";
-import { JsonFileLogDriver } from "aws-cdk-lib/aws-ecs";
 import { Effect, ManagedPolicy, PolicyDocument, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
 import { CfnDataLakeSettings } from "aws-cdk-lib/aws-lakeformation";
 import { Code, Function, Runtime } from "aws-cdk-lib/aws-lambda";
@@ -14,7 +12,6 @@ export interface DataMeshUILFTagPermissionsProps {
     rolesToGrant: string[]
     httpApi: HttpApi
     httpiApiUserPoolAuthorizer: HttpUserPoolAuthorizer
-    tagsToSync: string[]
 }
 
 export default class DataMeshUILFTagPermissions extends Construct {
@@ -29,7 +26,7 @@ export default class DataMeshUILFTagPermissions extends Construct {
                     new PolicyStatement({
                         effect: Effect.ALLOW,
                         actions: [
-                            "lakeformation:GetLFTag",
+                            "lakeformation:ListLFTags",
                             "lakeformation:GrantPermissions",
                             "lakeformation:BatchGrantPermissions",
                             "lakeformation:RevokePermissions",
@@ -55,8 +52,7 @@ export default class DataMeshUILFTagPermissions extends Construct {
             handler: "index.handler",
             code: Code.fromAsset(__dirname+"/resources/lambda/CRDataMeshUITagAccess"),
             environment: {
-                ROLES_TO_GRANT: JSON.stringify(props.rolesToGrant),
-                LF_TAGS: JSON.stringify(props.tagsToSync)
+                ROLES_TO_GRANT: JSON.stringify(props.rolesToGrant)
             }
         })
 
@@ -72,8 +68,7 @@ export default class DataMeshUILFTagPermissions extends Construct {
             handler: "index.handler",
             code: Code.fromAsset(__dirname+"/resources/lambda/SyncDataMeshUITagAccess"),
             environment: {
-                ROLES_TO_GRANT: JSON.stringify(props.rolesToGrant),
-                LF_TAGS: JSON.stringify(props.tagsToSync)
+                ROLES_TO_GRANT: JSON.stringify(props.rolesToGrant)
             }
         })
 
