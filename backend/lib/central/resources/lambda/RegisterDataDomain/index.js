@@ -385,7 +385,8 @@ exports.handler = async(event) => {
         Targets: [
             {
                 Id: `${domainId}_createResourceLinks_target`,
-                Arn: dataDomainBusArn
+                Arn: dataDomainBusArn,
+                RoleArn: process.env.EB_XACCOUNT_ROLE_ARN
             }
         ],
         EventBusName: centralEventBusName

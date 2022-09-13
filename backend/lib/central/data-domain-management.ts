@@ -21,6 +21,23 @@ export class DataDomainManagement extends Construct {
     constructor(scope: Construct, id: string, props: DataDomainManagementProps) {
         super(scope, id)
 
+        const crossAccountEbRole = new Role(this, "EventBridgeCrossAccountRole", {
+            assumedBy: new ServicePrincipal("events.amazonaws.com"),
+            inlinePolicies: {inline0: new PolicyDocument({
+                statements: [
+                    new PolicyStatement({
+                        effect: Effect.ALLOW,
+                        actions: [
+                            "events:PutEvents"
+                        ],
+                        resources: [
+                            "arn:aws:events:*:*:event-bus/data-mesh-bus"
+                        ]
+                    })
+                ]
+            })}
+        })
+
         const registerDataDomainRole = new Role(this, "RegisterDataDomainRole", {
             assumedBy: new ServicePrincipal("lambda.amazonaws.com"),
             managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole")],
@@ -56,7 +73,8 @@ export class DataDomainManagement extends Construct {
                             "iam:PassRole"
                         ],
                         resources: [
-                            "arn:aws:iam::*:role/data-domain-*-accessRole"
+                            "arn:aws:iam::*:role/data-domain-*-accessRole",
+                            crossAccountEbRole.roleArn
                         ]
                     })
                 ]
@@ -84,7 +102,8 @@ export class DataDomainManagement extends Construct {
                 CONFIDENTIALITY_TAG_KEY: tbacConfig.TagKeys.Confidentiality,
                 DEFAULT_CONFIDENTIALITY: tbacConfig.DefaultValues[tbacConfig.TagKeys.Confidentiality],
                 CENTRAL_EVENT_BUS_ARN: props.centralEventBusArn,
-                LAMBDA_EXEC_ROLE_ARN: registerDataDomainRole.roleArn
+                LAMBDA_EXEC_ROLE_ARN: registerDataDomainRole.roleArn,
+                EB_XACCOUNT_ROLE_ARN: crossAccountEbRole.roleArn
             }
         })
 
