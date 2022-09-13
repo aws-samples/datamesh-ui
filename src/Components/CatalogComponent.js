@@ -205,7 +205,7 @@ function CatalogComponent(props) {
                     footer={<Box textAlign="center" display={(response && response.NextToken) ? "block" : "none"}><Link variant="primary" onFollow={(event) => {setNextToken(response.NextToken);setRefreshTrigger(refreshTrigger + 1);} }>View More</Link></Box>}
                     columnDefinitions={[
                         {
-                            header: "Name",
+                            header: "Data Domain Database Name",
                             cell: item => <Link variant="primary" href={"/tables/"+item.Name}>{item.Name}</Link>
 
                         },
@@ -214,7 +214,7 @@ function CatalogComponent(props) {
                             cell: item => <ResourceLFTagsComponent resourceType="database" resourceName={item.Name} />
                         },
                         {
-                            header: "Owner",
+                            header: "Data Domain Name",
                             cell: item => item.Parameters.data_owner_name + " ("+item.Parameters.data_owner+")"
                         },
                         {

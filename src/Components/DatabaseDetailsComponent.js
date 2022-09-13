@@ -45,10 +45,10 @@ function DatabaseDetailsComponent({dbName, accessModeCallback}) {
 
     if (db) {
         return (
-            <Container header={<Header variant="h2">Product Details</Header>}>
+            <Container header={<Header variant="h2">Data Domain Details</Header>}>
                 <ColumnLayout columns={2} variant="text-grid">
                     <SpaceBetween size="m">
-                        <ValueWithLabel label="Product">
+                        <ValueWithLabel label="Data Domain Database Name">
                             {dbName}
                         </ValueWithLabel>
                         <ValueWithLabel label="Location">
@@ -62,10 +62,10 @@ function DatabaseDetailsComponent({dbName, accessModeCallback}) {
                         </ValueWithLabel>
                     </SpaceBetween>
                     <SpaceBetween size="m">
-                        <ValueWithLabel label="Data Owner">
+                        <ValueWithLabel label="Data Domain Name">
                             {(db.Parameters && "data_owner_name" in db.Parameters) ? db.Parameters.data_owner_name : "n/a"}
                         </ValueWithLabel>
-                        <ValueWithLabel label="Data Owner Account ID">
+                        <ValueWithLabel label="Data Domain Account ID">
                             {(db.Parameters && "data_owner" in db.Parameters) ? db.Parameters.data_owner : "n/a"}   
                         </ValueWithLabel>
                         <ValueWithLabel label="Tags">
