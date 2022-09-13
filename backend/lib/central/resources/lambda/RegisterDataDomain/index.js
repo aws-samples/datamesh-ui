@@ -76,9 +76,10 @@ exports.handler = async(event) => {
     let SecretString, BucketName, Prefix, KmsKeyId = null;
 
     try {
-        ({SecretString} = await secretsManagerClient.getSecretValue({SecretId: domainSecretArn}).promise())
+        const secretsResult = await secretsManagerClient.getSecretValue({SecretId: domainSecretArn}).promise()
+        SecretString = secretsResult.SecretString
     } catch (e) {
-        console.log(e)
+        console.log(JSON.stringify(e))
         returnPayload.statusCode = 400
         returnPayload.body = JSON.stringify({"error": "Invalid data domain secret."})
         return returnPayload
