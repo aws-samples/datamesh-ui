@@ -11,6 +11,7 @@
     "@aws-sdk/client-glue": "^3.25.0",
     "@aws-sdk/client-iam": "^3.27.0",
     "@aws-sdk/client-lakeformation": "^3.142.0",
+    "@aws-sdk/client-s3": "^3.170.0",
     "@aws-sdk/client-sfn": "^3.25.0",
     "@aws-sdk/client-sts": "^3.99.0",
     "@cloudscape-design/components": "^3.0.22",

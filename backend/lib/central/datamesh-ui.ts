@@ -2,12 +2,16 @@ import { IdentityPool } from "@aws-cdk/aws-cognito-identitypool-alpha";
 import { UserPool } from "aws-cdk-lib/aws-cognito";
 import { Effect, ManagedPolicy, Policy, PolicyDocument, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
 import { Construct } from "constructs";
-import { CfnOutput, RemovalPolicy, Stack } from "aws-cdk-lib";
+import { CfnOutput, Duration, RemovalPolicy, Stack } from "aws-cdk-lib";
 import { CallAwsService } from "aws-cdk-lib/aws-stepfunctions-tasks";
 import { JsonPath, Map, Pass, StateMachine, StateMachineType } from "aws-cdk-lib/aws-stepfunctions";
-import { Rule } from "aws-cdk-lib/aws-events";
+import { HttpMethod, Rule } from "aws-cdk-lib/aws-events";
 import { SfnStateMachine } from "aws-cdk-lib/aws-events-targets";
 import { AttributeType, BillingMode, Table, TableEncryption } from "aws-cdk-lib/aws-dynamodb";
+import { HttpApi } from "@aws-cdk/aws-apigatewayv2-alpha";
+import { HttpUserPoolAuthorizer } from "@aws-cdk/aws-apigatewayv2-authorizers-alpha";
+import { Code, Function, Runtime } from "aws-cdk-lib/aws-lambda";
+import { HttpLambdaIntegration } from "@aws-cdk/aws-apigatewayv2-integrations-alpha";
 const util = require("util");
 
 export interface DataMeshUIProps {
@@ -20,6 +24,8 @@ export interface DataMeshUIProps {
     workflowApiUrl: string
     dpmStateMachineArn?: string
     dpmStateMachineRoleArn?: string
+    httpApi: HttpApi
+    httpiApiUserPoolAuthorizer: HttpUserPoolAuthorizer
 }
 
 export class DataMeshUI extends Construct {
@@ -86,6 +92,36 @@ export class DataMeshUI extends Construct {
         //     ]
         // })
 
+        const validateProductPathRole = new Role(this, "ValidateProductPathRole", {
+            assumedBy: new ServicePrincipal("lambda.amazonaws.com"),
+            managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole")],
+            inlinePolicies: {inline0: new PolicyDocument({
+                statements: [
+                    new PolicyStatement({
+                        effect: Effect.ALLOW,
+                        actions: [
+                            "s3:ListBucket"
+                        ],
+                        resources: ["*"]
+                    })
+                ]
+            })}
+        });
+
+        const validateProductPathFunction = new Function(this, "ValidateProductPathFunction", {
+            runtime: Runtime.NODEJS_16_X,
+            role: validateProductPathRole,
+            handler: "index.handler",
+            timeout: Duration.seconds(30),
+            code: Code.fromAsset(__dirname+"/resources/lambda/ValidateProductPath")
+        })
+
+        props.httpApi.addRoutes({
+            path: "/data-products/validate",
+            methods: [HttpMethod.POST],
+            integration: new HttpLambdaIntegration("ValidateProductPathIntegration", validateProductPathFunction),
+            authorizer: props.httpiApiUserPoolAuthorizer
+        })
 
 
         if (props.dpmStateMachineArn && props.dpmStateMachineRoleArn) {

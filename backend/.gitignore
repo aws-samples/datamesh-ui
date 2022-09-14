@@ -6,6 +6,7 @@
 !lib/central/resources/lambda/Derive*/*
 !lib/central/resources/lambda/DataQuality*/*
 !lib/central/resources/lambda/Register*/*
+!lib/central/resources/lambda/Validate*/*
 !lib/producer/resources/lambda/*/*
 !jest.config.js
 *.d.ts

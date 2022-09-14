@@ -109,7 +109,9 @@ export class DataMeshUICentralStack extends Stack {
             userPool: dataMeshUIAuth.userPool,
             identityPool: dataMeshUIAuth.identityPool,
             tbacSharingWorkflow: tbacSharingWorkflow.tbacSharingWorkflow,
-            workflowApiUrl: approvalWorkflow.httpApi.apiEndpoint
+            workflowApiUrl: approvalWorkflow.httpApi.apiEndpoint,
+            httpApi: approvalWorkflow.httpApi,
+            httpiApiUserPoolAuthorizer: dataMeshUIAuth.httpApiUserPoolAuthorizer,
         });
 
         new DataMeshUILFTagPermissions(this, "LFTagPermissionManagement", {
