@@ -112,6 +112,7 @@ export class DataMeshUICentralStack extends Stack {
             workflowApiUrl: approvalWorkflow.httpApi.apiEndpoint,
             httpApi: approvalWorkflow.httpApi,
             httpiApiUserPoolAuthorizer: dataMeshUIAuth.httpApiUserPoolAuthorizer,
+            centralEventBusArn: centralEventBusArn.valueAsString
         });
 
         new DataMeshUILFTagPermissions(this, "LFTagPermissionManagement", {

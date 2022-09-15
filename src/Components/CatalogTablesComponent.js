@@ -23,6 +23,7 @@ import {Amplify, Auth } from "aws-amplify";
 import DatabaseDetailsComponent from "./DatabaseDetailsComponent";
 import RequestAccessComponent from "./RequestAccessComponent";
 import ResourceLFTagsComponent from "./TBAC/ResourceLFTagsComponent";
+import DataProductStateComponent from "./DataProductStateComponent";
 
 const config = Amplify.configure();
 
@@ -96,8 +97,12 @@ function CatalogTablesComponent(props) {
                             cell: item => <ResourceLFTagsComponent resourceType="table" resourceName={item.Name} resourceDatabaseName={dbname} />
                         },
                         {
+                            header: "Crawler State",
+                            cell: item => <DataProductStateComponent dbName={dbname} tableName={item.Name} />
+                        },
+                        {
                             header: "Actions",
-                            cell: item => <ColumnLayout columns={2} variant="text-grid"><div><Link variant="primary" href={"/request-access/"+dbname+"/"+item.Name}>View or Request Per Table Access</Link></div></ColumnLayout>
+                            cell: item => <ColumnLayout columns={2} variant="text-grid"><div><Link variant="primary" href={"/request-access/"+dbname+"/"+item.Name}>View or Request Access</Link></div></ColumnLayout>
                         }
                     ]}
 
@@ -107,7 +112,7 @@ function CatalogTablesComponent(props) {
                             {renderRefresh()}
                             <Button iconName="add-plus" href={`/product-registration/${dbname}/new`}>Register Data Products</Button>
                         </SpaceBetween>
-                    }>Tables in {dbname}</Header>}
+                    }>Data Products in {dbname}</Header>}
                 />
             </Box>
         </div>

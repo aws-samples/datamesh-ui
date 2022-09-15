@@ -5,9 +5,9 @@ import { Construct } from "constructs";
 import { CfnOutput, Duration, RemovalPolicy, Stack } from "aws-cdk-lib";
 import { CallAwsService } from "aws-cdk-lib/aws-stepfunctions-tasks";
 import { JsonPath, Map, Pass, StateMachine, StateMachineType } from "aws-cdk-lib/aws-stepfunctions";
-import { HttpMethod, Rule } from "aws-cdk-lib/aws-events";
-import { SfnStateMachine } from "aws-cdk-lib/aws-events-targets";
-import { AttributeType, BillingMode, Table, TableEncryption } from "aws-cdk-lib/aws-dynamodb";
+import { EventBus, HttpMethod, Rule } from "aws-cdk-lib/aws-events";
+import { LambdaFunction, SfnStateMachine } from "aws-cdk-lib/aws-events-targets";
+import { AttributeType, BillingMode, ProjectionType, Table, TableEncryption } from "aws-cdk-lib/aws-dynamodb";
 import { HttpApi } from "@aws-cdk/aws-apigatewayv2-alpha";
 import { HttpUserPoolAuthorizer } from "@aws-cdk/aws-apigatewayv2-authorizers-alpha";
 import { Code, Function, Runtime } from "aws-cdk-lib/aws-lambda";
@@ -26,6 +26,7 @@ export interface DataMeshUIProps {
     dpmStateMachineRoleArn?: string
     httpApi: HttpApi
     httpiApiUserPoolAuthorizer: HttpUserPoolAuthorizer
+    centralEventBusArn: string
 }
 
 export class DataMeshUI extends Construct {
@@ -176,35 +177,99 @@ export class DataMeshUI extends Construct {
             });
 
             dpmAddProdEventBridgeRule.addTarget(new SfnStateMachine(dataMeshUINewProductAuthFlow))
+            const centralEventBus = EventBus.fromEventBusArn(this, "CentralEventBus", props.centralEventBusArn)
 
-            // const registerProductTable = new Table(this, "DPMRegisterProductTable", {
-            //     partitionKey: {
-            //         name: "accountId",
-            //         type: AttributeType.STRING
-            //     },
-            //     sortKey: {
-            //         name: "dbTableName",
-            //         type: AttributeType.STRING
-            //     },
-            //     billingMode: BillingMode.PAY_PER_REQUEST,
-            //     encryption: TableEncryption.AWS_MANAGED,
-            //     removalPolicy: RemovalPolicy.DESTROY
-            // });
+            const dataProductRegistrationTable = new Table(this, "DataProductRegistrationTable", {
+                partitionKey: {
+                    name: "dbName",
+                    type: AttributeType.STRING
+                },
+                sortKey: {
+                    name: "tableName",
+                    type: AttributeType.STRING
+                },
+                billingMode: BillingMode.PAY_PER_REQUEST,
+                encryption: TableEncryption.AWS_MANAGED,
+                removalPolicy: RemovalPolicy.DESTROY
+            });
 
-            // const gsiStatusIndexName = "DPMRegisterProductTable-StatusIndex";
+            const updateDataDomainStateChangeRole = new Role(this, "UpdateDataDomainStateChangeRole", {
+                assumedBy: new ServicePrincipal("lambda.amazonaws.com"),
+                managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole")],
+                inlinePolicies: {inline0: new PolicyDocument({
+                    statements: [
+                        new PolicyStatement({
+                            effect: Effect.ALLOW,
+                            actions: [
+                                "dynamodb:PutItem"
+                            ],
+                            resources: [dataProductRegistrationTable.tableArn]
+                        })
+                    ]
+                })}
+            });
+    
+            const updateDataDomainStateChangeFunction = new Function(this, "UpdateDataDomainStateChangeFunction", {
+                runtime: Runtime.NODEJS_16_X,
+                role: updateDataDomainStateChangeRole,
+                handler: "index.handler",
+                timeout: Duration.seconds(30),
+                code: Code.fromAsset(__dirname+"/resources/lambda/UpdateDataDomainStateChange"),
+                environment: {
+                    DDB_TABLE_NAME: dataProductRegistrationTable.tableName
+                }
+            })            
 
-            // registerProductTable.addGlobalSecondaryIndex({
-            //     indexName: gsiStatusIndexName,
-            //     partitionKey: {
-            //         name: "status",
-            //         type: AttributeType.STRING
-            //     },
-            //     sortKey: {
-            //         name: "createdAt",
-            //         type: AttributeType.NUMBER
-            //     }
-            // })
+            updateDataDomainStateChangeFunction.addPermission("invokeFromDataDomainStateChangeEvent", {
+                principal: new ServicePrincipal("events.amazonaws.com"),
+                sourceArn: props.centralEventBusArn,
+                action: "lambda:InvokeFunction"
+            })
 
+            new Rule(this, "DataDomainGlueStateChangeTracker", {
+                eventBus: centralEventBus,
+                eventPattern: {
+                    source: ["data-domain-state-change"],
+                    detailType: ["data-domain-crawler-update"]
+                },
+                targets: [
+                    new LambdaFunction(updateDataDomainStateChangeFunction)
+                ]
+            })
+
+            const getCrawlerStateRole = new Role(this, "GetCrawlerStateRole", {
+                assumedBy: new ServicePrincipal("lambda.amazonaws.com"),
+                managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole")],
+                inlinePolicies: {inline0: new PolicyDocument({
+                    statements: [
+                        new PolicyStatement({
+                            effect: Effect.ALLOW,
+                            actions: [
+                                "dynamodb:GetItem"
+                            ],
+                            resources: [dataProductRegistrationTable.tableArn]
+                        })
+                    ]
+                })}
+            });
+    
+            const getCrawlerStateFunction = new Function(this, "GetCrawlerStateFunction", {
+                runtime: Runtime.NODEJS_16_X,
+                role: getCrawlerStateRole,
+                handler: "index.handler",
+                timeout: Duration.seconds(30),
+                code: Code.fromAsset(__dirname+"/resources/lambda/GetCrawlerState"),
+                environment: {
+                    DDB_TABLE_NAME: dataProductRegistrationTable.tableName
+                }
+            }) 
+
+            props.httpApi.addRoutes({
+                path: "/data-products/latest-state",
+                methods: [HttpMethod.GET],
+                integration: new HttpLambdaIntegration("getCrawlerStateIntegration", getCrawlerStateFunction),
+                authorizer: props.httpiApiUserPoolAuthorizer
+            })
 
             // uiPayload.InfraStack.RegisterProductTable = {
             //     "Name": registerProductTable.tableName,

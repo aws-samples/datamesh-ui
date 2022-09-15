@@ -18,7 +18,7 @@
 import { SFNClient, StartExecutionCommand } from "@aws-sdk/client-sfn";
 import { useState } from "react";
 import {Amplify, Auth } from "aws-amplify";
-import { Button, Container, Form, FormField, Header, Input } from "@cloudscape-design/components";
+import { Button, Container, Form, FormField, Header, Input, StatusIndicator } from "@cloudscape-design/components";
 const cfnOutput = require("../cfn-output.json");
 
 const config = Amplify.configure();
@@ -27,6 +27,7 @@ const SM_ARN = cfnOutput.InfraStack.StateMachineArn;
 function RequestAccessComponent({dbName, tableName, successHandler}) {
     const [targetAccount, setTargetAccount] = useState();
     const [error, setError] = useState();
+    const [success, setSuccess] = useState(false)
 
     const submitRequestAccess = async() => {
         if (targetAccount && targetAccount.length > 0 && !isNaN(targetAccount)) {
@@ -49,6 +50,7 @@ function RequestAccessComponent({dbName, tableName, successHandler}) {
                 }));
 
                 setTargetAccount(null);
+                setSuccess(true)
 
                 if (successHandler) {
                     successHandler(resp.executionArn);
@@ -61,11 +63,20 @@ function RequestAccessComponent({dbName, tableName, successHandler}) {
         }
     }
 
+    const renderSuccess = () => {
+        if (success) {
+            return (<StatusIndicator>Request Sent Successfully</StatusIndicator>)
+        }
+
+        return;
+    }
+
     return (
         <Form actions={<Button variant="primary" onClick={submitRequestAccess}>Submit</Button>} errorText={error}>
             <Container header={<Header variant="h3">Request Access</Header>}>                                
                 <FormField label="Target Account ID">
                     <Input type="number" value={targetAccount} onChange={event => setTargetAccount(event.detail.value)} />
+                    {renderSuccess()}
                 </FormField>
             </Container>
         </Form>
