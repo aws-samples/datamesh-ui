@@ -17,14 +17,15 @@
  */
 import { Amplify, Auth } from "aws-amplify";
 import { useEffect, useState } from "react";
-import {GlueClient, GetDatabasesCommand} from '@aws-sdk/client-glue';
-import { Alert, Box, Button, ButtonDropdown, FormField, Header, Icon, Input, Link, Modal, SpaceBetween, Spinner, Table } from "@cloudscape-design/components";
+import {GlueClient, GetDatabasesCommand, GetDatabaseCommand} from '@aws-sdk/client-glue';
+import { Alert, Box, Button, ButtonDropdown, FormField, Header, Icon, Input, Link, Modal, SpaceBetween, Spinner, Table, TextFilter } from "@cloudscape-design/components";
 import ResourceLFTagsComponent from "./TBAC/ResourceLFTagsComponent";
 import { v4 as uuid } from 'uuid';
 const cfnOutput = require("../cfn-output.json")
 const config = Amplify.configure();
 const axios = require("axios").default;
 const SECRETS_MANAGER_ARN_REGEX_PATTERN = /^arn:aws:secretsmanager:.+?:\d{12}:secret:domain\-config.*$/
+const ACCOUNT_ID_REGEX_PATTERN = /^\d{12}$/
 
 function CatalogComponent(props) {
     const [databases, setDatabases] = useState([]);
@@ -39,15 +40,32 @@ function CatalogComponent(props) {
     const [registerSpinnerVisible, setRegisterSpinnerVisible] = useState(false)
     const [domainTags, setDomainTags] = useState([])
     const [registerDisabled, setRegisterDisabled] = useState(false)
+    const [filterAccountId, setFilterAccountId] = useState(null)
+    const [filtered, setFiltered] = useState(false)
 
     useEffect(() => {
         async function run() {
             const credentials = await Auth.currentCredentials();
             const glue = new GlueClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
-            const results = await glue.send(new GetDatabasesCommand({NextToken: nextToken}));
-            const filteredResults = results.DatabaseList.filter(row => row.Parameters && row.Parameters.data_owner && row.Parameters.data_owner_name)
-            setDatabases(databases => databases.concat(filteredResults));
-            setResponse(results);
+            if (!ACCOUNT_ID_REGEX_PATTERN.test(filterAccountId)) {
+                const results = await glue.send(new GetDatabasesCommand({NextToken: nextToken}));
+                const filteredResults = results.DatabaseList.filter(row => row.Parameters && row.Parameters.data_owner && row.Parameters.data_owner_name)
+                setDatabases(databases => databases.concat(filteredResults));
+                setResponse(results);
+                setFiltered(false)
+            } else {
+                setFiltered(true)
+                const filteredDatabases = await Promise.allSettled([
+                    glue.send(new GetDatabaseCommand({Name: `nrac-data-domain-${filterAccountId}`})),
+                    glue.send(new GetDatabaseCommand({Name: `tbac-data-domain-${filterAccountId}`}))
+                ])
+                // console.log(filteredDatabases)
+                setDatabases([
+                    filteredDatabases[0].value.Database,
+                    filteredDatabases[1].value.Database
+                ])
+                setResponse(null)
+            }
         }
 
         run()
@@ -198,10 +216,20 @@ function CatalogComponent(props) {
         setDomainTags([...domainTags, {"id": uuid(), "TagKeys": "", "TagValues": ""}])
     }
 
+    const doFilter = async() => {
+        if ((!ACCOUNT_ID_REGEX_PATTERN.test(filterAccountId) && filtered) || ACCOUNT_ID_REGEX_PATTERN.test(filterAccountId)) {
+            setDatabases([])
+            setRefreshTrigger(refreshTrigger + 1)
+        }
+    }
+
     return (
         <div>
             <Box margin={{top: "l"}}>
                 <Table
+                    filter={
+                        <TextFilter filteringPlaceholder="Filter by Account ID" filteringText={filterAccountId} onDelayedChange={() => {doFilter()}} onChange={({detail}) => setFilterAccountId(detail.filteringText)} />
+                    }
                     footer={<Box textAlign="center" display={(response && response.NextToken) ? "block" : "none"}><Link variant="primary" onFollow={(event) => {setNextToken(response.NextToken);setRefreshTrigger(refreshTrigger + 1);} }>View More</Link></Box>}
                     columnDefinitions={[
                         {
