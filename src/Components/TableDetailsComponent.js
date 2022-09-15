@@ -23,11 +23,9 @@ import { ColumnLayout, Container, Flashbar, Header, Link, Box, SpaceBetween, Bre
 import ValueWithLabel from "./ValueWithLabel";
 import RequestAccessComponent from "./RequestAccessComponent";
 import DatabaseDetailsComponent from "./DatabaseDetailsComponent";
-import ResourceLFTagsComponent from "./TBAC/ResourceLFTagsComponent";
 import ResourceLFTagsWrapper from "./TBAC/ResourceLFTagsWrapper";
-import DisplayLFTagsComponent from "./TBAC/DisplayLFTagsComponent";
-import ResourceTagContext from "./TBAC/ResourceTagContext";
 import DisplayLFTagsFromContextComponent from "./TBAC/DisplayLFTagsFromContextComponent";
+import DataProductStateComponent from "./DataProductStateComponent";
 
 const config = Amplify.configure();
 
@@ -38,11 +36,6 @@ function TableDetailsComponent(props) {
     const [requestSuccessful, setRequestSuccessful] = useState(false);
     const [executionArn, setExecutionArn] = useState();
     const [accessMode, setAccessMode] = useState("nrac")
-
-    const requestAccessSuccessHandler = async(executionArn) => {
-        setExecutionArn(executionArn);
-        setRequestSuccessful(true);
-    }
 
     useEffect(() => {
         async function run() {
@@ -64,7 +57,10 @@ function TableDetailsComponent(props) {
         if (accessMode == "nrac") {
             return (
                 <Box margin={{top: "m"}}>
-                    <RequestAccessComponent dbName={dbname} tableName={tablename} successHandler={requestAccessSuccessHandler} />
+                    <RequestAccessComponent dbName={dbname} tableName={tablename} />
+                    {/* <Box margin={{top: "s", bottom: "s"}} display={requestSuccessful ? "block" : "none"}>
+                        <Flashbar items={[{type: "success", header: "Request Submitted ("+executionArn+")", content: "Successfully submitted request, once approved please accept RAM request."}]}></Flashbar>
+                    </Box> */}
                 </Box>  
             )
         }
@@ -82,9 +78,6 @@ function TableDetailsComponent(props) {
                             { text: dbname, href: "/tables/"+dbname },
                             { text: "Request Access ("+tablename+")", href: "/request-access/"+dbname+"/"+tablename }
                         ]} />
-                <Box margin={{top: "s", bottom: "s"}} display={requestSuccessful ? "block" : "none"}>
-                    <Flashbar items={[{type: "success", header: "Request Submitted ("+executionArn+")", content: "Successfully submitted request, once approved please accept RAM request."}]}></Flashbar>
-                </Box>
                 <DatabaseDetailsComponent dbName={dbname} accessModeCallback={setAccessMode} />
                 <ResourceLFTagsWrapper resourceName={tablename} resourceDatabaseName={dbname}>
                     <Box margin={{top: "l"}}>
@@ -101,6 +94,9 @@ function TableDetailsComponent(props) {
                                 <SpaceBetween size="m">
                                     <ValueWithLabel label="Location">
                                         {table.StorageDescriptor.Location}
+                                    </ValueWithLabel>
+                                    <ValueWithLabel label="Crawler State">
+                                        <DataProductStateComponent dbName={dbname} tableName={tablename} />
                                     </ValueWithLabel>
                                 </SpaceBetween>
                             </ColumnLayout>
