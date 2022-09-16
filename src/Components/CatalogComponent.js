@@ -54,17 +54,36 @@ function CatalogComponent(props) {
                 setResponse(results);
                 setFiltered(false)
             } else {
-                setFiltered(true)
-                const filteredDatabases = await Promise.allSettled([
-                    glue.send(new GetDatabaseCommand({Name: `nrac-data-domain-${filterAccountId}`})),
-                    glue.send(new GetDatabaseCommand({Name: `tbac-data-domain-${filterAccountId}`}))
-                ])
-                // console.log(filteredDatabases)
-                setDatabases([
-                    filteredDatabases[0].value.Database,
-                    filteredDatabases[1].value.Database
-                ])
-                setResponse(null)
+                try {
+                    setFiltered(true)
+                    const filteredDatabases = await Promise.allSettled([
+                        glue.send(new GetDatabaseCommand({Name: `nrac-data-domain-${filterAccountId}`})),
+                        glue.send(new GetDatabaseCommand({Name: `tbac-data-domain-${filterAccountId}`}))
+                    ])
+
+                    if (filteredDatabases.length == 2) {
+                        const finalizedFiltered = []
+                        
+                        if (filteredDatabases[0].status == "fulfilled") {
+                            finalizedFiltered.push(filteredDatabases[0].value.Database)
+                        }
+
+                        if (filteredDatabases[1].status == "fulfilled") {
+                            finalizedFiltered.push(filteredDatabases[1].value.Database)
+                        }
+
+                        setDatabases(finalizedFiltered)
+                        setResponse(null)
+                    } else {
+                        setFiltered(false)
+                        setResponse(null)
+                        setDatabases([])                        
+                    }
+                } catch (e) {
+                    setFiltered(false)
+                    setResponse(null)
+                    setDatabases([])
+                }
             }
         }
 
