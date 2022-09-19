@@ -1,15 +1,32 @@
 const AWS = require("aws-sdk")
 const util = require("util");
 
-exports.handler = async(event) => {
+const POLICY_VERSION = "2012-10-17"
+
+exports.handler = async(event, context) => {
     const accountId = event.accountId;
     const accountIdRootArn = util.format("arn:aws:iam::%s:root", accountId);
 
     const glue = new AWS.Glue();
 
-    const resourcePolicyResp = await glue.getResourcePolicy().promise();
+    
+    const functionArn = context.invokedFunctionArn
+    const functionArnTokenized = functionArn.split(":")
+    const functionRegion = functionArnTokenized[3]
+    const functionAccountId = functionArnTokenized[4]
+    let resourcePolicyResp = null
+    let resourcePolicy = null
 
-    let resourcePolicy = JSON.parse(resourcePolicyResp.PolicyInJson);
+    try {
+        resourcePolicyResp = await glue.getResourcePolicy().promise();
+        resourcePolicy = JSON.parse(resourcePolicyResp.PolicyInJson);
+    } catch (e) {
+        resourcePolicy = {
+            Version: POLICY_VERSION,
+            Statement: []
+        }
+    }
+
     let statements = resourcePolicy.Statement;
 
     let policyDocument = statements.find(row => row.Condition && row.Condition.Bool && row.Condition.Bool["glue:EvaluatedByLakeFormationTags"] == "true");
@@ -28,18 +45,46 @@ exports.handler = async(event) => {
         const arrNewPrincipals = Array.from(newPrincipals);
 
         policyDocument.Principal.AWS = arrNewPrincipals;
-
-        resourcePolicy.Statement = [
-            policyDocument
-        ]
-
-        if (ramPolicyDocument) {
-            resourcePolicy.Statement.push(ramPolicyDocument);
+    } else {
+        policyDocument = {
+            Effect: "Allow",
+            Principal: {
+                AWS: [accountIdRootArn]
+            },
+            Action: "glue:*",
+            Resource: [
+                `arn:aws:glue:${functionRegion}:${functionAccountId}:table/*`,
+                `arn:aws:glue:${functionRegion}:${functionAccountId}:database/*`,
+                `arn:aws:glue:${functionRegion}:${functionAccountId}:catalog`
+            ],
+            "Condition": {
+                "Bool": {
+                  "glue:EvaluatedByLakeFormationTags": "true"
+                }
+            }
         }
-
-        await glue.putResourcePolicy({
-            PolicyInJson: JSON.stringify(resourcePolicy),
-            EnableHybrid: "TRUE"
-        }).promise();
     }
+
+    resourcePolicy.Statement.push(policyDocument)
+
+    if (!ramPolicyDocument) {
+        resourcePolicy.Statement.push({
+            "Effect": "Allow",
+            "Principal": {
+              "Service": "ram.amazonaws.com"
+            },
+            "Action": "glue:ShareResource",
+            "Resource": [
+                `arn:aws:glue:${functionRegion}:${functionAccountId}:table/*`,
+                `arn:aws:glue:${functionRegion}:${functionAccountId}:database/*`,
+                `arn:aws:glue:${functionRegion}:${functionAccountId}:catalog`
+            ]
+        })
+    }
+
+    await glue.putResourcePolicy({
+        PolicyInJson: JSON.stringify(resourcePolicy),
+        EnableHybrid: "TRUE"
+    }).promise();
+
 }
