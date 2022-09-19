@@ -1,6 +1,9 @@
 const AWS = require("aws-sdk")
 const CRAWLER_NAME_REGEX = /.+?(tbac.+?|nrac.+?)_rl-(.+)/
 
+const NRAC_NAME_REGEX = /.+?(nrac.+?)_rl-(.+)/
+const TBAC_NAME_REGEX = /.+?rl-(tbac.+?)_(.+)/
+
 exports.handler = async({detail}) => {
     const {crawlerName, state, accountId} = detail
     let error = null;
@@ -9,8 +12,17 @@ exports.handler = async({detail}) => {
         error = detail.errorMessage
     }
 
-    const matchResults = CRAWLER_NAME_REGEX.exec(crawlerName)
-    const dbName = `${matchResults[1]}-${accountId}`
+    let matchResults = null
+    let dbName = null;
+
+    if (NRAC_NAME_REGEX.test(crawlerName)) {
+        matchResults = NRAC_NAME_REGEX.exec(crawlerName)
+        dbName = `${matchResults[1]}-${accountId}`
+    } else if (TBAC_NAME_REGEX.test(crawlerName)) {
+        matchResults = TBAC_NAME_REGEX.exec(crawlerName)
+        dbName = matchResults[1]
+    }
+
     const tableName = matchResults[2]
     const payload = {
         dbName: dbName,
