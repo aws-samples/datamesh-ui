@@ -154,7 +154,8 @@ export class TbacSharingWorkflow extends Construct {
                         "central_account_id": Stack.of(this).account,
                         "central_database_name.$": "$.databaseName",
                         "database_name": "tbac-data-domain",
-                        "lf_access_mode": "tbac"
+                        "lf_access_mode": "tbac",
+                        "producer_acc_id.$": "$.producerAccountId"
                       },
                       "DetailType.$": "States.Format('{}_createResourceLinks', $.targetAccountId)",
                       "EventBusName": centralEventBus.eventBusName,

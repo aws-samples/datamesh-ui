@@ -7,6 +7,7 @@ const cfnOutput = require("../../cfn-output.json");
 const tbacConfig = require("../../tbac-config.json");
 const config = Amplify.configure();
 const SM_ARN = cfnOutput.InfraStack.TbacStateMachineArn;
+const EXTRACT_PRODUCER_ACCOUNT_ID = /^.+?(\d{12})$/
 
 function DisplayLFTagsComponent(props) {
     const [modalVisible, setModalVisible] = useState(false);
@@ -29,13 +30,15 @@ function DisplayLFTagsComponent(props) {
         } else {
             // console.log("Tag Key: "+shareTagKey)
             // console.log("Tag Value: "+shareTagValue)
+            const producerAccountId = EXTRACT_PRODUCER_ACCOUNT_ID.exec(props.database)[1]
             const credentials = await Auth.currentCredentials();
             const sfnClient = new SFNClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
 
             try {
-
+                
                 const params = {
-                    "targetAccountId": targetAccountId,
+                    producerAccountId,
+                    targetAccountId,
                     "databaseName": props.database,
                     "lfTags": [
                         {

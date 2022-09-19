@@ -48,12 +48,10 @@ exports.handler = async(event) => {
                 error: (Item.error) ? Item.error.S : null
             })
         } catch (e) {
-            if (e instanceof ResourceNotFoundException) {
-                payload.statusCode = 404
-                payload.body = JSON.stringify({
-                    "error": "Resource not found"
-                })
-            }
+            payload.statusCode = 404
+            payload.body = JSON.stringify({
+                "error": "Resource not found"
+            })
         }
 
         return payload
