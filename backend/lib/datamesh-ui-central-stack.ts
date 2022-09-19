@@ -128,7 +128,8 @@ export class DataMeshUICentralStack extends Stack {
             uiAuthenticatedRole: dataMeshUIAuth.identityPool.authenticatedRole,
             httpApi: approvalWorkflow.httpApi,
             httpiApiUserPoolAuthorizer: dataMeshUIAuth.httpApiUserPoolAuthorizer,
-            centralEventBusArn: centralEventBusArn.valueAsString
+            centralEventBusArn: centralEventBusArn.valueAsString,
+            adjustGlueResourcePolicyFunction: tbacSharingWorkflow.adjustGlueResourcePolicyFunction
         })
     }
 }

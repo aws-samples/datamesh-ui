@@ -15,6 +15,7 @@ export interface DataDomainManagementProps {
     httpApi: HttpApi
     httpiApiUserPoolAuthorizer: HttpUserPoolAuthorizer
     centralEventBusArn: string
+    adjustGlueResourcePolicyFunction: Function
 }
 
 export class DataDomainManagement extends Construct {
@@ -76,7 +77,16 @@ export class DataDomainManagement extends Construct {
                             "arn:aws:iam::*:role/data-domain-*-accessRole",
                             crossAccountEbRole.roleArn
                         ]
-                    })
+                    }),
+                    new PolicyStatement({
+                        effect: Effect.ALLOW,
+                        actions: [
+                            "lambda:InvokeFunction"
+                        ],
+                        resources: [
+                            props.adjustGlueResourcePolicyFunction.functionArn
+                        ]
+                    }),
                 ]
             })}
         });
@@ -103,7 +113,8 @@ export class DataDomainManagement extends Construct {
                 DEFAULT_CONFIDENTIALITY: tbacConfig.DefaultValues[tbacConfig.TagKeys.Confidentiality],
                 CENTRAL_EVENT_BUS_ARN: props.centralEventBusArn,
                 LAMBDA_EXEC_ROLE_ARN: registerDataDomainRole.roleArn,
-                EB_XACCOUNT_ROLE_ARN: crossAccountEbRole.roleArn
+                EB_XACCOUNT_ROLE_ARN: crossAccountEbRole.roleArn,
+                ADJUST_RESOURCE_POLICY_FUNC_NAME: props.adjustGlueResourcePolicyFunction.functionName
             }
         })
 

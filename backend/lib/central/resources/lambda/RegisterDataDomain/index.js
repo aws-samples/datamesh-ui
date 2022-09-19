@@ -89,6 +89,14 @@ exports.handler = async(event) => {
 
     domainName = DomainName
 
+    const lambdaClient = new AWS.Lambda()
+    await lambdaClient.invoke({
+        FunctionName: process.env.ADJUST_RESOURCE_POLICY_FUNC_NAME,
+        Payload: JSON.stringify({
+            "accountId": domainId
+        })
+    }).promise()
+
     const validationCheck = await Promise.allSettled([
         glueClient.getDatabase({Name: `${LF_MODE_NRAC}-${DOMAIN_DATABASE_PREFIX}-${domainId}`}).promise(),
         glueClient.getDatabase({Name: `${LF_MODE_TBAC}-${DOMAIN_DATABASE_PREFIX}-${domainId}`}).promise()
