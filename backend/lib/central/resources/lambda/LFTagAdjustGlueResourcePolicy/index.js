@@ -32,6 +32,8 @@ exports.handler = async(event, context) => {
     let policyDocument = statements.find(row => row.Condition && row.Condition.Bool && row.Condition.Bool["glue:EvaluatedByLakeFormationTags"] == "true");
     let ramPolicyDocument = statements.find(row => row.Principal.Service && row.Principal.Service == "ram.amazonaws.com");
 
+    resourcePolicy.Statement = []
+
     if (policyDocument) {
         const newPrincipals = new Set();
         newPrincipals.add(accountIdRootArn);
@@ -80,6 +82,8 @@ exports.handler = async(event, context) => {
                 `arn:aws:glue:${functionRegion}:${functionAccountId}:catalog`
             ]
         })
+    } else {
+        resourcePolicy.Statement.push(ramPolicyDocument)
     }
 
     await glue.putResourcePolicy({
