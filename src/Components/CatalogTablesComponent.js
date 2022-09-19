@@ -16,7 +16,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import { GlueClient, GetTablesCommand, GetDatabasesCommand, GetDatabaseCommand } from "@aws-sdk/client-glue";
-import { ColumnLayout, Box, BreadcrumbGroup, Flashbar, Header, Link, Table, SpaceBetween, Button, Spinner } from "@cloudscape-design/components";
+import { ColumnLayout, Box, BreadcrumbGroup, Flashbar, Header, Link, Table, SpaceBetween, Button, Spinner, ContentLayout, Container } from "@cloudscape-design/components";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import {Amplify, Auth } from "aws-amplify";
@@ -44,6 +44,15 @@ function CatalogTablesComponent(props) {
     }
 
     useEffect(() => {
+        if (props.breadcrumbsCallback) {
+            props.breadcrumbsCallback(
+                <BreadcrumbGroup items={[
+                    { text: "Data Domains", href: "/"},
+                    { text: dbname, href: "/tables/"+dbname }
+                ]} />
+            )
+        }
+        
         async function run() {
             const credentials = await Auth.currentCredentials();
             const glue = new GlueClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
@@ -75,47 +84,44 @@ function CatalogTablesComponent(props) {
     }
 
     return(
-        <div>
-            <BreadcrumbGroup items={[
-                { text: "Data Domains", href: "/"},
-                { text: dbname, href: "/tables/"+dbname }
-            ]} />
-            <Box margin={{top: "s", bottom: "s"}} display={requestSuccessful ? "block" : "none"}>
-                <Flashbar items={[{type: "success", header: "Request Submitted ("+executionArn+")", content: "Successfully submitted request, once approved please accept RAM request."}]}></Flashbar>
-            </Box>
-            <DatabaseDetailsComponent dbName={dbname} />
-            <Box margin={{top: "l"}}>
-                <Table 
-                    footer={<Box textAlign="center" display={(response && response.NextToken) ? "block" : "none"}><Link variant="primary" onFollow={(event) => setNextToken(response.NextToken)}>View More</Link></Box>}
-                    columnDefinitions={[
-                        {
-                            header: "Table Name",
-                            cell: item => item.Name
-                        },
-                        {
-                            header: "Tags",
-                            cell: item => <ResourceLFTagsComponent resourceType="table" resourceName={item.Name} resourceDatabaseName={dbname} />
-                        },
-                        {
-                            header: "Crawler State",
-                            cell: item => <DataProductStateComponent dbName={dbname} tableName={item.Name} />
-                        },
-                        {
-                            header: "Actions",
-                            cell: item => <ColumnLayout columns={2} variant="text-grid"><div><Link variant="primary" href={"/request-access/"+dbname+"/"+item.Name}>View or Request Access</Link></div></ColumnLayout>
-                        }
-                    ]}
+        <Box>
+            <ContentLayout header={
+                <Header variant="h1">{dbname}</Header>
+            }>
+                <DatabaseDetailsComponent dbName={dbname} />
+                <Box margin={{top: "l"}}>
+                    <Table 
+                        footer={<Box textAlign="center" display={(response && response.NextToken) ? "block" : "none"}><Link variant="primary" onFollow={(event) => setNextToken(response.NextToken)}>View More</Link></Box>}
+                        columnDefinitions={[
+                            {
+                                header: "Table Name",
+                                cell: item => item.Name
+                            },
+                            {
+                                header: "Tags",
+                                cell: item => <ResourceLFTagsComponent resourceType="table" resourceName={item.Name} resourceDatabaseName={dbname} />
+                            },
+                            {
+                                header: "Crawler State",
+                                cell: item => <DataProductStateComponent dbName={dbname} tableName={item.Name} />
+                            },
+                            {
+                                header: "Actions",
+                                cell: item => <ColumnLayout columns={2} variant="text-grid"><div><Link variant="primary" href={"/request-access/"+dbname+"/"+item.Name}>View or Request Access</Link></div></ColumnLayout>
+                            }
+                        ]}
 
-                    items={tables}
-                    header={<Header variant="h2" actions={
-                        <SpaceBetween direction="horizontal" size="s">
-                            {renderRefresh()}
-                            <Button iconName="add-plus" href={`/product-registration/${dbname}/new`}>Register Data Products</Button>
-                        </SpaceBetween>
-                    }>Data Products in {dbname}</Header>}
-                />
-            </Box>
-        </div>
+                        items={tables}
+                        header={<Header variant="h2" actions={
+                            <SpaceBetween direction="horizontal" size="s">
+                                {renderRefresh()}
+                                <Button iconName="add-plus" href={`/product-registration/${dbname}/new`}>Register Data Products</Button>
+                            </SpaceBetween>
+                        }>Data Products in {dbname}</Header>}
+                    />
+                </Box>
+            </ContentLayout>
+        </Box>
     );
 }
 

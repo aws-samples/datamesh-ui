@@ -37,6 +37,7 @@ function MainComponent(props) {
     const [searchInput, setSearchInput] = useState("");
     const [searchStatusType, setSearchStatusType] = useState("pending");
     const [searchOptions, setSearchOptions] = useState([]);
+    const [breadcrumbs, setBreadcrumbs] = useState(null)
 
     const i18nStrings = {
         searchIconAriaLabel: "Search",
@@ -159,7 +160,7 @@ function MainComponent(props) {
             <TopNavigation identity={identity} i18nStrings={i18nStrings} utilities={navUtilities} search={
                 <Autosuggest onSelect={onSearchSelect} onLoadItems={searchLoadItems} options={searchOptions} statusType={searchStatusType} loadingText="Search objects" errorText="Error fetching objects" enteredTextLabel={(value) => value} onChange={({detail}) => {setSearchInput(detail.value)}} value={searchInput} />
             }  />
-            <AppLayout navigation={
+            <AppLayout breadcrumbs={breadcrumbs} navigation={
             <SideNavigation 
                 activeHref={window.location.pathname} 
                 items={[
@@ -175,8 +176,8 @@ function MainComponent(props) {
             <BrowserRouter>
                 <Routes>
                     <Route exact path="/" element={<CatalogComponent />} />
-                    <Route exact path="/tables/:dbname" element={<CatalogTablesComponent />} />
-                    <Route exact path="/request-access/:dbname/:tablename" element={<TableDetailsComponent />} />
+                    <Route exact path="/tables/:dbname" element={<CatalogTablesComponent breadcrumbsCallback={setBreadcrumbs} />} />
+                    <Route exact path="/request-access/:dbname/:tablename" element={<TableDetailsComponent breadcrumbsCallback={setBreadcrumbs} />} />
                     <Route exact path="/workflow-executions" element={<WorkflowExecutionsComponent />} />
                     <Route exact path="/search" element={<SearchComponent />} />
                     <Route exact path="/data-product-details/:dataProduct" element={<DataProductDetailsComponent />} />

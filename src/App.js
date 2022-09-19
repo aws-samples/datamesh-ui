@@ -20,8 +20,9 @@ import './App.css';
 import awsconfig from './aws-exports';
 import {Authenticator} from '@aws-amplify/ui-react'
 import {Amplify} from 'aws-amplify';
-import MainComponent from './Components/MainComponent';
 import '@aws-amplify/ui-react/styles.css';
+import "@cloudscape-design/global-styles/index.css"
+import MainComponent from './Components/MainComponent';
 const cfnOutput = require("./cfn-output.json");
 
 Amplify.configure(awsconfig);

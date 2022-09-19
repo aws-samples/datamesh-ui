@@ -19,7 +19,7 @@ import {Amplify, Auth} from "aws-amplify";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { GlueClient, GetTableCommand } from "@aws-sdk/client-glue";
-import { ColumnLayout, Container, Flashbar, Header, Link, Box, SpaceBetween, BreadcrumbGroup, Table, Button, Form, FormField, Input, Badge} from "@cloudscape-design/components";
+import { ColumnLayout, Container, Flashbar, Header, Link, Box, SpaceBetween, BreadcrumbGroup, Table, Button, Form, FormField, Input, Badge, ContentLayout} from "@cloudscape-design/components";
 import ValueWithLabel from "./ValueWithLabel";
 import RequestAccessComponent from "./RequestAccessComponent";
 import DatabaseDetailsComponent from "./DatabaseDetailsComponent";
@@ -38,6 +38,16 @@ function TableDetailsComponent(props) {
     const [accessMode, setAccessMode] = useState("nrac")
 
     useEffect(() => {
+        if (props.breadcrumbsCallback) {
+            props.breadcrumbsCallback(
+                <BreadcrumbGroup items={[
+                    { text: "Data Domains", href: "/"},
+                    { text: dbname, href: "/tables/"+dbname },
+                    { text: "Request Access ("+tablename+")", href: "/request-access/"+dbname+"/"+tablename }
+                ]} />
+            )
+        }
+
         async function run() {
             const credentials = await Auth.currentCredentials();
             const glueClient = new GlueClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
@@ -73,57 +83,54 @@ function TableDetailsComponent(props) {
     } else if (table) {
         return (
             <div>
-                <BreadcrumbGroup items={[
-                            { text: "Data Domains", href: "/"},
-                            { text: dbname, href: "/tables/"+dbname },
-                            { text: "Request Access ("+tablename+")", href: "/request-access/"+dbname+"/"+tablename }
-                        ]} />
-                <DatabaseDetailsComponent dbName={dbname} accessModeCallback={setAccessMode} />
-                <ResourceLFTagsWrapper resourceName={tablename} resourceDatabaseName={dbname}>
-                    <Box margin={{top: "l"}}>
-                        <Container header={<Header variant="h2">Table Details</Header>}>
-                            <ColumnLayout columns={2} variant="text-grid">
-                                <SpaceBetween size="m">
-                                    <ValueWithLabel label="Table">
-                                        {tablename}
-                                    </ValueWithLabel>
-                                    <ValueWithLabel label="Tags">
-                                        <DisplayLFTagsFromContextComponent resourceType="table" showDataDomain />
-                                    </ValueWithLabel>
-                                </SpaceBetween>
-                                <SpaceBetween size="m">
-                                    <ValueWithLabel label="Location">
-                                        {table.StorageDescriptor.Location}
-                                    </ValueWithLabel>
-                                    <ValueWithLabel label="Crawler State">
-                                        <DataProductStateComponent dbName={dbname} tableName={tablename} />
-                                    </ValueWithLabel>
-                                </SpaceBetween>
-                            </ColumnLayout>
-                        </Container>
-                    </Box>
-                    <Box margin={{top: "m"}}>
-                        <Table header={<Header variant="h3">Columns</Header>} items={table.StorageDescriptor.Columns} columnDefinitions={[
-                            {
-                                header: "Name",
-                                cell: item => item.Name
-                            },
-                            {
-                                header: "Type",
-                                cell: item => item.Type
-                            },
-                            {
-                                header: "Tags",
-                                cell: item => <DisplayLFTagsFromContextComponent resourceType="column" resourceColumnName={item.Name} />
-                            },
-                            {
-                                header: "Is PII",
-                                cell: item => (item.Parameters && "pii_flag" in item.Parameters && item.Parameters.pii_flag === "true") ? <Badge color="red">Yes</Badge> : <Badge color="green">No</Badge>
-                            }
-                        ]} />
-                    </Box>
-                </ResourceLFTagsWrapper>
-                {renderRequestAccess()}
+                <ContentLayout header={<Header variant="h1">{tablename}</Header>}>
+                    <DatabaseDetailsComponent dbName={dbname} accessModeCallback={setAccessMode} />
+                    <ResourceLFTagsWrapper resourceName={tablename} resourceDatabaseName={dbname}>
+                        <Box margin={{top: "l"}}>
+                            <Container header={<Header variant="h2">Table Details</Header>}>
+                                <ColumnLayout columns={2} variant="text-grid">
+                                    <SpaceBetween size="m">
+                                        <ValueWithLabel label="Table">
+                                            {tablename}
+                                        </ValueWithLabel>
+                                        <ValueWithLabel label="Tags">
+                                            <DisplayLFTagsFromContextComponent resourceType="table" showDataDomain />
+                                        </ValueWithLabel>
+                                    </SpaceBetween>
+                                    <SpaceBetween size="m">
+                                        <ValueWithLabel label="Location">
+                                            {table.StorageDescriptor.Location}
+                                        </ValueWithLabel>
+                                        <ValueWithLabel label="Crawler State">
+                                            <DataProductStateComponent dbName={dbname} tableName={tablename} />
+                                        </ValueWithLabel>
+                                    </SpaceBetween>
+                                </ColumnLayout>
+                            </Container>
+                        </Box>
+                        <Box margin={{top: "m"}}>
+                            <Table header={<Header variant="h3">Columns</Header>} items={table.StorageDescriptor.Columns} columnDefinitions={[
+                                {
+                                    header: "Name",
+                                    cell: item => item.Name
+                                },
+                                {
+                                    header: "Type",
+                                    cell: item => item.Type
+                                },
+                                {
+                                    header: "Tags",
+                                    cell: item => <DisplayLFTagsFromContextComponent resourceType="column" resourceColumnName={item.Name} />
+                                },
+                                {
+                                    header: "Is PII",
+                                    cell: item => (item.Parameters && "pii_flag" in item.Parameters && item.Parameters.pii_flag === "true") ? <Badge color="red">Yes</Badge> : <Badge color="green">No</Badge>
+                                }
+                            ]} />
+                        </Box>
+                    </ResourceLFTagsWrapper>
+                    {renderRequestAccess()}
+                </ContentLayout>
             </div>
         );
     } else {
