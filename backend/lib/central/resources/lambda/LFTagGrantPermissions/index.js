@@ -4,7 +4,7 @@ const AWS = require("aws-sdk");
 exports.handler = async(event) => {
     const lf = new LakeFormation();
 
-    event.lfTags.forEach(async(row) => {
+    for (const row of event.lfTags) {
         await lf.grantPermissions({
             "Permissions": ["DESCRIBE"],
             "Principal": {
@@ -15,7 +15,7 @@ exports.handler = async(event) => {
             },
             "PermissionsWithGrantOption": ["DESCRIBE"]
         }).promise();
-    })
+    }
 
     await lf.grantPermissions({
         "Permissions": ["DESCRIBE"],
