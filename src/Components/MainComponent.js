@@ -38,6 +38,7 @@ function MainComponent(props) {
     const [searchStatusType, setSearchStatusType] = useState("pending");
     const [searchOptions, setSearchOptions] = useState([]);
     const [breadcrumbs, setBreadcrumbs] = useState(null)
+    const [navigationOpen, setNavigationOpen] = useState(false)
 
     const i18nStrings = {
         searchIconAriaLabel: "Search",
@@ -160,7 +161,7 @@ function MainComponent(props) {
             <TopNavigation identity={identity} i18nStrings={i18nStrings} utilities={navUtilities} search={
                 <Autosuggest onSelect={onSearchSelect} onLoadItems={searchLoadItems} options={searchOptions} statusType={searchStatusType} loadingText="Search objects" errorText="Error fetching objects" enteredTextLabel={(value) => value} onChange={({detail}) => {setSearchInput(detail.value)}} value={searchInput} />
             }  />
-            <AppLayout breadcrumbs={breadcrumbs} navigation={
+            <AppLayout navigationOpen={navigationOpen} onNavigationChange={({detail}) => setNavigationOpen(detail.open)} breadcrumbs={breadcrumbs} navigation={
             <SideNavigation 
                 activeHref={window.location.pathname} 
                 items={[
