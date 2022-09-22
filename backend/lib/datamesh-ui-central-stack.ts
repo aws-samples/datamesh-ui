@@ -100,7 +100,7 @@ export class DataMeshUICentralStack extends Stack {
             centralEventBusArn: centralEventBusArn.valueAsString
         });
 
-        new DataMeshUI(this, "DataMeshUI", {
+        const dataMeshUI = new DataMeshUI(this, "DataMeshUI", {
             stateMachineArn: approvalWorkflow.stateMachine.stateMachineArn,
             stateMachineName: approvalWorkflow.stateMachine.stateMachineName,
             dpmStateMachineArn: centralStateMachineArn.valueAsString,
@@ -129,7 +129,8 @@ export class DataMeshUICentralStack extends Stack {
             httpApi: approvalWorkflow.httpApi,
             httpiApiUserPoolAuthorizer: dataMeshUIAuth.httpApiUserPoolAuthorizer,
             centralEventBusArn: centralEventBusArn.valueAsString,
-            adjustGlueResourcePolicyFunction: tbacSharingWorkflow.adjustGlueResourcePolicyFunction
+            adjustGlueResourcePolicyFunction: tbacSharingWorkflow.adjustGlueResourcePolicyFunction,
+            userDomainMappingTable: dataMeshUI.userDomainMappingTable
         })
     }
 }

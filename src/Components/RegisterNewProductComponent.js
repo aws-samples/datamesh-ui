@@ -23,6 +23,7 @@ import {Amplify, Auth } from "aws-amplify";
 import {useEffect, useState} from 'react';
 import { useParams } from "react-router";
 import {v4 as uuid} from 'uuid';
+import DataDomain from "../Backend/DataDomain";
 import ResourceLFTagsComponent from "./TBAC/ResourceLFTagsComponent";
 import ValueWithLabel from "./ValueWithLabel";
 const cfnOutput = require("../cfn-output.json");
@@ -37,6 +38,7 @@ function RegisterNewProductComponent() {
     const [database, setDatabase] = useState(null)
     const [products, setProducts] = useState([{"id": uuid(), "name": "", "location": "", "error": "", "nameError": "", "firstRow": true}])
     const [spinnerVisible, setSpinnerVisible] = useState(false)
+    const [owner, setOwner] = useState(false)
  
     // const onCancel = () => {
     //     window.location.href="/product-registration/list";
@@ -223,7 +225,12 @@ function RegisterNewProductComponent() {
             
             const credentials = await Auth.currentCredentials()
             const glueClient = new GlueClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)})
-            setDatabase(await glueClient.send(new GetDatabaseCommand({Name: domainId})))
+            const dbResult = await glueClient.send(new GetDatabaseCommand({Name: domainId}))
+            setDatabase(dbResult)
+
+            if (dbResult) {
+                setOwner(await DataDomain.isOwner(dbResult.Database.Parameters.data_owner))
+            }
         })()
     }, [])
 
@@ -234,7 +241,7 @@ function RegisterNewProductComponent() {
             )
         } else {
             return (
-                <Button variant="primary" onClick={onSubmit} disabled={!database}>Submit</Button>
+                <Button variant="primary" onClick={onSubmit} disabled={!database || !owner}>Submit</Button>
             )
         }
     }

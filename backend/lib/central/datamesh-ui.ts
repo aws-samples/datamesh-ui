@@ -13,6 +13,7 @@ import { HttpUserPoolAuthorizer } from "@aws-cdk/aws-apigatewayv2-authorizers-al
 import { Code, Function, Runtime } from "aws-cdk-lib/aws-lambda";
 import { HttpLambdaIntegration } from "@aws-cdk/aws-apigatewayv2-integrations-alpha";
 const util = require("util");
+const crypto = require("crypto")
 
 export interface DataMeshUIProps {
     stateMachineArn: string
@@ -30,18 +31,35 @@ export interface DataMeshUIProps {
 }
 
 export class DataMeshUI extends Construct {
+    readonly userDomainMappingTable: Table
 
     constructor(scope: Construct, id: string, props: DataMeshUIProps) {
         super(scope, id)
 
         let uiPayload : any = {
             "InfraStack": {
+                "AccountId": Stack.of(this).account,
                 "StateMachineArn": props.stateMachineArn,
                 "SearchApiUrl": props.searchApiUrl,
                 "TbacStateMachineArn": props.tbacSharingWorkflow.stateMachineArn,
-                "WorkflowApiUrl": props.workflowApiUrl
+                "WorkflowApiUrl": props.workflowApiUrl,
+                "RegistrationToken": crypto.randomBytes(4).toString('hex')
             }
         }
+
+        this.userDomainMappingTable = new Table(this, "UserDomainMapping", {
+            partitionKey: {
+                name: "userId",
+                type: AttributeType.STRING
+            },
+            sortKey: {
+                name: "accountId",
+                type: AttributeType.STRING
+            },
+            billingMode: BillingMode.PAY_PER_REQUEST,
+            encryption: TableEncryption.AWS_MANAGED,
+            removalPolicy: RemovalPolicy.DESTROY
+        });
 
         const stateMachineArn = props.stateMachineArn;
         props.identityPool.authenticatedRole.attachInlinePolicy(new Policy(this, "DataMeshUIAuthRoleInlinePolicy", {
@@ -77,6 +95,13 @@ export class DataMeshUI extends Construct {
                         "lakeformation:GetResourceLFTags"
                     ],
                     resources: ["*"]
+                }),
+                new PolicyStatement({
+                    effect: Effect.ALLOW,
+                    actions: [
+                        "dynamodb:GetItem"
+                    ],
+                    resources: [this.userDomainMappingTable.tableArn]
                 })
             ]
         }));

@@ -36,6 +36,7 @@ function TableDetailsComponent(props) {
     const [requestSuccessful, setRequestSuccessful] = useState(false);
     const [executionArn, setExecutionArn] = useState();
     const [accessMode, setAccessMode] = useState("nrac")
+    const [owner, setOwner] = useState(false)
 
     useEffect(() => {
         if (props.breadcrumbsCallback) {
@@ -64,7 +65,7 @@ function TableDetailsComponent(props) {
     }, []);
 
     const renderRequestAccess = () => {
-        if (accessMode == "nrac") {
+        if (accessMode == "nrac" && !owner) {
             return (
                 <Box margin={{top: "m"}}>
                     <RequestAccessComponent dbName={dbname} tableName={tablename} />
@@ -84,7 +85,7 @@ function TableDetailsComponent(props) {
         return (
             <div>
                 <ContentLayout header={<Header variant="h1">{tablename}</Header>}>
-                    <DatabaseDetailsComponent dbName={dbname} accessModeCallback={setAccessMode} />
+                    <DatabaseDetailsComponent dbName={dbname} accessModeCallback={setAccessMode} ownerCallback={setOwner} />
                     <ResourceLFTagsWrapper resourceName={tablename} resourceDatabaseName={dbname}>
                         <Box margin={{top: "l"}}>
                             <Container header={<Header variant="h2">Table Details</Header>}>

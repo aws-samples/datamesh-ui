@@ -2,6 +2,7 @@ import { HttpApi } from "@aws-cdk/aws-apigatewayv2-alpha";
 import { HttpUserPoolAuthorizer } from "@aws-cdk/aws-apigatewayv2-authorizers-alpha";
 import { HttpLambdaIntegration } from "@aws-cdk/aws-apigatewayv2-integrations-alpha";
 import { Duration } from "aws-cdk-lib";
+import { Table } from "aws-cdk-lib/aws-dynamodb";
 import { HttpMethod } from "aws-cdk-lib/aws-events";
 import { Effect, IRole, ManagedPolicy, PolicyDocument, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
 import { CfnDataLakeSettings } from "aws-cdk-lib/aws-lakeformation";
@@ -16,6 +17,7 @@ export interface DataDomainManagementProps {
     httpiApiUserPoolAuthorizer: HttpUserPoolAuthorizer
     centralEventBusArn: string
     adjustGlueResourcePolicyFunction: Function
+    userDomainMappingTable: Table
 }
 
 export class DataDomainManagement extends Construct {
@@ -87,6 +89,15 @@ export class DataDomainManagement extends Construct {
                             props.adjustGlueResourcePolicyFunction.functionArn
                         ]
                     }),
+                    new PolicyStatement({
+                        effect: Effect.ALLOW,
+                        actions: [
+                            "dynamodb:PutItem"
+                        ],
+                        resources: [
+                            props.userDomainMappingTable.tableArn
+                        ]
+                    })
                 ]
             })}
         });
@@ -114,7 +125,8 @@ export class DataDomainManagement extends Construct {
                 CENTRAL_EVENT_BUS_ARN: props.centralEventBusArn,
                 LAMBDA_EXEC_ROLE_ARN: registerDataDomainRole.roleArn,
                 EB_XACCOUNT_ROLE_ARN: crossAccountEbRole.roleArn,
-                ADJUST_RESOURCE_POLICY_FUNC_NAME: props.adjustGlueResourcePolicyFunction.functionName
+                ADJUST_RESOURCE_POLICY_FUNC_NAME: props.adjustGlueResourcePolicyFunction.functionName,
+                USER_MAPPING_TABLE_NAME: props.userDomainMappingTable.tableName
             }
         })
 
@@ -122,6 +134,42 @@ export class DataDomainManagement extends Construct {
             path: "/data-domain/register",
             methods: [HttpMethod.POST],
             integration: new HttpLambdaIntegration("RegisterDataDomainIntegration", registerDataDomainFunction),
+            authorizer: props.httpiApiUserPoolAuthorizer
+        })
+
+        const getDataDomainOwnerRole = new Role(this, "GetDataDomainOwnerRole", {
+            assumedBy: new ServicePrincipal("lambda.amazonaws.com"),
+            managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole")],
+            inlinePolicies: {inline0: new PolicyDocument({
+                statements: [
+                    new PolicyStatement({
+                        effect: Effect.ALLOW,
+                        actions: [
+                            "dynamodb:GetItem"
+                        ],
+                        resources: [
+                            props.userDomainMappingTable.tableArn
+                        ]
+                    })
+                ]
+            })}
+        });
+
+        const getDataDomainOwnerFunction = new Function(this, "GetDataDomainOwnerFunction", {
+            runtime: Runtime.NODEJS_16_X,
+            role: getDataDomainOwnerRole,
+            handler: "index.handler",
+            timeout: Duration.seconds(30),
+            code: Code.fromAsset(__dirname+"/resources/lambda/GetDataDomainOwner"),
+            environment: {
+                USER_MAPPING_TABLE_NAME: props.userDomainMappingTable.tableName
+            }
+        })
+
+        props.httpApi.addRoutes({
+            path: "/data-domain/validate-owner",
+            methods: [HttpMethod.GET],
+            integration: new HttpLambdaIntegration("GetDataDomainOwnerIntegration", getDataDomainOwnerFunction),
             authorizer: props.httpiApiUserPoolAuthorizer
         })
     }

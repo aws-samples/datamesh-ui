@@ -23,6 +23,7 @@ import {Amplify} from 'aws-amplify';
 import '@aws-amplify/ui-react/styles.css';
 import "@cloudscape-design/global-styles/index.css"
 import MainComponent from './Components/MainComponent';
+import { useEffect, useState } from 'react';
 const cfnOutput = require("./cfn-output.json");
 
 Amplify.configure(awsconfig);
@@ -39,8 +40,17 @@ Amplify.configure(awsconfig);
 // });
 
 function App() {
+  const [canRegister, setCanRegister] = useState(false)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const token = params.get("token")
+    setCanRegister(token && token == cfnOutput.InfraStack.RegistrationToken)
+  }, [])
+  
+  
   return (
-    <Authenticator variation='modal' hideSignUp={true}>
+    <Authenticator variation='modal' hideSignUp={!canRegister}>
       <MainComponent />
     </Authenticator>
   )
