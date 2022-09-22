@@ -9,7 +9,7 @@ exports.handler = async({detail}) => {
             S: detail.tableName
         },
         state: {
-            S: detail.state
+            S: detail.lastCrawlStatus.toLowerCase()
         }
     }
 

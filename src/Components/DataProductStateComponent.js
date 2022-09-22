@@ -5,9 +5,9 @@ const cfnOutput = require("../cfn-output.json")
 const axios = require("axios").default;
 
 
-const STATE_PENDING = "Pending"
-const STATE_SUCCEEDED = "Succeeded"
-const STATE_FAILED = "Failed"
+const STATE_PENDING = "pending"
+const STATE_SUCCEEDED = "succeeded"
+const STATE_FAILED = "failed"
 
 function DataProductStateComponent(props) {
     const apiUrl = cfnOutput.InfraStack.WorkflowApiUrl + "/data-products/latest-state"

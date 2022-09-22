@@ -126,7 +126,11 @@ function TableDetailsComponent(props) {
                                     header: "Is PII",
                                     cell: item => (item.Parameters && "pii_flag" in item.Parameters && item.Parameters.pii_flag === "true") ? <Badge color="red">Yes</Badge> : <Badge color="green">No</Badge>
                                 }
-                            ]} />
+                            ]} empty={
+                                <Box textAlign="center">
+                                    <b>Schema would be initially populated by the crawler</b>
+                                </Box>
+                            } />
                         </Box>
                     </ResourceLFTagsWrapper>
                     {renderRequestAccess()}

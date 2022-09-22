@@ -280,6 +280,14 @@ function CatalogComponent(props) {
                             {renderRegisterDataDomain()}
                         </SpaceBetween>
                     }>Data Domains</Header>}
+                    empty={
+                        <Box textAlign="center">
+                            <b>No Registered Data Domain</b>
+                            <Box margin={{top: "m"}}>
+                                {renderRegisterDataDomain()}
+                            </Box>
+                        </Box>
+                    }
                 />
              </Box>
              <Modal size="large" onDismiss={() => {setModalVisible(false)}} visible={modalVisible} header="Register Data Domain" footer={

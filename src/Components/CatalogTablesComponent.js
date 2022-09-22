@@ -83,6 +83,12 @@ function CatalogTablesComponent(props) {
         }
     }
 
+    const renderRegisterDataProduct = () => {
+        return (
+            <Button iconName="add-plus" href={`/product-registration/${dbname}/new`}>Register Data Products</Button>
+        )
+    }
+
     return(
         <Box>
             <ContentLayout header={
@@ -115,9 +121,17 @@ function CatalogTablesComponent(props) {
                         header={<Header variant="h2" actions={
                             <SpaceBetween direction="horizontal" size="s">
                                 {renderRefresh()}
-                                <Button iconName="add-plus" href={`/product-registration/${dbname}/new`}>Register Data Products</Button>
+                                {renderRegisterDataProduct()}
                             </SpaceBetween>
                         }>Data Products in {dbname}</Header>}
+                        empty={
+                            <Box textAlign="center">
+                                <b>No Registered Data Product</b>
+                                <Box margin={{top: "m"}}>
+                                {renderRegisterDataProduct()}
+                                </Box>
+                            </Box>
+                        }
                     />
                 </Box>
             </ContentLayout>
