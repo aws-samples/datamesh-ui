@@ -2,7 +2,7 @@ import { IdentityPool } from "@aws-cdk/aws-cognito-identitypool-alpha";
 import { UserPool } from "aws-cdk-lib/aws-cognito";
 import { Effect, ManagedPolicy, Policy, PolicyDocument, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
 import { Construct } from "constructs";
-import { CfnOutput, Duration, RemovalPolicy, Stack } from "aws-cdk-lib";
+import { CfnOutput, Duration, RemovalPolicy, SecretValue, Stack } from "aws-cdk-lib";
 import { CallAwsService } from "aws-cdk-lib/aws-stepfunctions-tasks";
 import { JsonPath, Map, Pass, StateMachine, StateMachineType } from "aws-cdk-lib/aws-stepfunctions";
 import { EventBus, HttpMethod, Rule } from "aws-cdk-lib/aws-events";
@@ -12,7 +12,10 @@ import { HttpApi } from "@aws-cdk/aws-apigatewayv2-alpha";
 import { HttpUserPoolAuthorizer } from "@aws-cdk/aws-apigatewayv2-authorizers-alpha";
 import { Code, Function, Runtime } from "aws-cdk-lib/aws-lambda";
 import { HttpLambdaIntegration } from "@aws-cdk/aws-apigatewayv2-integrations-alpha";
+import { Secret } from "aws-cdk-lib/aws-secretsmanager";
+import { NagSuppressions } from "cdk-nag";
 const util = require("util");
+const crypto = require("crypto")
 
 export interface DataMeshUIProps {
     stateMachineArn: string
@@ -27,21 +30,54 @@ export interface DataMeshUIProps {
     httpApi: HttpApi
     httpiApiUserPoolAuthorizer: HttpUserPoolAuthorizer
     centralEventBusArn: string
+    centralEventHash: string
 }
 
 export class DataMeshUI extends Construct {
+    readonly userDomainMappingTable: Table
 
     constructor(scope: Construct, id: string, props: DataMeshUIProps) {
         super(scope, id)
+        
+        const eventSecret = new Secret(this, "EventSecret", {
+            secretObjectValue: {
+                "eventHash": SecretValue.unsafePlainText(props.centralEventHash)
+            }
+        })
+
+        NagSuppressions.addResourceSuppressions(eventSecret, [
+            {
+                id: "AwsSolutions-SMG4",
+                reason: "Used to share Event Hash during Workshop Event"
+            }
+        ])
 
         let uiPayload : any = {
             "InfraStack": {
+                "AccountId": Stack.of(this).account,
                 "StateMachineArn": props.stateMachineArn,
                 "SearchApiUrl": props.searchApiUrl,
                 "TbacStateMachineArn": props.tbacSharingWorkflow.stateMachineArn,
-                "WorkflowApiUrl": props.workflowApiUrl
+                "WorkflowApiUrl": props.workflowApiUrl,
+                "RegistrationToken": crypto.randomBytes(4).toString('hex')
             }
         }
+
+        this.userDomainMappingTable = new Table(this, "UserDomainMapping", {
+            partitionKey: {
+                name: "userId",
+                type: AttributeType.STRING
+            },
+            sortKey: {
+                name: "accountId",
+                type: AttributeType.STRING
+            },
+            billingMode: BillingMode.PAY_PER_REQUEST,
+            encryption: TableEncryption.AWS_MANAGED,
+            removalPolicy: RemovalPolicy.DESTROY
+        });
+
+
 
         const stateMachineArn = props.stateMachineArn;
         props.identityPool.authenticatedRole.attachInlinePolicy(new Policy(this, "DataMeshUIAuthRoleInlinePolicy", {
@@ -59,8 +95,7 @@ export class DataMeshUI extends Construct {
                 new PolicyStatement({
                     effect: Effect.ALLOW,
                     actions: [
-                        "states:ListExecutions",
-                        "states:StartExecution"   
+                        "states:ListExecutions"
                     ],
                     resources: [props.stateMachineArn]
                 }),
@@ -77,9 +112,18 @@ export class DataMeshUI extends Construct {
                         "lakeformation:GetResourceLFTags"
                     ],
                     resources: ["*"]
+                }),
+                new PolicyStatement({
+                    effect: Effect.ALLOW,
+                    actions: [
+                        "dynamodb:GetItem"
+                    ],
+                    resources: [this.userDomainMappingTable.tableArn]
                 })
             ]
         }));
+
+        eventSecret.grantRead(props.identityPool.authenticatedRole)
 
         // const repo = new Repository(this, "DataMeshUIRepository", {
         //     repositoryName: "datamesh-ui",
@@ -271,6 +315,40 @@ export class DataMeshUI extends Construct {
                 authorizer: props.httpiApiUserPoolAuthorizer
             })
 
+            const getEventSecretRole = new Role(this, "GetEventSecretRole", {
+                assumedBy: new ServicePrincipal("lambda.amazonaws.com"),
+                managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole")],
+                inlinePolicies: {inline0: new PolicyDocument({
+                    statements: [
+                        new PolicyStatement({
+                            effect: Effect.ALLOW,
+                            actions: [
+                                "secretsmanager:GetSecretValue"
+                            ],
+                            resources: [eventSecret.secretArn]
+                        })
+                    ]
+                })}
+            });
+    
+            const getEventSecretFunction = new Function(this, "GetEventSecretFunction", {
+                runtime: Runtime.NODEJS_16_X,
+                role: getEventSecretRole,
+                handler: "index.handler",
+                timeout: Duration.seconds(30),
+                code: Code.fromAsset(__dirname+"/resources/lambda/GetEventSecret"),
+                environment: {
+                    EVENT_SECRET_ARN: eventSecret.secretArn
+                }
+            }) 
+
+            props.httpApi.addRoutes({
+                path: "/event/details",
+                methods: [HttpMethod.GET],
+                integration: new HttpLambdaIntegration("getEventSecretIntegration", getEventSecretFunction),
+                authorizer: props.httpiApiUserPoolAuthorizer
+            })
+
             // uiPayload.InfraStack.RegisterProductTable = {
             //     "Name": registerProductTable.tableName,
             //     "Arn": registerProductTable.tableArn,
@@ -347,25 +425,25 @@ export class DataMeshUI extends Construct {
 
             // registerProductUIRule.addTarget(new SfnStateMachine(registerProductSM));
 
-            props.identityPool.authenticatedRole.attachInlinePolicy(new Policy(this, "UIDPMStateMachinePolicy", {
-                statements: [   
-                    new PolicyStatement({
-                        effect: Effect.ALLOW,
-                        actions: [
-                            "states:ListExecutions",
-                            "states:StartExecution"   
-                        ],
-                        resources: [props.dpmStateMachineArn]
-                    }),
-                    new PolicyStatement({
-                        effect: Effect.ALLOW,
-                        actions: [
-                            "states:DescribeExecution"
-                        ],
-                        resources: [util.format("arn:aws:states:%s:%s:execution:%s:*", Stack.of(this).region, Stack.of(this).account, props.dpmStateMachineArn.substring(props.dpmStateMachineArn.lastIndexOf(":")+1))]
-                    })
-                ]
-            }));
+            // props.identityPool.authenticatedRole.attachInlinePolicy(new Policy(this, "UIDPMStateMachinePolicy", {
+            //     statements: [   
+            //         new PolicyStatement({
+            //             effect: Effect.ALLOW,
+            //             actions: [
+            //                 "states:ListExecutions",
+            //                 "states:StartExecution"   
+            //             ],
+            //             resources: [props.dpmStateMachineArn]
+            //         }),
+            //         new PolicyStatement({
+            //             effect: Effect.ALLOW,
+            //             actions: [
+            //                 "states:DescribeExecution"
+            //             ],
+            //             resources: [util.format("arn:aws:states:%s:%s:execution:%s:*", Stack.of(this).region, Stack.of(this).account, props.dpmStateMachineArn.substring(props.dpmStateMachineArn.lastIndexOf(":")+1))]
+            //         })
+            //     ]
+            // }));
         }
 
         new CfnOutput(this, "UIPayload", {

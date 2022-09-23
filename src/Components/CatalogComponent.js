@@ -21,6 +21,8 @@ import {GlueClient, GetDatabasesCommand, GetDatabaseCommand} from '@aws-sdk/clie
 import { Alert, Box, Button, ButtonDropdown, FormField, Header, Icon, Input, Link, Modal, SpaceBetween, Spinner, Table, TextFilter } from "@cloudscape-design/components";
 import ResourceLFTagsComponent from "./TBAC/ResourceLFTagsComponent";
 import { v4 as uuid } from 'uuid';
+import DataDomain from "../Backend/DataDomain";
+import DataDomainActionComponent from "./DataDomainActionComponent";
 const cfnOutput = require("../cfn-output.json")
 const config = Amplify.configure();
 const axios = require("axios").default;
@@ -92,27 +94,8 @@ function CatalogComponent(props) {
 
     const refresh = async() => {
         setSpinnerVisibility(true)
-        const currentSession = await Auth.currentSession();
-        const refreshLfTagUrl = cfnOutput.InfraStack.WorkflowApiUrl + "/tags/sync-permissions";
-        const refreshDataDomainPermissionsUrl = cfnOutput.InfraStack.WorkflowApiUrl + "/data-domains/sync-permissions";
 
-        await Promise.all([
-            axios({
-                method: "POST",
-                url: refreshLfTagUrl,
-                headers: {
-                    "Authorization": currentSession.getAccessToken().getJwtToken()
-                }
-            }),
-            axios({
-                method: "POST",
-                url: refreshDataDomainPermissionsUrl,
-                headers: {
-                    "Authorization": currentSession.getAccessToken().getJwtToken()
-                }
-            })
-        ])
-
+        await DataDomain.refresh()
 
         setDatabases([])
         setNextToken(null)
@@ -138,27 +121,13 @@ function CatalogComponent(props) {
     const registerDataDomain = async() => {
         if (domainSecretArn) {
             if (SECRETS_MANAGER_ARN_REGEX_PATTERN.test(domainSecretArn)) {
-                const registerUrl = cfnOutput.InfraStack.WorkflowApiUrl + "/data-domain/register"
-                const session = await Auth.currentSession()
                 const domainId = domainSecretArn.split(":")[4]
     
                 try {
                     setRegisterSpinnerVisible(true)
                     setRegisterDisabled(true)
     
-                    await axios({
-                        method: "POST",
-                        url: registerUrl,
-                        headers: {
-                            "Authorization": session.getAccessToken().getJwtToken(),
-                            "Content-Type": "application/json"
-                        },
-                        data: {
-                            "domainId": domainId,
-                            "domainSecretArn": domainSecretArn,
-                            "customLfTags": domainTags.map((tag) => ({TagKey: tag.TagKey, TagValues: [tag.TagValues]}))
-                        }
-                    })
+                    await DataDomain.register(domainId, domainSecretArn, domainTags)
     
                     cancelModal()
                     await refresh()
@@ -266,10 +235,7 @@ function CatalogComponent(props) {
                         },
                         {
                             header: "Actions",
-                            cell: item => <ButtonDropdown expandToViewport="true" items={[
-                                {text: "Register Data Product", href: `/product-registration/${item.Name}/new`},
-                                {text: "View Tables", href: `/tables/${item.Name}`}
-                            ]}>Actions</ButtonDropdown>
+                            cell: item => <DataDomainActionComponent item={item} />
                         }
                     ]}
 
@@ -280,6 +246,14 @@ function CatalogComponent(props) {
                             {renderRegisterDataDomain()}
                         </SpaceBetween>
                     }>Data Domains</Header>}
+                    empty={
+                        <Box textAlign="center">
+                            <b>No Registered Data Domain</b>
+                            <Box margin={{top: "m"}}>
+                                {renderRegisterDataDomain()}
+                            </Box>
+                        </Box>
+                    }
                 />
              </Box>
              <Modal size="large" onDismiss={() => {setModalVisible(false)}} visible={modalVisible} header="Register Data Domain" footer={

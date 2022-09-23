@@ -75,6 +75,8 @@ exports.handler = async(event) => {
 
     let SecretString, BucketName, Prefix, KmsKeyId, DomainName, domainName = null;
 
+    const userClaims = event.requestContext.authorizer.jwt.claims
+
     try {
         const secretsResult = await secretsManagerClient.getSecretValue({SecretId: domainSecretArn}).promise()
         SecretString = secretsResult.SecretString
@@ -400,6 +402,22 @@ exports.handler = async(event) => {
             }
         ],
         EventBusName: centralEventBusName
+    }).promise()
+
+    const dynamodbClient = new AWS.DynamoDB()
+    await dynamodbClient.putItem({
+        TableName: process.env.USER_MAPPING_TABLE_NAME,
+        Item: {
+            "userId": {
+                "S": userClaims.sub
+            },
+            "accountId": {
+                "S": domainId
+            },
+            "role": {
+                "S": "owner"
+            }
+        }
     }).promise()
 
     returnPayload.body = JSON.stringify({"status": "200 OK"})

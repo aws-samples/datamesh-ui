@@ -6,6 +6,7 @@ function DisplayLFTagsFromContextComponent(props) {
     const context = useContext(ResourceTagContext);
     const [tags, setTags] = useState([]);
     const [databaseName, setDatabaseName] = useState(null);
+    const [refreshCounter, setRefreshCounter] = useState(1)
 
     useEffect(() => {
         if (context) {
@@ -18,7 +19,7 @@ function DisplayLFTagsFromContextComponent(props) {
                 setTags(filtered && filtered.length >= 1 ? filtered[0].LFTags : []);
             }
         }
-    });
+    }, [refreshCounter]);
 
     return (
         <DisplayLFTagsComponent lfTags={tags} database={databaseName} showDataDomain={props.showDataDomain} />

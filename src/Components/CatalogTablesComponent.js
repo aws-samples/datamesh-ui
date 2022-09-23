@@ -21,7 +21,6 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import {Amplify, Auth } from "aws-amplify";
 import DatabaseDetailsComponent from "./DatabaseDetailsComponent";
-import RequestAccessComponent from "./RequestAccessComponent";
 import ResourceLFTagsComponent from "./TBAC/ResourceLFTagsComponent";
 import DataProductStateComponent from "./DataProductStateComponent";
 
@@ -33,15 +32,10 @@ function CatalogTablesComponent(props) {
     const [tables, setTables] = useState([]);
     const [nextToken, setNextToken] = useState();
     const [response, setResponse] = useState();
-    const [executionArn, setExecutionArn] = useState();
-    const [requestSuccessful, setRequestSuccessful] = useState(false);
     const [spinnerVisibility, setSpinnerVisibility] = useState(false)
     const [forceRefresh, setForceRefresh] = useState(0)
+    const [owner, setOwner] = useState(false)
 
-    const requestAccessSuccessHandler = async(executionArn) => {
-        setExecutionArn(executionArn);
-        setRequestSuccessful(true);
-    }
 
     useEffect(() => {
         if (props.breadcrumbsCallback) {
@@ -83,12 +77,18 @@ function CatalogTablesComponent(props) {
         }
     }
 
+    const renderRegisterDataProduct = () => {
+        return (
+            <Button iconName="add-plus" disabled={!owner} href={`/product-registration/${dbname}/new`}>Register Data Products</Button>
+        )
+    }
+
     return(
         <Box>
             <ContentLayout header={
                 <Header variant="h1">{dbname}</Header>
             }>
-                <DatabaseDetailsComponent dbName={dbname} />
+                <DatabaseDetailsComponent dbName={dbname} ownerCallback={setOwner} />
                 <Box margin={{top: "l"}}>
                     <Table 
                         footer={<Box textAlign="center" display={(response && response.NextToken) ? "block" : "none"}><Link variant="primary" onFollow={(event) => setNextToken(response.NextToken)}>View More</Link></Box>}
@@ -115,9 +115,17 @@ function CatalogTablesComponent(props) {
                         header={<Header variant="h2" actions={
                             <SpaceBetween direction="horizontal" size="s">
                                 {renderRefresh()}
-                                <Button iconName="add-plus" href={`/product-registration/${dbname}/new`}>Register Data Products</Button>
+                                {renderRegisterDataProduct()}
                             </SpaceBetween>
                         }>Data Products in {dbname}</Header>}
+                        empty={
+                            <Box textAlign="center">
+                                <b>No Registered Data Product</b>
+                                <Box margin={{top: "m"}}>
+                                {renderRegisterDataProduct()}
+                                </Box>
+                            </Box>
+                        }
                     />
                 </Box>
             </ContentLayout>

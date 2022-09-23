@@ -21,10 +21,11 @@ import { GetDatabaseCommand, GlueClient } from "@aws-sdk/client-glue";
 import { Badge, ColumnLayout, Container, Header, SpaceBetween } from "@cloudscape-design/components";
 import ValueWithLabel from "./ValueWithLabel";
 import ResourceLFTagsComponent from "./TBAC/ResourceLFTagsComponent";
+import DataDomain from "../Backend/DataDomain"
 
 const config = Amplify.configure();
 
-function DatabaseDetailsComponent({dbName, accessModeCallback}) {
+function DatabaseDetailsComponent({dbName, accessModeCallback, ownerCallback}) {
     const [db, setDb] = useState();
 
     useEffect(() => {
@@ -37,6 +38,11 @@ function DatabaseDetailsComponent({dbName, accessModeCallback}) {
 
             if (accessModeCallback) {
                 accessModeCallback((parameters && "access_mode" in parameters) ? parameters.access_mode : "nrac")
+            }
+
+            if (ownerCallback) {
+                const isOwner = await DataDomain.isOwner(parameters.data_owner)
+                ownerCallback(isOwner)
             }
         }
 

@@ -23,6 +23,8 @@ import {Amplify, Auth } from "aws-amplify";
 import {useEffect, useState} from 'react';
 import { useParams } from "react-router";
 import {v4 as uuid} from 'uuid';
+import DataDomain from "../Backend/DataDomain";
+import AuthWorkflow from "../Backend/AuthWorkflow";
 import ResourceLFTagsComponent from "./TBAC/ResourceLFTagsComponent";
 import ValueWithLabel from "./ValueWithLabel";
 const cfnOutput = require("../cfn-output.json");
@@ -37,6 +39,7 @@ function RegisterNewProductComponent() {
     const [database, setDatabase] = useState(null)
     const [products, setProducts] = useState([{"id": uuid(), "name": "", "location": "", "error": "", "nameError": "", "firstRow": true}])
     const [spinnerVisible, setSpinnerVisible] = useState(false)
+    const [owner, setOwner] = useState(false)
  
     // const onCancel = () => {
     //     window.location.href="/product-registration/list";
@@ -63,7 +66,6 @@ function RegisterNewProductComponent() {
             const isPathValid = await isS3PathsValid(credentials)
 
             if (isPathValid) {
-                const sfnClient = new SFNClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
                 const accessMode = (database.Database.Parameters && database.Database.Parameters.access_mode) ? database.Database.Parameters.access_mode : "nrac";
                 const formattedProducts = products.map((prod) => {
                     if (prod.location.startsWith("/")) {
@@ -76,16 +78,22 @@ function RegisterNewProductComponent() {
                     
                     return prod;
                 })
-                await sfnClient.send(new StartExecutionCommand({
-                    stateMachineArn: dpmStateMachineArn,
-                    input: JSON.stringify({
-                        "producer_acc_id": database.Database.Parameters.data_owner,
-                        "database_name": domainId,
-                        "lf_access_mode": accessMode,
-                        "tables": formattedProducts
-                    })
-                }))
-    
+
+                const input = JSON.stringify({
+                    "producer_acc_id": database.Database.Parameters.data_owner,
+                    "database_name": domainId,
+                    "lf_access_mode": accessMode,
+                    "tables": formattedProducts
+                })
+
+                try {
+                    await AuthWorkflow.exec(dpmStateMachineArn, input, database.Database.Parameters.data_owner)
+                } catch (e) {
+                    setSpinnerVisible(false)
+                    setError("An unexpected error has occurred, please try again")
+                }
+                
+   
                 window.location.href = `/tables/${domainId}`
             } else {
                 setSpinnerVisible(false)
@@ -223,7 +231,12 @@ function RegisterNewProductComponent() {
             
             const credentials = await Auth.currentCredentials()
             const glueClient = new GlueClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)})
-            setDatabase(await glueClient.send(new GetDatabaseCommand({Name: domainId})))
+            const dbResult = await glueClient.send(new GetDatabaseCommand({Name: domainId}))
+            setDatabase(dbResult)
+
+            if (dbResult) {
+                setOwner(await DataDomain.isOwner(dbResult.Database.Parameters.data_owner))
+            }
         })()
     }, [])
 
@@ -234,7 +247,7 @@ function RegisterNewProductComponent() {
             )
         } else {
             return (
-                <Button variant="primary" onClick={onSubmit} disabled={!database}>Submit</Button>
+                <Button variant="primary" onClick={onSubmit} disabled={!database || !owner}>Submit</Button>
             )
         }
     }

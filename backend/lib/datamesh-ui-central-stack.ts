@@ -1,11 +1,13 @@
 import { Aws, CfnParameter, Stack } from "aws-cdk-lib";
 import { Role } from "aws-cdk-lib/aws-iam";
+import { StateMachine } from "aws-cdk-lib/aws-stepfunctions";
 import { Construct } from "constructs";
 import { ApprovalWorkflow } from "./central/approval-workflow";
 import { DataDomainManagement } from "./central/data-domain-management";
 import { DataQualityCentralAccount } from "./central/data-quality-central-account";
 import { DataMeshUI } from "./central/datamesh-ui";
 import { DataMeshUIAuth } from "./central/datamesh-ui-auth";
+import { DataMeshUIAuthWorkflow } from "./central/datamesh-ui-auth-workflow";
 import DataMeshUILFTagPermissions from "./central/datamesh-ui-lftag-permissions";
 import { GlueCatalogSearchApi } from "./central/glue-catalog-search-api";
 import { TbacSharingWorkflow } from "./central/tbac-sharing-workflow";
@@ -41,6 +43,16 @@ export class DataMeshUICentralStack extends Stack {
                 type: "String",
                 description:
                     "Central EventBridge ARN in Central Governance account",
+            }
+        );
+
+        const centralEventHash = new CfnParameter(
+            this,
+            "centralEventHash",
+            {
+                type: "String",
+                description: "Event Hash to be displayed in the UI",
+                default: "",
             }
         );
 
@@ -100,7 +112,7 @@ export class DataMeshUICentralStack extends Stack {
             centralEventBusArn: centralEventBusArn.valueAsString
         });
 
-        new DataMeshUI(this, "DataMeshUI", {
+        const dataMeshUI = new DataMeshUI(this, "DataMeshUI", {
             stateMachineArn: approvalWorkflow.stateMachine.stateMachineArn,
             stateMachineName: approvalWorkflow.stateMachine.stateMachineName,
             dpmStateMachineArn: centralStateMachineArn.valueAsString,
@@ -112,7 +124,8 @@ export class DataMeshUICentralStack extends Stack {
             workflowApiUrl: approvalWorkflow.httpApi.apiEndpoint,
             httpApi: approvalWorkflow.httpApi,
             httpiApiUserPoolAuthorizer: dataMeshUIAuth.httpApiUserPoolAuthorizer,
-            centralEventBusArn: centralEventBusArn.valueAsString
+            centralEventBusArn: centralEventBusArn.valueAsString,
+            centralEventHash: centralEventHash.valueAsString
         });
 
         new DataMeshUILFTagPermissions(this, "LFTagPermissionManagement", {
@@ -129,7 +142,19 @@ export class DataMeshUICentralStack extends Stack {
             httpApi: approvalWorkflow.httpApi,
             httpiApiUserPoolAuthorizer: dataMeshUIAuth.httpApiUserPoolAuthorizer,
             centralEventBusArn: centralEventBusArn.valueAsString,
-            adjustGlueResourcePolicyFunction: tbacSharingWorkflow.adjustGlueResourcePolicyFunction
+            adjustGlueResourcePolicyFunction: tbacSharingWorkflow.adjustGlueResourcePolicyFunction,
+            userDomainMappingTable: dataMeshUI.userDomainMappingTable
+        })
+
+        const registrationStateMachine = StateMachine.fromStateMachineArn(this, "RegistrationStateMachine", centralStateMachineArn.valueAsString)
+
+        new DataMeshUIAuthWorkflow(this, "DataMeshUIAuthWorkflow", {
+            registrationWorkflow: registrationStateMachine,
+            nracApprovalWorkflow: approvalWorkflow.stateMachine,
+            tbacApprovalWorkflow: tbacSharingWorkflow.tbacSharingWorkflow,
+            httpApi: approvalWorkflow.httpApi,
+            httpiApiUserPoolAuthorizer: dataMeshUIAuth.httpApiUserPoolAuthorizer,
+            userMappingTable: dataMeshUI.userDomainMappingTable
         })
     }
 }

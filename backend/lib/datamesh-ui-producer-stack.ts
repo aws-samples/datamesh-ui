@@ -26,8 +26,8 @@ export class DataMeshUIProducerStack extends Stack {
             centralAccountId: centralAccountId.valueAsString
         });
 
-        new ProducerStateChange(this, "ProducerStateChange", {
-            centralEventBusArn: centralEventBusArn.valueAsString
-        })
+        // new ProducerStateChange(this, "ProducerStateChange", {
+        //     centralEventBusArn: centralEventBusArn.valueAsString
+        // })
     }
 }

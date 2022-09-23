@@ -44,7 +44,7 @@ exports.handler = async(event) => {
             payload.body = JSON.stringify({
                 dbName: Item.dbName.S,
                 tableName: Item.tableName.S,
-                state: Item.state.S,
+                state: Item.state.S.toLowerCase(),
                 error: (Item.error) ? Item.error.S : null
             })
         } catch (e) {

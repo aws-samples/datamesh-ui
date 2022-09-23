@@ -36,6 +36,10 @@ export class DataMeshUIAuth extends Construct {
                 requireLowercase: true,
                 requireUppercase: true,
                 requireDigits: true
+            },
+            selfSignUpEnabled: true,
+            autoVerify: {
+                email: true
             }
         });
 
