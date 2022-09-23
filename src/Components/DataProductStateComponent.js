@@ -55,7 +55,7 @@ function DataProductStateComponent(props) {
                 )
             case STATE_FAILED:
                 return (
-                    <StatusIndicator type="error">{prodError}</StatusIndicator>
+                    <StatusIndicator type="error">Failed</StatusIndicator>
                 )
             default:
                 return (

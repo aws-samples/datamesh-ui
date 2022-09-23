@@ -1,6 +1,14 @@
 const AWS = require("aws-sdk")
 
 exports.handler = async({detail}) => {
+    let state = null
+
+    if (detail.crawlerInfo && detail.crawlerInfo.LastCrawl) {
+        state = detail.crawlerInfo.LastCrawl.Status
+    } else {
+        state = detail.state
+    }
+
     const payload = {
         dbName: {
             S: detail.dbName
@@ -9,7 +17,7 @@ exports.handler = async({detail}) => {
             S: detail.tableName
         },
         state: {
-            S: detail.lastCrawlStatus.toLowerCase()
+            S: state.toLowerCase()
         }
     }
 
