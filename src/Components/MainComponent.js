@@ -15,7 +15,7 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import { AppLayout, SideNavigation, Box, TopNavigation, Link, Input, Autosuggest } from "@cloudscape-design/components";
+import { AppLayout, SideNavigation, Box, TopNavigation, Link, Input, Autosuggest, HelpPanel, Header } from "@cloudscape-design/components";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import CatalogComponent from "./CatalogComponent";
 import CatalogTablesComponent from "./CatalogTablesComponent";
@@ -27,6 +27,7 @@ import RegisterNewProductComponent from "./RegisterNewProductComponent";
 import SearchComponent from "./SearchComponent";
 import DataProductDetailsComponent from "./DataProductDetailsComponent"
 import { useEffect, useState } from "react";
+import Event from "../Backend/Event";
 const cfnOutput = require("../cfn-output.json");
 const searchApiUrl = cfnOutput.InfraStack.SearchApiUrl;
 const MIN_SEARCH_STRING_LENGTH = 1;
@@ -39,6 +40,7 @@ function MainComponent(props) {
     const [searchOptions, setSearchOptions] = useState([]);
     const [breadcrumbs, setBreadcrumbs] = useState(null)
     const [navigationOpen, setNavigationOpen] = useState(false)
+    const [eventHash, setEventHash] = useState(null)
 
     const i18nStrings = {
         searchIconAriaLabel: "Search",
@@ -80,6 +82,8 @@ function MainComponent(props) {
                     onItemClick: handleMenuClick
                 }
             ])
+
+            setEventHash((await Event.getDetails()).eventHash)
         })()
     }, [])
 
@@ -193,12 +197,21 @@ function MainComponent(props) {
                 </Routes>
             </BrowserRouter>
         } tools={
-            <Box variant="p" padding={{vertical: "m", horizontal: "m"}}>
-                Additional Resources:
+            <HelpPanel header={<Header variant="h3">Additional Resources</Header>}>
+                <h4>Event Information</h4>
                 <ul>
+                    <li>Central Account ID: <strong>{cfnOutput.InfraStack.AccountId}</strong></li>
+                    <li>Event Hash: <strong>{eventHash ? eventHash : "n/a"}</strong></li>
                     <li><Link target="_blank" href="https://catalog.us-east-1.prod.workshops.aws/workshops/23e6326b-58ee-4ab0-9bc7-3c8d730eb851/en-US">Build a Data Mesh Workshop</Link></li>
                 </ul>
-            </Box>
+                
+            </HelpPanel>
+            // <Box variant="p" padding={{vertical: "m", horizontal: "m"}}>
+            //     Additional Resources:
+            //     <ul>
+            //         <li><Link target="_blank" href="https://catalog.us-east-1.prod.workshops.aws/workshops/23e6326b-58ee-4ab0-9bc7-3c8d730eb851/en-US">Build a Data Mesh Workshop</Link></li>
+            //     </ul>
+            // </Box>
         } />
         </Box>
     );

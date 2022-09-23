@@ -46,6 +46,16 @@ export class DataMeshUICentralStack extends Stack {
             }
         );
 
+        const centralEventHash = new CfnParameter(
+            this,
+            "centralEventHash",
+            {
+                type: "String",
+                description: "Event Hash to be displayed in the UI",
+                default: "",
+            }
+        );
+
         const centralOpensearchSize = new CfnParameter(
             this,
             "centralOpensearchSize",
@@ -114,7 +124,8 @@ export class DataMeshUICentralStack extends Stack {
             workflowApiUrl: approvalWorkflow.httpApi.apiEndpoint,
             httpApi: approvalWorkflow.httpApi,
             httpiApiUserPoolAuthorizer: dataMeshUIAuth.httpApiUserPoolAuthorizer,
-            centralEventBusArn: centralEventBusArn.valueAsString
+            centralEventBusArn: centralEventBusArn.valueAsString,
+            centralEventHash: centralEventHash.valueAsString
         });
 
         new DataMeshUILFTagPermissions(this, "LFTagPermissionManagement", {
