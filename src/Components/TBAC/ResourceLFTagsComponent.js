@@ -8,6 +8,7 @@ const config = Amplify.configure();
 function ResourceLFTagsComponent(props) {
     const [resourceTag, setResourceTag] = useState([]);
     const [databaseName, setDatabaseName] = useState(null);
+    const [id, setId] = useState()
 
     useEffect(() => {
         async function run() {

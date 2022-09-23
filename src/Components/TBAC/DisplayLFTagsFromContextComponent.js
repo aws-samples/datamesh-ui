@@ -19,7 +19,7 @@ function DisplayLFTagsFromContextComponent(props) {
                 setTags(filtered && filtered.length >= 1 ? filtered[0].LFTags : []);
             }
         }
-    }, [refreshCounter]);
+    });
 
     return (
         <DisplayLFTagsComponent lfTags={tags} database={databaseName} showDataDomain={props.showDataDomain} />
