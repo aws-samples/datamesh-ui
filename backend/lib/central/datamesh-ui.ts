@@ -77,8 +77,7 @@ export class DataMeshUI extends Construct {
                 new PolicyStatement({
                     effect: Effect.ALLOW,
                     actions: [
-                        "states:ListExecutions",
-                        "states:StartExecution"   
+                        "states:ListExecutions"
                     ],
                     resources: [props.stateMachineArn]
                 }),
@@ -372,25 +371,25 @@ export class DataMeshUI extends Construct {
 
             // registerProductUIRule.addTarget(new SfnStateMachine(registerProductSM));
 
-            props.identityPool.authenticatedRole.attachInlinePolicy(new Policy(this, "UIDPMStateMachinePolicy", {
-                statements: [   
-                    new PolicyStatement({
-                        effect: Effect.ALLOW,
-                        actions: [
-                            "states:ListExecutions",
-                            "states:StartExecution"   
-                        ],
-                        resources: [props.dpmStateMachineArn]
-                    }),
-                    new PolicyStatement({
-                        effect: Effect.ALLOW,
-                        actions: [
-                            "states:DescribeExecution"
-                        ],
-                        resources: [util.format("arn:aws:states:%s:%s:execution:%s:*", Stack.of(this).region, Stack.of(this).account, props.dpmStateMachineArn.substring(props.dpmStateMachineArn.lastIndexOf(":")+1))]
-                    })
-                ]
-            }));
+            // props.identityPool.authenticatedRole.attachInlinePolicy(new Policy(this, "UIDPMStateMachinePolicy", {
+            //     statements: [   
+            //         new PolicyStatement({
+            //             effect: Effect.ALLOW,
+            //             actions: [
+            //                 "states:ListExecutions",
+            //                 "states:StartExecution"   
+            //             ],
+            //             resources: [props.dpmStateMachineArn]
+            //         }),
+            //         new PolicyStatement({
+            //             effect: Effect.ALLOW,
+            //             actions: [
+            //                 "states:DescribeExecution"
+            //             ],
+            //             resources: [util.format("arn:aws:states:%s:%s:execution:%s:*", Stack.of(this).region, Stack.of(this).account, props.dpmStateMachineArn.substring(props.dpmStateMachineArn.lastIndexOf(":")+1))]
+            //         })
+            //     ]
+            // }));
         }
 
         new CfnOutput(this, "UIPayload", {

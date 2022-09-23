@@ -9,6 +9,9 @@
 !lib/central/resources/lambda/Register*/*
 !lib/central/resources/lambda/Validate*/*
 !lib/central/resources/lambda/Update*/*
+!lib/central/resources/lambda/Nrac*/*
+!lib/central/resources/lambda/Tbac*/*
+!lib/central/resources/lambda/Authenticated*/*
 !lib/producer/resources/lambda/*/*
 !jest.config.js
 *.d.ts

@@ -1,8 +1,9 @@
 import { SFNClient, StartExecutionCommand } from "@aws-sdk/client-sfn";
-import { Box, Button, ColumnLayout, Container, FormField, Grid, Header, Icon, Input, Link, Modal, SpaceBetween, StatusIndicator, Badge, ExpandableSection, Table } from "@cloudscape-design/components";
+import { Box, Button, ColumnLayout, Container, FormField, Grid, Header, Icon, Input, Link, Modal, SpaceBetween, StatusIndicator, Badge, ExpandableSection, Table, Select } from "@cloudscape-design/components";
 import {Amplify, Auth } from "aws-amplify";
-import { useState } from "react";
-import ValueWithLabel from "../ValueWithLabel";
+import { useEffect, useState } from "react";
+import DataDomain from "../../Backend/DataDomain"
+import AuthWorkflow from "../../Backend/AuthWorkflow"
 const cfnOutput = require("../../cfn-output.json");
 const tbacConfig = require("../../tbac-config.json");
 const config = Amplify.configure();
@@ -15,7 +16,11 @@ function DisplayLFTagsComponent(props) {
     const [shareTagValue, setShareTagValue] = useState(null)
     const [targetAccountId, setTargetAccountId] = useState(null)
     const [success, setSuccess] = useState(null)
+    const [owner, setOwner] = useState(false)
     const [error, setError] = useState(null);   
+    const [producerAccountId, setProducerAccountId] = useState()
+    const [domainIdOptions, setDomainIdOptions] = useState([])
+    const [dataDomain, setDataDomain] = useState(null)
 
     const showShareDialog = (key, value) => {
         setShareTagKey(key);
@@ -24,21 +29,14 @@ function DisplayLFTagsComponent(props) {
     }
 
     const requestAccess = async() => {
-        const dataDomain = props.lfTags.find((row) => row.TagKey == tbacConfig.TagKeys.LineOfBusiness)
         if (!targetAccountId) {
             setError("Target Account ID is required");
         } else {
-            // console.log("Tag Key: "+shareTagKey)
-            // console.log("Tag Value: "+shareTagValue)
-            const producerAccountId = EXTRACT_PRODUCER_ACCOUNT_ID.exec(props.database)[1]
-            const credentials = await Auth.currentCredentials();
-            const sfnClient = new SFNClient({region: config.aws_project_region, credentials: Auth.essentialCredentials(credentials)});
-
             try {
                 
-                const params = {
+                const params = JSON.stringify({
                     producerAccountId,
-                    targetAccountId,
+                    "targetAccountId": targetAccountId.value,
                     "databaseName": props.database,
                     "lfTags": [
                         {
@@ -50,12 +48,9 @@ function DisplayLFTagsComponent(props) {
                             "TagValues": [shareTagValue]
                         }
                     ]
-                }
-                
-                await sfnClient.send(new StartExecutionCommand({
-                    input: JSON.stringify(params),
-                    stateMachineArn: SM_ARN
-                }));
+                })
+
+                await AuthWorkflow.exec(SM_ARN, params, targetAccountId.value)
 
 
                 setTargetAccountId(null);
@@ -77,24 +72,8 @@ function DisplayLFTagsComponent(props) {
         setModalVisible(false);
     }
 
-    const renderTagRow = (tagRow, props) => {
-        if (tagRow.TagKey == tbacConfig.TagKeys.LineOfBusiness && props.showDataDomain) {
-            return (<ValueWithLabel label={tagRow.TagKey}><StatusIndicator type="info">{tagRow.TagValues[0]}</StatusIndicator></ValueWithLabel>);
-        } else if (tagRow.TagKey != tbacConfig.TagKeys.LineOfBusiness) {
-            return (
-                <ValueWithLabel label={tagRow.TagKey}>
-                    <Link onFollow={() => showShareDialog(tagRow.TagKey, tagRow.TagValues[0])}>
-                        {tagRow.TagKey == tbacConfig.TagKeys.Confidentiality && tagRow.TagValues[0] == "sensitive" ? <StatusIndicator type="warning">{tagRow.TagValues[0]}</StatusIndicator> : tagRow.TagValues[0]}
-                    </Link>
-                </ValueWithLabel>
-            );
-        }
-
-        return null;
-    }
-
     const renderTagValue = (tagRow) => {
-        if (tagRow.TagKey == tbacConfig.TagKeys.LineOfBusiness) {
+        if (tagRow.TagKey == tbacConfig.TagKeys.LineOfBusiness || owner) {
             return (tagRow.TagValues[0])
         } else {
             return (
@@ -105,17 +84,36 @@ function DisplayLFTagsComponent(props) {
         }
     }
 
+    useEffect(() => {
+        async function run() {
+            if (props.lfTags && props.lfTags.length > 0) {
+                const prodAccountId = EXTRACT_PRODUCER_ACCOUNT_ID.exec(props.database)[1]
+                setProducerAccountId(prodAccountId)
+                setOwner(await DataDomain.isOwner(prodAccountId))
+                setDataDomain(props.lfTags ? props.lfTags.find((row) => row.TagKey == tbacConfig.TagKeys.LineOfBusiness) : null)
+    
+                const {domainIds} = await DataDomain.getOwnedDomainIds()
+                const selectFormatted = []
+    
+                if (domainIds && domainIds.length > 0) {
+                    for (const domainId of domainIds) {
+                        selectFormatted.push({label: domainId, value: domainId})
+                    }
+    
+                    setTargetAccountId(selectFormatted[0])
+                }
+    
+                setDomainIdOptions(selectFormatted)
+            }
+        }
+
+        run()
+    }, [props.lfTags])
+
     if (props.lfTags && props.lfTags.length > 0) {
         return (
             <Box>
                 <ExpandableSection header={<Header variant="h4">View Associated Tags</Header>}>
-                    {/* <ColumnLayout columns={2} variant="text-grid">
-                        <SpaceBetween size="m">
-                            {props.lfTags ? props.lfTags.map((tagRow) => {
-                                return (renderTagRow(tagRow, props))
-                            }): "n/a"}
-                        </SpaceBetween>
-                    </ColumnLayout>                     */}
                     <Table items={props.lfTags} columnDefinitions={[
                         {
                             header: "Tag Key",
@@ -128,16 +126,16 @@ function DisplayLFTagsComponent(props) {
                     ]}></Table>
                 </ExpandableSection>
 
-                <Modal onDismiss={() => setModalVisible(false)} visible={modalVisible} header="Request Tag Access" footer={
+                <Modal onDismiss={() => setModalVisible(false)} visible={modalVisible} header={<Header variant="h3">Requesting Tag Access from {dataDomain ? dataDomain.TagValues[0] : null}</Header>} footer={
                     <SpaceBetween direction="horizontal" size="xs">
                         <Button variant="link" onClick={cancelModal}>Cancel</Button>
                         <Button variant="primary" onClick={requestAccess}>Request Access</Button>
                     </SpaceBetween>}>
                     <Box margin={{bottom: "l"}}>
-                        You're requesting access to <strong>{shareTagKey}</strong> = <strong>{shareTagValue}</strong>
+                        You're requesting access to <strong>{shareTagKey}</strong> = <strong>{shareTagValue}</strong>.
                     </Box>
                     <FormField label="Target Account ID" errorText={error}>
-                        <Input type="number" value={targetAccountId} onChange={event => setTargetAccountId(event.detail.value)} />
+                        <Select selectedOption={targetAccountId} options={domainIdOptions} onChange={({detail}) => setTargetAccountId(detail.selectedOption)} />
                     </FormField>
                     {success ? <StatusIndicator>{success}</StatusIndicator> : null}
                 </Modal>

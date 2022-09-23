@@ -172,5 +172,41 @@ export class DataDomainManagement extends Construct {
             integration: new HttpLambdaIntegration("GetDataDomainOwnerIntegration", getDataDomainOwnerFunction),
             authorizer: props.httpiApiUserPoolAuthorizer
         })
+
+        const getUserDataDomainsRole = new Role(this, "GetUserDataDomainsRole", {
+            assumedBy: new ServicePrincipal("lambda.amazonaws.com"),
+            managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole")],
+            inlinePolicies: {inline0: new PolicyDocument({
+                statements: [
+                    new PolicyStatement({
+                        effect: Effect.ALLOW,
+                        actions: [
+                            "dynamodb:Query"
+                        ],
+                        resources: [
+                            props.userDomainMappingTable.tableArn
+                        ]
+                    })
+                ]
+            })}
+        });
+
+        const getUserDataDomainsFunction = new Function(this, "GetUserDataDomainsFunction", {
+            runtime: Runtime.NODEJS_16_X,
+            role: getUserDataDomainsRole,
+            handler: "index.handler",
+            timeout: Duration.seconds(30),
+            code: Code.fromAsset(__dirname+"/resources/lambda/GetUserDataDomains"),
+            environment: {
+                USER_MAPPING_TABLE_NAME: props.userDomainMappingTable.tableName
+            }
+        })
+
+        props.httpApi.addRoutes({
+            path: "/data-domain/list",
+            methods: [HttpMethod.GET],
+            integration: new HttpLambdaIntegration("GetUserDataDomainsIntegration", getUserDataDomainsFunction),
+            authorizer: props.httpiApiUserPoolAuthorizer
+        })
     }
 }

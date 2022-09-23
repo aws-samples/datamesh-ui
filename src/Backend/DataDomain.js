@@ -60,6 +60,21 @@ const DataDomain = {
                 "customLfTags": domainTags.map((tag) => ({TagKey: tag.TagKey, TagValues: [tag.TagValues]}))
             }
         })
+    },
+    async getOwnedDomainIds() {
+        const session = await Auth.currentSession()
+        const apiUrl = `${cfnOutput.InfraStack.WorkflowApiUrl}/data-domain/list`
+
+        const {data} = await axios({
+            method: "GET",
+            url: apiUrl,
+            headers: {
+                "Authorization": session.getAccessToken().getJwtToken(),
+                "Content-Type": "application/json"
+            }
+        })
+
+        return data
     }
 }
 

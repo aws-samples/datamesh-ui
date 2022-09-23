@@ -1,11 +1,13 @@
 import { Aws, CfnParameter, Stack } from "aws-cdk-lib";
 import { Role } from "aws-cdk-lib/aws-iam";
+import { StateMachine } from "aws-cdk-lib/aws-stepfunctions";
 import { Construct } from "constructs";
 import { ApprovalWorkflow } from "./central/approval-workflow";
 import { DataDomainManagement } from "./central/data-domain-management";
 import { DataQualityCentralAccount } from "./central/data-quality-central-account";
 import { DataMeshUI } from "./central/datamesh-ui";
 import { DataMeshUIAuth } from "./central/datamesh-ui-auth";
+import { DataMeshUIAuthWorkflow } from "./central/datamesh-ui-auth-workflow";
 import DataMeshUILFTagPermissions from "./central/datamesh-ui-lftag-permissions";
 import { GlueCatalogSearchApi } from "./central/glue-catalog-search-api";
 import { TbacSharingWorkflow } from "./central/tbac-sharing-workflow";
@@ -131,6 +133,17 @@ export class DataMeshUICentralStack extends Stack {
             centralEventBusArn: centralEventBusArn.valueAsString,
             adjustGlueResourcePolicyFunction: tbacSharingWorkflow.adjustGlueResourcePolicyFunction,
             userDomainMappingTable: dataMeshUI.userDomainMappingTable
+        })
+
+        const registrationStateMachine = StateMachine.fromStateMachineArn(this, "RegistrationStateMachine", centralStateMachineArn.valueAsString)
+
+        new DataMeshUIAuthWorkflow(this, "DataMeshUIAuthWorkflow", {
+            registrationWorkflow: registrationStateMachine,
+            nracApprovalWorkflow: approvalWorkflow.stateMachine,
+            tbacApprovalWorkflow: tbacSharingWorkflow.tbacSharingWorkflow,
+            httpApi: approvalWorkflow.httpApi,
+            httpiApiUserPoolAuthorizer: dataMeshUIAuth.httpApiUserPoolAuthorizer,
+            userMappingTable: dataMeshUI.userDomainMappingTable
         })
     }
 }
