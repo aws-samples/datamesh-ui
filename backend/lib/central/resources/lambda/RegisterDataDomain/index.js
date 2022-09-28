@@ -175,7 +175,7 @@ exports.handler = async(event) => {
         }).promise()
 
         await lfClient.grantPermissions({
-            Permissions: ["DESCRIBE"],
+            Permissions: ["DESCRIBE", "ALTER"],
             Principal: {
                 DataLakePrincipalIdentifier: UI_AUTH_ROLE_ARN
             },

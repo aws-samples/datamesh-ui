@@ -2,7 +2,7 @@ import { HttpApi, HttpMethod } from "@aws-cdk/aws-apigatewayv2-alpha";
 import { HttpLambdaIntegration } from "@aws-cdk/aws-apigatewayv2-integrations-alpha";
 import { HttpUserPoolAuthorizer } from "@aws-cdk/aws-apigatewayv2-authorizers-alpha";
 import { CustomResource } from "aws-cdk-lib";
-import { Effect, ManagedPolicy, PolicyDocument, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
+import { Effect, IRole, ManagedPolicy, PolicyDocument, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
 import { CfnDataLakeSettings } from "aws-cdk-lib/aws-lakeformation";
 import { Code, Function, Runtime } from "aws-cdk-lib/aws-lambda";
 import { Provider } from "aws-cdk-lib/custom-resources";
@@ -11,10 +11,11 @@ import { Construct } from "constructs";
 export interface DataMeshUILFTagPermissionsProps {
     rolesToGrant: string[]
     httpApi: HttpApi
-    httpiApiUserPoolAuthorizer: HttpUserPoolAuthorizer
 }
 
 export default class DataMeshUILFTagPermissions extends Construct {
+    readonly dataMeshUITagAccessRole: IRole
+
     constructor(scope: Construct, id: string, props: DataMeshUILFTagPermissionsProps) {
         super(scope, id);
 
@@ -46,6 +47,8 @@ export default class DataMeshUILFTagPermissions extends Construct {
             ]
         });
 
+        this.dataMeshUITagAccessRole = crDataMeshUITagAccessRole
+
         const crDataMeshUITagAccessFunction = new Function(this, "CRDataMeshUITagAccessFunction", {
             runtime: Runtime.NODEJS_16_X,
             role: crDataMeshUITagAccessRole,
@@ -75,8 +78,7 @@ export default class DataMeshUILFTagPermissions extends Construct {
         props.httpApi.addRoutes({
             path: "/tags/sync-permissions",
             methods: [HttpMethod.POST],
-            integration: new HttpLambdaIntegration("SyncDataMeshUITagAccessIntegration", syncDataMeshUITagAccessFunction),
-            authorizer: props.httpiApiUserPoolAuthorizer
+            integration: new HttpLambdaIntegration("SyncDataMeshUITagAccessIntegration", syncDataMeshUITagAccessFunction)
         })
     }
 }

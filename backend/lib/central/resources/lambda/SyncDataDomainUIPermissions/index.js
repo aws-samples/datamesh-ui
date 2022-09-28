@@ -32,7 +32,8 @@ exports.handler = async(event) => {
             return {
                 Id: index+"",
                 Permissions: [
-                    "DESCRIBE"
+                    "DESCRIBE",
+                    "ALTER"
                 ],
                 Principal: {
                     DataLakePrincipalIdentifier: roleToGrant

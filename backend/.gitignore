@@ -1,5 +1,7 @@
 *.js
+!lib/central/resources/lambda/layers/data-domain/nodejs/*
 !lib/central/resources/lambda/CR*/*
+!lib/central/resources/lambda/Toggle*/*
 !lib/central/resources/lambda/Get*/*
 !lib/central/resources/lambda/Sync*/*
 !lib/central/resources/lambda/LFTag*/*

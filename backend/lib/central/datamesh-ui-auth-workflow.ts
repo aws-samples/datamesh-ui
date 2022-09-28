@@ -5,7 +5,7 @@ import { Duration } from "aws-cdk-lib";
 import { Table } from "aws-cdk-lib/aws-dynamodb";
 import { HttpMethod } from "aws-cdk-lib/aws-events";
 import { Effect, ManagedPolicy, PolicyDocument, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
-import { Code, Function, Runtime } from "aws-cdk-lib/aws-lambda";
+import { Code, Function, LayerVersion, Runtime } from "aws-cdk-lib/aws-lambda";
 import { IStateMachine, StateMachine } from "aws-cdk-lib/aws-stepfunctions";
 import { Construct } from "constructs";
 
@@ -15,7 +15,7 @@ export interface DataMeshUIAuthWorkflowProps {
     tbacApprovalWorkflow: IStateMachine
     userMappingTable: Table
     httpApi: HttpApi
-    httpiApiUserPoolAuthorizer: HttpUserPoolAuthorizer
+    dataDomainLayer: LayerVersion
 }
 
 export class DataMeshUIAuthWorkflow extends Construct {
@@ -57,14 +57,14 @@ export class DataMeshUIAuthWorkflow extends Construct {
             code: Code.fromAsset(__dirname+"/resources/lambda/AuthenticatedWorkflow"),
             environment: {
                 USER_MAPPING_TABLE_NAME: props.userMappingTable.tableName
-            }
+            },
+            layers: [props.dataDomainLayer]
         }) 
 
         props.httpApi.addRoutes({
             path: "/workflow/exec",
             methods: [HttpMethod.POST],
-            integration: new HttpLambdaIntegration("AuthWorkflowIntegration", authWorkflowFunction),
-            authorizer: props.httpiApiUserPoolAuthorizer
+            integration: new HttpLambdaIntegration("AuthWorkflowIntegration", authWorkflowFunction)
         })
     }
 }

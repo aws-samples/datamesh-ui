@@ -1,9 +1,6 @@
-const AWS = require("aws-sdk")
+const {DataDomain} = require("/opt/nodejs/data-domain")
 
 exports.handler = async(event) => {
-    const ddbClient = new AWS.DynamoDB()
-    const userClaim = event.requestContext.authorizer.jwt.claims
-
     const payload = {
         "statusCode": "200",
         "headers": {
@@ -18,25 +15,10 @@ exports.handler = async(event) => {
         payload.statusCode = 400
         payload.body = JSON.stringify({"error": "Missing required parameters"})
     } else {
-        try {
-            const result = await ddbClient.getItem({
-                TableName: process.env.USER_MAPPING_TABLE_NAME,
-                Key: {
-                    "userId": {
-                        "S": userClaim.sub
-                    },
-                    "accountId": {
-                        "S": accountId
-                    }
-                },
-                ConsistentRead: false
-            }).promise()
-            if (result && result.Item) {
-                payload.body = JSON.stringify({"message": "ok"})
-            } else {
-                throw new Error("Not found")
-            }
-        } catch (e) {
+        const isOwner = await DataDomain.isOwner(DataDomain.extractUserId(event), accountId, process.env.USER_MAPPING_TABLE_NAME)
+        if (isOwner) {
+            payload.body = JSON.stringify({"message": "ok"})
+        } else {
             payload.statusCode = 404
             payload.body = JSON.stringify({"error": "Not found"})
         }

@@ -1,9 +1,9 @@
+const {DataDomain} = require("/opt/nodejs/data-domain")
 const AWS = require("aws-sdk")
 
 exports.handler = async(event) => {
-    const userClaims = event.requestContext.authorizer.jwt.claims
+    const userId = DataDomain.extractUserId(event)
     const sfnClient = new AWS.StepFunctions()
-    const ddbClient = new AWS.DynamoDB()
 
     const payload = {
         "statusCode": "200",
@@ -16,21 +16,9 @@ exports.handler = async(event) => {
     const body = JSON.parse(event.body)
 
     const {stateMachineArn, input, domainId} = body
+    const isOwner = await DataDomain.isOwner(userId, domainId, process.env.USER_MAPPING_TABLE_NAME)
 
-    const userMapping = await ddbClient.getItem({
-        TableName: process.env.USER_MAPPING_TABLE_NAME,
-        Key: {
-            "userId": {
-                "S": userClaims.sub
-            },
-            "accountId": {
-                "S": domainId
-            }
-        },
-        ConsistentRead: false
-    }).promise()
-
-    if (userMapping && userMapping.Item) {
+    if (isOwner) {
         const execResult = await sfnClient.startExecution({stateMachineArn,input}).promise()
         payload.body = JSON.stringify(execResult)
     } else {

@@ -26,36 +26,34 @@ exports.handler = async (event) => {
     const target = input.target;
     const source = input.source;
     const sourceAccountId = input.table_details.Payload.data_owner;
-    
-    const apiGatewayBaseUrl = process.env.API_GATEWAY_BASE_URL;
-    const approveLink = util.format("%s/update-state?action=approve&token=%s", apiGatewayBaseUrl, encodeURIComponent(taskToken));
-    const denyLink = util.format("%s/update-state?action=deny&token=%s", apiGatewayBaseUrl, encodeURIComponent(taskToken));
-    
-    const topicArn = util.format("arn:aws:sns:%s:%s:DataLakeSharingApproval", process.env.AWS_REGION, sourceAccountId);
-    var messageBody = "A data sharing request has been created, please see the following details:\n";
-    messageBody += util.format("Database: %s\n", source.database);
-    messageBody += util.format("Table: %s\n", source.table);
-    messageBody += util.format("Target Account: %s\n\n", target.account_id);
-    messageBody += util.format("Approve: %s\n\nDeny: %s\n\n", approveLink, denyLink);
-    
-    const subject = util.format("Data Sharing Request Approval %s - %s", source.database, source.table);
-    
-    const eb = new AWS.EventBridge();
-    const centralApprovalBusName = process.env.CENTRAL_APPROVAL_BUS_NAME;
 
-    await eb.putEvents({
-        Entries: [
-            {
-                Detail: JSON.stringify({
-                    messageBody: messageBody,
-                    subject: subject
-                }),
-                DetailType: util.format("%s_sharingApproval", sourceAccountId),
-                EventBusName: centralApprovalBusName,
-                Source: SOURCE
+    const ddbClient = new AWS.DynamoDB()
+    await ddbClient.putItem({
+        TableName: process.env.APPROVALS_TABLE_NAME,
+        Item: {
+            "accountId": {
+                "S": sourceAccountId
+            },
+            "requestIdentifier": {
+                "S": `PENDING#${(new Date()).getTime()}`
+            },
+            "mode": {
+                "S": "nrac"
+            },
+            "token": {
+                "S": encodeURIComponent(taskToken)
+            },
+            "targetAccountId": {
+                "S": target.account_id
+            },
+            "sourceDomain": {
+                "S": source.database
+            },
+            "sourceProduct": {
+                "S": source.table
             }
-        ]
-    }).promise();
+        }
+    }).promise()
     
     return {};
 };

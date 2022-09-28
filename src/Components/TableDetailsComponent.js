@@ -26,6 +26,7 @@ import DatabaseDetailsComponent from "./DatabaseDetailsComponent";
 import ResourceLFTagsWrapper from "./TBAC/ResourceLFTagsWrapper";
 import DisplayLFTagsFromContextComponent from "./TBAC/DisplayLFTagsFromContextComponent";
 import DataProductStateComponent from "./DataProductStateComponent";
+import TogglePiiFlagComponent from "./TogglePiiFlagComponent";
 
 const config = Amplify.configure();
 
@@ -33,10 +34,10 @@ function TableDetailsComponent(props) {
     const {dbname, tablename} = useParams();
     const [table, setTable] = useState();
     const [tableNotFound, setTableNotFound] = useState(false);
-    const [requestSuccessful, setRequestSuccessful] = useState(false);
-    const [executionArn, setExecutionArn] = useState();
     const [accessMode, setAccessMode] = useState("nrac")
     const [owner, setOwner] = useState(false)
+    const [forceReload, setForceReload] = useState(1)
+    const [domainId, setDomainId] = useState(null)
 
     useEffect(() => {
         if (props.breadcrumbsCallback) {
@@ -62,7 +63,11 @@ function TableDetailsComponent(props) {
         }
 
         run()
-    }, []);
+    }, [forceReload]);
+
+    const toggleCallback = () => {
+        setForceReload(forceReload + 1)
+    }
 
     const renderRequestAccess = () => {
         if (accessMode == "nrac" && !owner) {
@@ -85,7 +90,7 @@ function TableDetailsComponent(props) {
         return (
             <div>
                 <ContentLayout header={<Header variant="h1">{tablename}</Header>}>
-                    <DatabaseDetailsComponent dbName={dbname} accessModeCallback={setAccessMode} ownerCallback={setOwner} />
+                    <DatabaseDetailsComponent dbName={dbname} accessModeCallback={setAccessMode} domainIdCallback={setDomainId} ownerCallback={setOwner} />
                     <ResourceLFTagsWrapper resourceName={tablename} resourceDatabaseName={dbname}>
                         <Box margin={{top: "l"}}>
                             <Container header={<Header variant="h2">Table Details</Header>}>
@@ -124,8 +129,8 @@ function TableDetailsComponent(props) {
                                     cell: item => <DisplayLFTagsFromContextComponent resourceType="column" resourceColumnName={item.Name} />
                                 },
                                 {
-                                    header: "Is PII",
-                                    cell: item => (item.Parameters && "pii_flag" in item.Parameters && item.Parameters.pii_flag === "true") ? <Badge color="red">Yes</Badge> : <Badge color="green">No</Badge>
+                                    header: "Access Approval",
+                                    cell: item => <TogglePiiFlagComponent objectParameters={item.Parameters} type="column" owner={owner} domainId={domainId} dbName={dbname} tableName={tablename} columnName={item.Name} toggleCallback={toggleCallback} />
                                 }
                             ]} empty={
                                 <Box textAlign="center">

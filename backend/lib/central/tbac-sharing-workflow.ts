@@ -1,4 +1,5 @@
 import { Stack } from "aws-cdk-lib";
+import { Table } from "aws-cdk-lib/aws-dynamodb";
 import { EventBus } from "aws-cdk-lib/aws-events";
 import { Effect, IRole, ManagedPolicy, Policy, PolicyDocument, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
 import { CfnDataLakeSettings } from "aws-cdk-lib/aws-lakeformation";
@@ -11,8 +12,7 @@ export interface TbacSharingWorkflowProps {
     dataDomainTagName?: string
     confidentialityTagName?: string
     cognitoAuthRole: IRole
-    centralApprovalEventBus: EventBus
-    approvalBaseUrl: string
+    approvalsTable: Table
     centralEventBusArn: string
 }
 
@@ -108,12 +108,12 @@ export class TbacSharingWorkflow extends Construct {
             assumedBy: new ServicePrincipal("lambda.amazonaws.com"),
             managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole")],
             inlinePolicies: {
-                "AllowCentralApprovalBus": new PolicyDocument({
+                "RecordApprovalRequest": new PolicyDocument({
                     statements: [
                         new PolicyStatement({
                             effect: Effect.ALLOW,
-                            actions: ["events:PutEvents"],
-                            resources: [props.centralApprovalEventBus.eventBusArn]
+                            actions: ["dynamodb:PutItem"],
+                            resources: [props.approvalsTable.tableArn]
                         })
                     ]
                 })
@@ -126,8 +126,7 @@ export class TbacSharingWorkflow extends Construct {
             code: Code.fromAsset(__dirname+"/resources/lambda/LFTagSendApproval"),
             role: sendApprovalRole,
             environment: {
-                "API_GATEWAY_BASE_URL": props.approvalBaseUrl,
-                "CENTRAL_APPROVAL_BUS_NAME": props.centralApprovalEventBus.eventBusName
+                APPROVALS_TABLE_NAME: props.approvalsTable.tableName
             }
         });
 

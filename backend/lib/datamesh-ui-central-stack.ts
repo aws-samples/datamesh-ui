@@ -6,6 +6,7 @@ import { ApprovalWorkflow } from "./central/approval-workflow";
 import { DataDomainManagement } from "./central/data-domain-management";
 import { DataQualityCentralAccount } from "./central/data-quality-central-account";
 import { DataMeshUI } from "./central/datamesh-ui";
+import { DataMeshUIAPI } from "./central/datamesh-ui-api";
 import { DataMeshUIAuth } from "./central/datamesh-ui-auth";
 import { DataMeshUIAuthWorkflow } from "./central/datamesh-ui-auth-workflow";
 import DataMeshUILFTagPermissions from "./central/datamesh-ui-lftag-permissions";
@@ -71,6 +72,12 @@ export class DataMeshUICentralStack extends Stack {
             this.node.tryGetContext("centralOpensearchVpcCidrRange") ||
             "10.37.0.0/16";
 
+        const dataMeshUIAuth = new DataMeshUIAuth(this, "DataMeshUIAuth");
+
+        const dataMeshUIAPI = new DataMeshUIAPI(this, "DataMeshUIAPI", {
+            httpiApiUserPoolAuthorizer: dataMeshUIAuth.httpApiUserPoolAuthorizer
+        })
+
         const approvalWorkflow = new ApprovalWorkflow(
             this,
             "ApprovalWorkflow",
@@ -80,18 +87,6 @@ export class DataMeshUICentralStack extends Stack {
                 dpmStateMachineRoleArn: centralLfAdminRoleArn.valueAsString,
             }
         );
-
-        const dataMeshUIAuth = new DataMeshUIAuth(this, "DataMeshUIAuth", {
-            httpApi: approvalWorkflow.httpApi
-        });
-
-        // const dataQuality = new DataQualityCentralAccount(
-        //     this,
-        //     "DataQualityCentralAccount",
-        //     {
-        //         userPool: dataMeshUIAuth.userPool,
-        //     }
-        // );
 
         const searchCatalog = new GlueCatalogSearchApi(
             this,
@@ -107,10 +102,18 @@ export class DataMeshUICentralStack extends Stack {
 
         const tbacSharingWorkflow = new TbacSharingWorkflow(this, "TbacSharingWorkflow", {
             cognitoAuthRole: dataMeshUIAuth.identityPool.authenticatedRole,
-            centralApprovalEventBus: approvalWorkflow.centralApprovalEventBus,
-            approvalBaseUrl: approvalWorkflow.approvalBaseUrl,
+            approvalsTable: approvalWorkflow.approvalsTable,
             centralEventBusArn: centralEventBusArn.valueAsString
         });
+
+        const dataDomainManagement = new DataDomainManagement(this, "DataDomainManagement", {
+            centralWorkflowRole: Role.fromRoleArn(this, "CentralWorkflowRole", centralLfAdminRoleArn.valueAsString),
+            uiAuthenticatedRole: dataMeshUIAuth.identityPool.authenticatedRole,
+            httpApi: dataMeshUIAPI.httpApi,
+            centralEventBusArn: centralEventBusArn.valueAsString,
+            adjustGlueResourcePolicyFunction: tbacSharingWorkflow.adjustGlueResourcePolicyFunction,
+            approvalsTable: approvalWorkflow.approvalsTable
+        })
 
         const dataMeshUI = new DataMeshUI(this, "DataMeshUI", {
             stateMachineArn: approvalWorkflow.stateMachine.stateMachineArn,
@@ -121,9 +124,7 @@ export class DataMeshUICentralStack extends Stack {
             userPool: dataMeshUIAuth.userPool,
             identityPool: dataMeshUIAuth.identityPool,
             tbacSharingWorkflow: tbacSharingWorkflow.tbacSharingWorkflow,
-            workflowApiUrl: approvalWorkflow.httpApi.apiEndpoint,
-            httpApi: approvalWorkflow.httpApi,
-            httpiApiUserPoolAuthorizer: dataMeshUIAuth.httpApiUserPoolAuthorizer,
+            httpApi: dataMeshUIAPI.httpApi,
             centralEventBusArn: centralEventBusArn.valueAsString,
             centralEventHash: centralEventHash.valueAsString
         });
@@ -132,18 +133,7 @@ export class DataMeshUICentralStack extends Stack {
             rolesToGrant: [
                 dataMeshUIAuth.identityPool.authenticatedRole.roleArn
             ],
-            httpApi: approvalWorkflow.httpApi,
-            httpiApiUserPoolAuthorizer: dataMeshUIAuth.httpApiUserPoolAuthorizer
-        })
-
-        new DataDomainManagement(this, "DataDomainManagement", {
-            centralWorkflowRole: Role.fromRoleArn(this, "CentralWorkflowRole", centralLfAdminRoleArn.valueAsString),
-            uiAuthenticatedRole: dataMeshUIAuth.identityPool.authenticatedRole,
-            httpApi: approvalWorkflow.httpApi,
-            httpiApiUserPoolAuthorizer: dataMeshUIAuth.httpApiUserPoolAuthorizer,
-            centralEventBusArn: centralEventBusArn.valueAsString,
-            adjustGlueResourcePolicyFunction: tbacSharingWorkflow.adjustGlueResourcePolicyFunction,
-            userDomainMappingTable: dataMeshUI.userDomainMappingTable
+            httpApi: dataMeshUIAPI.httpApi
         })
 
         const registrationStateMachine = StateMachine.fromStateMachineArn(this, "RegistrationStateMachine", centralStateMachineArn.valueAsString)
@@ -152,9 +142,9 @@ export class DataMeshUICentralStack extends Stack {
             registrationWorkflow: registrationStateMachine,
             nracApprovalWorkflow: approvalWorkflow.stateMachine,
             tbacApprovalWorkflow: tbacSharingWorkflow.tbacSharingWorkflow,
-            httpApi: approvalWorkflow.httpApi,
-            httpiApiUserPoolAuthorizer: dataMeshUIAuth.httpApiUserPoolAuthorizer,
-            userMappingTable: dataMeshUI.userDomainMappingTable
+            httpApi: dataMeshUIAPI.httpApi,
+            userMappingTable: dataDomainManagement.userDomainMappingTable,
+            dataDomainLayer: dataDomainManagement.dataDomainLayer
         })
     }
 }

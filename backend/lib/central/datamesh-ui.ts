@@ -24,18 +24,14 @@ export interface DataMeshUIProps {
     userPool: UserPool
     identityPool: IdentityPool
     tbacSharingWorkflow: StateMachine
-    workflowApiUrl: string
     dpmStateMachineArn?: string
     dpmStateMachineRoleArn?: string
     httpApi: HttpApi
-    httpiApiUserPoolAuthorizer: HttpUserPoolAuthorizer
     centralEventBusArn: string
     centralEventHash: string
 }
 
 export class DataMeshUI extends Construct {
-    readonly userDomainMappingTable: Table
-
     constructor(scope: Construct, id: string, props: DataMeshUIProps) {
         super(scope, id)
         
@@ -55,29 +51,11 @@ export class DataMeshUI extends Construct {
         let uiPayload : any = {
             "InfraStack": {
                 "AccountId": Stack.of(this).account,
-                "StateMachineArn": props.stateMachineArn,
                 "SearchApiUrl": props.searchApiUrl,
-                "TbacStateMachineArn": props.tbacSharingWorkflow.stateMachineArn,
-                "WorkflowApiUrl": props.workflowApiUrl,
+                "WorkflowApiUrl": props.httpApi.apiEndpoint,
                 "RegistrationToken": crypto.randomBytes(4).toString('hex')
             }
         }
-
-        this.userDomainMappingTable = new Table(this, "UserDomainMapping", {
-            partitionKey: {
-                name: "userId",
-                type: AttributeType.STRING
-            },
-            sortKey: {
-                name: "accountId",
-                type: AttributeType.STRING
-            },
-            billingMode: BillingMode.PAY_PER_REQUEST,
-            encryption: TableEncryption.AWS_MANAGED,
-            removalPolicy: RemovalPolicy.DESTROY
-        });
-
-
 
         const stateMachineArn = props.stateMachineArn;
         props.identityPool.authenticatedRole.attachInlinePolicy(new Policy(this, "DataMeshUIAuthRoleInlinePolicy", {
@@ -95,30 +73,9 @@ export class DataMeshUI extends Construct {
                 new PolicyStatement({
                     effect: Effect.ALLOW,
                     actions: [
-                        "states:ListExecutions"
-                    ],
-                    resources: [props.stateMachineArn]
-                }),
-                new PolicyStatement({
-                    effect: Effect.ALLOW,
-                    actions: [
-                        "states:DescribeExecution"
-                    ],
-                    resources: [util.format("arn:aws:states:%s:%s:execution:%s:*", Stack.of(this).region, Stack.of(this).account, props.stateMachineName)]
-                }),
-                new PolicyStatement({
-                    effect: Effect.ALLOW,
-                    actions: [
                         "lakeformation:GetResourceLFTags"
                     ],
                     resources: ["*"]
-                }),
-                new PolicyStatement({
-                    effect: Effect.ALLOW,
-                    actions: [
-                        "dynamodb:GetItem"
-                    ],
-                    resources: [this.userDomainMappingTable.tableArn]
                 })
             ]
         }));
@@ -164,8 +121,7 @@ export class DataMeshUI extends Construct {
         props.httpApi.addRoutes({
             path: "/data-products/validate",
             methods: [HttpMethod.POST],
-            integration: new HttpLambdaIntegration("ValidateProductPathIntegration", validateProductPathFunction),
-            authorizer: props.httpiApiUserPoolAuthorizer
+            integration: new HttpLambdaIntegration("ValidateProductPathIntegration", validateProductPathFunction)
         })
 
 
@@ -176,7 +132,8 @@ export class DataMeshUI extends Construct {
                 iamResources: ["*"],
                 parameters: {
                     "Permissions": [
-                        "DESCRIBE"
+                        "DESCRIBE",
+                        "ALTER"
                     ],
                     "Principal": {
                         "DataLakePrincipalIdentifier": props.identityPool.authenticatedRole.roleArn
@@ -311,8 +268,7 @@ export class DataMeshUI extends Construct {
             props.httpApi.addRoutes({
                 path: "/data-products/latest-state",
                 methods: [HttpMethod.GET],
-                integration: new HttpLambdaIntegration("getCrawlerStateIntegration", getCrawlerStateFunction),
-                authorizer: props.httpiApiUserPoolAuthorizer
+                integration: new HttpLambdaIntegration("getCrawlerStateIntegration", getCrawlerStateFunction)
             })
 
             const getEventSecretRole = new Role(this, "GetEventSecretRole", {
@@ -345,155 +301,12 @@ export class DataMeshUI extends Construct {
             props.httpApi.addRoutes({
                 path: "/event/details",
                 methods: [HttpMethod.GET],
-                integration: new HttpLambdaIntegration("getEventSecretIntegration", getEventSecretFunction),
-                authorizer: props.httpiApiUserPoolAuthorizer
+                integration: new HttpLambdaIntegration("getEventSecretIntegration", getEventSecretFunction)
             })
-
-            // uiPayload.InfraStack.RegisterProductTable = {
-            //     "Name": registerProductTable.tableName,
-            //     "Arn": registerProductTable.tableArn,
-            //     "GSI-StatusIndex": gsiStatusIndexName
-            // }
-
-            uiPayload.InfraStack.DPMStateMachineArn = props.dpmStateMachineArn;
-
-            // const registerProductInitialState = new Pass(this, "RegisterProductInitialState", {
-            //     parameters: {
-            //         "payload.$": "States.StringToJson($.detail.input)",
-            //         "status.$": "$.detail.status",
-            //         "createdAt.$": "$.detail.startDate"
-            //     }
-            // });
-
-            // const mapTables = new Map(this, "TraverseTableArray", {
-            //     itemsPath: "$.payload.tables",
-            //     maxConcurrency: 2,
-            //     parameters: {
-            //         "producerAccountId.$": "$.payload.producer_acc_id",
-            //         "databaseName.$": "$.payload.database_name",
-            //         "status.$": "$.status",
-            //         "createdAt.$": "$.createdAt",
-            //         "table.$": "$$.Map.Item.Value"
-            //     }
-            // });
-
-            // const putRegisterProductData = new CallAwsService(this, "PutRegisterProductData", {
-            //     service: "dynamodb",
-            //     action: "putItem",
-            //     iamResources: [registerProductTable.tableArn],
-            //     resultPath: JsonPath.DISCARD,
-            //     parameters: {
-            //         "TableName": registerProductTable.tableName,
-            //         "Item": {
-            //             "accountId": {
-            //                 "S.$": "$.producerAccountId" 
-            //             },
-            //             "dbTableName": {
-            //                 "S.$": "States.Format('{}_{}#{}', $.producerAccountId, $.databaseName, $.table.name)"
-            //             },
-            //             "location": {
-            //                 "S.$": "$.table.location"
-            //             },
-            //             "status": {
-            //                 "S.$": "$.status"
-            //             },
-            //             "createdAt": {
-            //                 "N.$": "States.Format('{}', $.createdAt)"
-            //             }
-            //         }
-            //     }
-            // })
-
-            // putRegisterProductData.endStates;
-            // mapTables.iterator(putRegisterProductData).endStates;
-            // registerProductInitialState.next(mapTables)
-
-            // const registerProductSM = new StateMachine(this, "RegisterProductMetadata", {
-            //     definition: registerProductInitialState,
-            //     stateMachineType: StateMachineType.STANDARD
-            // });
-
-            // const registerProductUIRule = new Rule(this, 'RegisterProductUIRule', {
-            //     eventPattern: {
-            //         source: ["aws.states"],
-            //         detailType: ["Step Functions Execution Status Change"],
-            //         detail: {
-            //             "stateMachineArn": [props.dpmStateMachineArn]
-            //         }
-            //     }
-            // });
-
-            // registerProductUIRule.addTarget(new SfnStateMachine(registerProductSM));
-
-            // props.identityPool.authenticatedRole.attachInlinePolicy(new Policy(this, "UIDPMStateMachinePolicy", {
-            //     statements: [   
-            //         new PolicyStatement({
-            //             effect: Effect.ALLOW,
-            //             actions: [
-            //                 "states:ListExecutions",
-            //                 "states:StartExecution"   
-            //             ],
-            //             resources: [props.dpmStateMachineArn]
-            //         }),
-            //         new PolicyStatement({
-            //             effect: Effect.ALLOW,
-            //             actions: [
-            //                 "states:DescribeExecution"
-            //             ],
-            //             resources: [util.format("arn:aws:states:%s:%s:execution:%s:*", Stack.of(this).region, Stack.of(this).account, props.dpmStateMachineArn.substring(props.dpmStateMachineArn.lastIndexOf(":")+1))]
-            //         })
-            //     ]
-            // }));
         }
 
         new CfnOutput(this, "UIPayload", {
             value: JSON.stringify(uiPayload)
         })
-
-        // const amplifyApp = new App(this, "DataMeshUI", {
-        //     sourceCodeProvider: new CodeCommitSourceCodeProvider({
-        //         repository: repo
-        //     }),
-        //     role: amplifyServiceRole,
-        //     buildSpec: BuildSpec.fromObjectToYaml({
-        //         version: '1.0',
-        //         frontend: {
-        //             phases: {
-        //                 preBuild: {
-        //                     commands: [
-        //                         "npm install",
-        //                         "amplify init -y",
-        //                         util.format("echo '{\"version\": 1, \"userPoolId\": \"%s\", \"webClientId\": \"%s\", \"nativeClientId\": \"%s\", \"identityPoolId\": \"%s\"}' | amplify import auth --headless", 
-        //                             userPool.userPoolId,
-        //                             client.userPoolClientId,
-        //                             client.userPoolClientId,
-        //                             identityProvider.identityPoolId),
-        //                         "amplify push -y",
-        //                         util.format("echo '%s' > src/cfn-output.json", JSON.stringify(uiPayload))
-        //                     ]
-        //                 },
-        //                 build: {
-        //                     commands: [
-        //                         "npm run build"
-        //                     ]
-        //                 }
-        //             },
-        //             artifacts: {
-        //                 baseDirectory: "build",
-        //                 files: ["**/*"]
-                        
-        //             }
-        //         }
-        //     }),
-        //     customRules: [
-        //         new CustomRule({
-        //             source: "</^[^.]+$|\\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff|woff2|ttf|map|json)$)([^.]+$)/>",
-        //             target: "/index.html",
-        //             status: RedirectStatus.REWRITE
-        //         })
-        //     ]
-        // });
-
-        // amplifyApp.addBranch("RebasedSearchComponent");
     }
 }
