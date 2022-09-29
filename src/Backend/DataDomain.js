@@ -4,7 +4,7 @@ const axios = require("axios").default;
 const cfnOutput = require("../cfn-output.json")
 
 const DataDomain = {
-    async togglePiiFlag(type, domainId, dbName, tableName, columnName) {
+    async togglePiiFlag(type, domainId, dbName, tableName, columnName, resourceType) {
         const apiUrl = `${cfnOutput.InfraStack.WorkflowApiUrl}/data-products/toggle-pii-flag`
         const session = await Auth.currentSession()  
         
@@ -19,7 +19,8 @@ const DataDomain = {
                 domainId,
                 dbName,
                 tableName,
-                columnName
+                columnName,
+                resourceType
             }
         })
     },

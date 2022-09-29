@@ -84,6 +84,20 @@ function TableDetailsComponent(props) {
         return null
     }
 
+    const renderAccessApproval = (item) => {
+        if (accessMode === "nrac") {
+            return (
+                <TogglePiiFlagComponent objectParameters={item.Parameters} type="column" owner={owner} domainId={domainId} dbName={dbname} tableName={tablename} columnName={item.Name} toggleCallback={toggleCallback} />
+            )
+        } else if (accessMode === "tbac") {
+            return (
+                <TogglePiiFlagComponent type="tags" resourceType="column" owner={owner} domainId={domainId} dbName={dbname} tableName={tablename} columnName={item.Name} toggleCallback={toggleCallback} />
+            )
+        }
+
+        return null
+    }
+
     if (tableNotFound) {
         return <Flashbar items={[{header: "Invalid Request", type: "error", content: "There's no table found for the given parameter."}]} />;
     } else if (table) {
@@ -91,7 +105,7 @@ function TableDetailsComponent(props) {
             <div>
                 <ContentLayout header={<Header variant="h1">{tablename}</Header>}>
                     <DatabaseDetailsComponent dbName={dbname} accessModeCallback={setAccessMode} domainIdCallback={setDomainId} ownerCallback={setOwner} />
-                    <ResourceLFTagsWrapper resourceName={tablename} resourceDatabaseName={dbname}>
+                    <ResourceLFTagsWrapper forceReload={forceReload} resourceName={tablename} resourceDatabaseName={dbname}>
                         <Box margin={{top: "l"}}>
                             <Container header={<Header variant="h2">Table Details</Header>}>
                                 <ColumnLayout columns={2} variant="text-grid">
@@ -130,7 +144,7 @@ function TableDetailsComponent(props) {
                                 },
                                 {
                                     header: "Access Approval",
-                                    cell: item => <TogglePiiFlagComponent objectParameters={item.Parameters} type="column" owner={owner} domainId={domainId} dbName={dbname} tableName={tablename} columnName={item.Name} toggleCallback={toggleCallback} />
+                                    cell: item => renderAccessApproval(item)
                                 }
                             ]} empty={
                                 <Box textAlign="center">

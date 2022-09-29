@@ -53,6 +53,8 @@ export class DataMeshUI extends Construct {
                 "AccountId": Stack.of(this).account,
                 "SearchApiUrl": props.searchApiUrl,
                 "WorkflowApiUrl": props.httpApi.apiEndpoint,
+                "TbacStateMachineArn": props.tbacSharingWorkflow.stateMachineArn,
+                "StateMachineArn": props.stateMachineArn,
                 "RegistrationToken": crypto.randomBytes(4).toString('hex')
             }
         }

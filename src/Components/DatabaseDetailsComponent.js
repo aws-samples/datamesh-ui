@@ -30,6 +30,7 @@ function DatabaseDetailsComponent({dbName, accessModeCallback, ownerCallback, do
     const [db, setDb] = useState();
     const [forceReload, setForceReload] = useState(1)
     const [owner, setOwner] = useState(false)
+    const [tags, setTags] = useState(null)
 
     useEffect(() => {
         async function run() {
@@ -65,11 +66,12 @@ function DatabaseDetailsComponent({dbName, accessModeCallback, ownerCallback, do
         const accessMode = (db.Parameters && "access_mode" in db.Parameters) ? db.Parameters.access_mode : null
 
         if (accessMode === "nrac") {
-            const piiFlag = (db.Parameters && "pii_flag" in db.Parameters && db.Parameters.pii_flag === "true") ? true : false
             return (
-                <ValueWithLabel label="Access Approval">
-                    <TogglePiiFlagComponent objectParameters={db.Parameters} type="database" owner={owner} domainId={db.Parameters.data_owner} dbName={dbName} toggleCallback={toggleCallback} />
-                </ValueWithLabel>
+                <TogglePiiFlagComponent objectParameters={db.Parameters} type="database" owner={owner} domainId={db.Parameters.data_owner} dbName={dbName} toggleCallback={toggleCallback} />
+            )
+        } else if (accessMode === "tbac") {
+            return (
+                <TogglePiiFlagComponent objectParameters={db.Parameters} type="tags" resourceType="database" tags={tags} owner={owner} domainId={db.Parameters.data_owner} dbName={dbName} toggleCallback={toggleCallback} />
             )
         }
 
@@ -87,7 +89,9 @@ function DatabaseDetailsComponent({dbName, accessModeCallback, ownerCallback, do
                         <ValueWithLabel label="Location">
                             {db.LocationUri}
                         </ValueWithLabel>
-                        {renderPii()}
+                        <ValueWithLabel label="Access Approval">
+                            {renderPii()}
+                        </ValueWithLabel>
                         <ValueWithLabel label="Access Mode">
                             {(db.Parameters && "access_mode" in db.Parameters) ? db.Parameters.access_mode : "n/a"}
                         </ValueWithLabel>
@@ -100,7 +104,7 @@ function DatabaseDetailsComponent({dbName, accessModeCallback, ownerCallback, do
                             {(db.Parameters && "data_owner" in db.Parameters) ? db.Parameters.data_owner : "n/a"}   
                         </ValueWithLabel>
                         <ValueWithLabel label="Tags">
-                            <ResourceLFTagsComponent resourceType="database" resourceName={dbName} />
+                            <ResourceLFTagsComponent tagsCallback={setTags} resourceType="database" resourceName={dbName} forceReload={forceReload} />
                         </ValueWithLabel>
                     </SpaceBetween>
                 </ColumnLayout>

@@ -29,7 +29,7 @@ function ResourceLFTagsWrapper(props) {
         }
 
         run()
-    }, []);
+    }, [props.forceReload]);
 
     return (
         <ResourceTagContext.Provider value={context}>

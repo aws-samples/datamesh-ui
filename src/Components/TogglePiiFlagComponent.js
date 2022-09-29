@@ -1,26 +1,57 @@
 import { Badge, Spinner, Toggle } from "@cloudscape-design/components"
-import { useEffect, useState } from "react"
+import { useContext, useEffect, useState } from "react"
 import DataDomain from "../Backend/DataDomain"
+import Tbac from "../Backend/Tbac"
+import ResourceTagContext from "./TBAC/ResourceTagContext";
 
 function TogglePiiFlagComponent(props) {
     const [spinner, setSpinner] = useState(false)
     const [owner, setOwner] = useState(false)
     const [piiFlag, setPiiFlag] = useState(false)
+    const context = useContext(ResourceTagContext);
 
     useEffect(() => {
-        const parameters = props.objectParameters
         setOwner(props.owner)
 
-        if (parameters && "pii_flag" in parameters && parameters.pii_flag === "true") {
-            setPiiFlag(true)
+        if (props.type !== "tags") {
+            const parameters = props.objectParameters
+            if (parameters && "pii_flag" in parameters && parameters.pii_flag === "true") {
+                setPiiFlag(true)
+            }
+        } else {
+            let tags = null
+
+            if (props.tags) {
+                tags = props.tags
+            } else if (props.resourceType && props.resourceType === "column") {
+                if (context) {
+                    const resourceTag = context.resourceTag
+                    const filtered = (resourceTag.LFTagsOnColumns && resourceTag.LFTagsOnColumns.length > 0) ? resourceTag.LFTagsOnColumns.filter(record => record.Name == props.columnName) : [];
+                    tags = filtered && filtered.length >= 1 ? filtered[0].LFTags : []
+                }
+
+            }
+
+            if (tags) {
+                const confidentialityTag = Tbac.extractConfidentialityTag(tags)
+                if (confidentialityTag) {
+                    const confidentialityValue = confidentialityTag.TagValues[0]
+
+                    if (confidentialityValue == "sensitive") {
+                        setPiiFlag(true)
+                    } else {
+                        setPiiFlag(false)
+                    }
+                }               
+            }
         }
-    }, [props.owner])
+    })
 
     const toggleButton = async() => {
-        const {type, domainId, dbName, tableName, columnName} = props
+        const {type, domainId, dbName, tableName, columnName, resourceType} = props
 
         setSpinner(true)
-        await DataDomain.togglePiiFlag(type, domainId, dbName, tableName, columnName)
+        await DataDomain.togglePiiFlag(type, domainId, dbName, tableName, columnName, resourceType)
         setPiiFlag(!piiFlag)
         setSpinner(false)
 
@@ -44,9 +75,7 @@ function TogglePiiFlagComponent(props) {
             return (
                 <Badge color={(piiFlag ? "red" : "green")}>{piiFlag ? "Yes" : "No"}</Badge>
             )
-        }
-
-        return null
+        } 
     }
 
     return (

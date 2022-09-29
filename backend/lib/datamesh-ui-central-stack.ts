@@ -112,7 +112,8 @@ export class DataMeshUICentralStack extends Stack {
             httpApi: dataMeshUIAPI.httpApi,
             centralEventBusArn: centralEventBusArn.valueAsString,
             adjustGlueResourcePolicyFunction: tbacSharingWorkflow.adjustGlueResourcePolicyFunction,
-            approvalsTable: approvalWorkflow.approvalsTable
+            approvalsTable: approvalWorkflow.approvalsTable,
+            confidentialityKey: tbacConfig.TagKeys.Confidentiality
         })
 
         const dataMeshUI = new DataMeshUI(this, "DataMeshUI", {

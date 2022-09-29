@@ -94,6 +94,85 @@ exports.handler = async(event) => {
                 DatabaseName: body.dbName,
                 TableInput: Table
             }).promise()
+        } else if (body.type == "tags") {
+            let resourceLfTagParams = null
+            let resourceLfTagResponseName = null
+            switch (body.resourceType) {
+                case "database":
+                    resourceLfTagParams = {
+                        "Database": {
+                            "Name": body.dbName
+                        }
+                    }
+                    resourceLfTagResponseName = "LFTagOnDatabase"
+                    break;
+                case "table":
+                    resourceLfTagParams = {
+                        "Table": {
+                            "DatabaseName": body.dbName,
+                            "Name": body.tableName
+                        }
+                    }
+                    resourceLfTagResponseName = "LFTagsOnTable"
+                    break;
+                case "column":
+                    resourceLfTagParams = {
+                        "TableWithColumns": {
+                            "DatabaseName": body.dbName,
+                            "Name": body.tableName,
+                            "ColumnNames": [body.columnName]
+                        }
+                    }
+                    resourceLfTagResponseName = "LFTagsOnColumns"
+                    break;
+                
+            }
+            
+            const resourceLfTagsResponse = await lfClient.getResourceLFTags({Resource: resourceLfTagParams}).promise()
+            let tags = null
+
+            if (resourceLfTagResponseName !== "LFTagsOnColumns") {
+                tags = resourceLfTagsResponse[resourceLfTagResponseName]
+            } else {
+                tags = resourceLfTagsResponse[resourceLfTagResponseName][0].LFTags
+            }
+            
+
+            const confidentialityTag = tags.find((tag) => tag.TagKey === process.env.CONFIDENTIALITY_KEY)
+
+            if (confidentialityTag) {
+                await lfClient.grantPermissions({
+                    Permissions: ["ASSOCIATE"],
+                    Principal: {
+                        DataLakePrincipalIdentifier: process.env.LAMBDA_EXEC_ROLE_ARN
+                    },
+                    Resource: {
+                        LFTag: {
+                            TagKey: process.env.CONFIDENTIALITY_KEY,
+                            TagValues: ["sensitive", "non-sensitive"]
+                        }
+                    }
+                }).promise()
+
+                const value = confidentialityTag.TagValues[0]
+                let newValue = ""
+
+                if (value === "sensitive") {
+                    newValue = "non-sensitive"
+                } else {
+                    newValue = "sensitive"
+                }
+
+                updateResp = await lfClient.addLFTagsToResource({
+                    LFTags: [
+                        {
+                            TagKey: process.env.CONFIDENTIALITY_KEY,
+                            TagValues: [newValue]
+                        }
+                    ],
+                    Resource: resourceLfTagParams
+                }).promise()
+            }
         }
 
         payload.body = JSON.stringify(updateResp)

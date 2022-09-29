@@ -17,6 +17,7 @@ export interface DataDomainManagementProps {
     centralEventBusArn: string
     adjustGlueResourcePolicyFunction: Function
     approvalsTable: Table
+    confidentialityKey: string
 }
 
 export class DataDomainManagement extends Construct {
@@ -331,7 +332,8 @@ export class DataDomainManagement extends Construct {
             code: Code.fromAsset(__dirname+"/resources/lambda/TogglePIIFlag"),
             environment: {
                 USER_MAPPING_TABLE_NAME: this.userDomainMappingTable.tableName,
-                LAMBDA_EXEC_ROLE_ARN: crDataDomainUIAccessRole.roleArn
+                LAMBDA_EXEC_ROLE_ARN: crDataDomainUIAccessRole.roleArn,
+                CONFIDENTIALITY_KEY: props.confidentialityKey
             },
             layers: [this.dataDomainLayer]
         })
