@@ -53,7 +53,7 @@ function DisplayLFTagsComponent(props) {
                 await AuthWorkflow.exec(SM_ARN, params, targetAccountId.value)
 
 
-                setTargetAccountId(null);
+                // setTargetAccountId(null);
                 setError(null);
                 setSuccess("Request for access sent successfully")
             } catch (e) {
@@ -66,7 +66,7 @@ function DisplayLFTagsComponent(props) {
     const cancelModal = () => {
         setShareTagKey(null);
         setShareTagValue(null);
-        setTargetAccountId(null);
+        // setTargetAccountId(null);
         setError(null);
         setSuccess(null);
         setModalVisible(false);
@@ -126,7 +126,7 @@ function DisplayLFTagsComponent(props) {
                     ]}></Table>
                 </ExpandableSection>
 
-                <Modal onDismiss={() => setModalVisible(false)} visible={modalVisible} header={<Header variant="h3">Requesting Tag Access from {dataDomain ? dataDomain.TagValues[0] : null}</Header>} footer={
+                <Modal onDismiss={() => cancelModal()} visible={modalVisible} header={<Header variant="h3">Requesting Tag Access from {dataDomain ? dataDomain.TagValues[0] : null}</Header>} footer={
                     <SpaceBetween direction="horizontal" size="xs">
                         <Button variant="link" onClick={cancelModal}>Cancel</Button>
                         <Button variant="primary" onClick={requestAccess}>Request Access</Button>

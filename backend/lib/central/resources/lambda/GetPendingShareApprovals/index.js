@@ -7,10 +7,10 @@ exports.handler = async(event) => {
 
     const domainIds = await DataDomain.getUserDataDomains(userId, process.env.USER_MAPPING_TABLE_NAME)
 
-    const pendingApprovals = []
+    let pendingApprovals = []
 
     for (const domainId of domainIds) {
-        const nextToken = null
+        let nextToken = null
         do {
             const resp = await ddbClient.query({
                 TableName: process.env.APPROVALS_TABLE_NAME,
@@ -27,7 +27,7 @@ exports.handler = async(event) => {
                 ExclusiveStartKey: nextToken
             }).promise()
             nextToken = resp.LastEvaluatedKey
-            pendingApprovals.concat(resp.Items)
+            pendingApprovals = pendingApprovals.concat(resp.Items)
         } while (nextToken)
     }
 

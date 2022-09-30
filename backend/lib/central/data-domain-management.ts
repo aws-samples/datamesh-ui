@@ -18,6 +18,7 @@ export interface DataDomainManagementProps {
     adjustGlueResourcePolicyFunction: Function
     approvalsTable: Table
     confidentialityKey: string
+    approvalsLayer: LayerVersion
 }
 
 export class DataDomainManagement extends Construct {
@@ -295,7 +296,8 @@ export class DataDomainManagement extends Construct {
                     new PolicyStatement({
                         effect: Effect.ALLOW,
                         actions: [
-                            "dynamodb:GetItem"
+                            "dynamodb:GetItem",
+                            "dynamodb:Query"
                         ],
                         resources: [
                             this.userDomainMappingTable.tableArn
@@ -342,6 +344,110 @@ export class DataDomainManagement extends Construct {
             path: "/data-products/toggle-pii-flag",
             methods: [HttpMethod.POST],
             integration: new HttpLambdaIntegration("togglePIIFlagIntegration", togglePIIFlagFunction),
+        })
+
+        const processApprovalRole = new Role(this, "ProcessApprovalRole", {
+            assumedBy: new ServicePrincipal("lambda.amazonaws.com"),
+            managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole")],
+            inlinePolicies: {inline0: new PolicyDocument({
+                statements: [
+                    new PolicyStatement({
+                        effect: Effect.ALLOW,
+                        actions: [
+                            "dynamodb:GetItem"
+                        ],
+                        resources: [
+                            this.userDomainMappingTable.tableArn
+                        ]
+                    }),
+                    new PolicyStatement({
+                        effect: Effect.ALLOW,
+                        actions: [
+                            "dynamodb:GetItem",
+                            "dynamodb:UpdateItem",
+                            "dynamodb:DeleteItem",
+                            "dynamodb:TransactWriteItems"
+                        ],
+                        resources: [
+                            props.approvalsTable.tableArn
+                        ]
+                    }),
+                    new PolicyStatement({
+                        effect: Effect.ALLOW,
+                        actions: [
+                            "states:SendTaskFailure",
+                            "states:SendTaskSuccess"
+                        ],
+                        resources: ["*"]
+                    })
+                ]
+            })}
+        });
+
+        const processApprovalFunction = new Function(this, "ProcessApprovalFunction", {
+            runtime: Runtime.NODEJS_16_X,
+            role: processApprovalRole,
+            handler: "index.handler",
+            timeout: Duration.seconds(30),
+            code: Code.fromAsset(__dirname+"/resources/lambda/ProcessApproval"),
+            environment: {
+                USER_MAPPING_TABLE_NAME: this.userDomainMappingTable.tableName,
+                APPROVALS_TABLE_NAME: props.approvalsTable.tableName
+            },
+            layers: [this.dataDomainLayer, props.approvalsLayer]
+        })
+
+        props.httpApi.addRoutes({
+            path: "/data-domains/process-approval",
+            methods: [HttpMethod.POST],
+            integration: new HttpLambdaIntegration("processApprovalIntegration", processApprovalFunction),
+        })
+
+        const getPendingApprovalCountRole = new Role(this, "GetPendingApprovalCountRole", {
+            assumedBy: new ServicePrincipal("lambda.amazonaws.com"),
+            managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole")],
+            inlinePolicies: {inline0: new PolicyDocument({
+                statements: [
+                    new PolicyStatement({
+                        effect: Effect.ALLOW,
+                        actions: [
+                            "dynamodb:GetItem",
+                            "dynamodb:Query"
+                        ],
+                        resources: [
+                            this.userDomainMappingTable.tableArn
+                        ]
+                    }),
+                    new PolicyStatement({
+                        effect: Effect.ALLOW,
+                        actions: [
+                            "dynamodb:GetItem",
+                        ],
+                        resources: [
+                            props.approvalsTable.tableArn
+                        ]
+                    })
+                ]
+            })}
+        });
+
+        const getPendingApprovalCountFunction = new Function(this, "GetPendingApprovalCountFunction", {
+            runtime: Runtime.NODEJS_16_X,
+            role: getPendingApprovalCountRole,
+            handler: "index.handler",
+            timeout: Duration.seconds(30),
+            code: Code.fromAsset(__dirname+"/resources/lambda/GetPendingApprovalCount"),
+            environment: {
+                USER_MAPPING_TABLE_NAME: this.userDomainMappingTable.tableName,
+                APPROVALS_TABLE_NAME: props.approvalsTable.tableName
+            },
+            layers: [this.dataDomainLayer, props.approvalsLayer]
+        })
+
+        props.httpApi.addRoutes({
+            path: "/data-domains/pending-approval-count",
+            methods: [HttpMethod.GET],
+            integration: new HttpLambdaIntegration("getPendingApprovalCountIntegration", getPendingApprovalCountFunction),
         })
     }
 }

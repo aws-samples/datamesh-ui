@@ -1,5 +1,6 @@
 *.js
 !lib/central/resources/lambda/layers/data-domain/nodejs/*
+!lib/central/resources/lambda/layers/approvals/nodejs/*
 !lib/central/resources/lambda/CR*/*
 !lib/central/resources/lambda/Toggle*/*
 !lib/central/resources/lambda/Get*/*
@@ -14,6 +15,7 @@
 !lib/central/resources/lambda/Nrac*/*
 !lib/central/resources/lambda/Tbac*/*
 !lib/central/resources/lambda/Authenticated*/*
+!lib/central/resources/lambda/Process*/*
 !lib/producer/resources/lambda/*/*
 !jest.config.js
 *.d.ts

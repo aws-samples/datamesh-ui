@@ -23,6 +23,7 @@ import ResourceLFTagsComponent from "./TBAC/ResourceLFTagsComponent";
 import { v4 as uuid } from 'uuid';
 import DataDomain from "../Backend/DataDomain";
 import DataDomainActionComponent from "./DataDomainActionComponent";
+import PendingApprovalCountComponent from "./Approvals/PendingApprovalCountComponent";
 const cfnOutput = require("../cfn-output.json")
 const config = Amplify.configure();
 const axios = require("axios").default;
@@ -213,6 +214,7 @@ function CatalogComponent(props) {
 
     return (
         <div>
+            <PendingApprovalCountComponent />
             <Box margin={{top: "l"}}>
                 <Table
                     filter={

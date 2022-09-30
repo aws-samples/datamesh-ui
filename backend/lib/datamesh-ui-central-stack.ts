@@ -103,7 +103,8 @@ export class DataMeshUICentralStack extends Stack {
         const tbacSharingWorkflow = new TbacSharingWorkflow(this, "TbacSharingWorkflow", {
             cognitoAuthRole: dataMeshUIAuth.identityPool.authenticatedRole,
             approvalsTable: approvalWorkflow.approvalsTable,
-            centralEventBusArn: centralEventBusArn.valueAsString
+            centralEventBusArn: centralEventBusArn.valueAsString,
+            approvalsLayer: approvalWorkflow.approvalsLayer
         });
 
         const dataDomainManagement = new DataDomainManagement(this, "DataDomainManagement", {
@@ -113,7 +114,8 @@ export class DataMeshUICentralStack extends Stack {
             centralEventBusArn: centralEventBusArn.valueAsString,
             adjustGlueResourcePolicyFunction: tbacSharingWorkflow.adjustGlueResourcePolicyFunction,
             approvalsTable: approvalWorkflow.approvalsTable,
-            confidentialityKey: tbacConfig.TagKeys.Confidentiality
+            confidentialityKey: tbacConfig.TagKeys.Confidentiality,
+            approvalsLayer: approvalWorkflow.approvalsLayer
         })
 
         const dataMeshUI = new DataMeshUI(this, "DataMeshUI", {

@@ -7,7 +7,7 @@ import { AttributeType, BillingMode, Table, TableEncryption } from "aws-cdk-lib/
 import { EventBus, EventField, Rule, RuleTargetInput } from "aws-cdk-lib/aws-events";
 import { SfnStateMachine } from "aws-cdk-lib/aws-events-targets";
 import { Effect, FederatedPrincipal, ManagedPolicy, Policy, PolicyDocument, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
-import { Code, Function, Runtime } from "aws-cdk-lib/aws-lambda";
+import { Code, Function, LayerVersion, Runtime } from "aws-cdk-lib/aws-lambda";
 import { Choice, Condition, IntegrationPattern, JsonPath, Pass, StateMachine, StateMachineType, TaskInput } from "aws-cdk-lib/aws-stepfunctions";
 import { CallAwsService, HttpMethod, LambdaInvoke } from "aws-cdk-lib/aws-stepfunctions-tasks";
 import { NagSuppressions } from "cdk-nag";
@@ -28,6 +28,7 @@ export class ApprovalWorkflow extends Construct {
     
     readonly stateMachine: StateMachine;
     readonly approvalsTable: Table
+    readonly approvalsLayer: LayerVersion
 
     constructor(scope: Construct, id: string, props:ApprovalWorkflowProps) {
         super(scope, id);
@@ -46,6 +47,12 @@ export class ApprovalWorkflow extends Construct {
             removalPolicy: RemovalPolicy.DESTROY
         });
 
+        this.approvalsLayer = new LayerVersion(this, "ApprovalsLayer", {
+            code: Code.fromAsset(__dirname+"/resources/lambda/layers/approvals"),
+            compatibleRuntimes: [Runtime.NODEJS_16_X],
+            removalPolicy: RemovalPolicy.DESTROY
+        })
+
         this.workflowLambdaSendApprovalEmailRole = new Role(this, "WorkflowLambdaSendApprovalEmailRole", {
             assumedBy: new ServicePrincipal("lambda.amazonaws.com"),
             managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole")],
@@ -54,7 +61,11 @@ export class ApprovalWorkflow extends Construct {
                     statements: [
                         new PolicyStatement({
                             effect: Effect.ALLOW,
-                            actions: ["dynamodb:PutItem"],
+                            actions: [
+                                "dynamodb:TransactWriteItems",
+                                "dynamodb:PutItem",
+                                "dynamodb:UpdateItem"
+                            ],
                             resources: [this.approvalsTable.tableArn]
                         })
                     ]
@@ -163,7 +174,8 @@ export class ApprovalWorkflow extends Construct {
             role: this.workflowLambdaSendApprovalEmailRole,
             environment: {
                 APPROVALS_TABLE_NAME: this.approvalsTable.tableName
-            }
+            },
+            layers: [this.approvalsLayer]
         });
 
         const workflowGetTableDetails = new Function(this, "WorkflowGetTableDetails", {

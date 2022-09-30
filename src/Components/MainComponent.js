@@ -28,6 +28,7 @@ import SearchComponent from "./SearchComponent";
 import DataProductDetailsComponent from "./DataProductDetailsComponent"
 import { useEffect, useState } from "react";
 import Event from "../Backend/Event";
+import PendingApprovalsComponent from "./Approvals/PendingApprovalsComponent";
 const cfnOutput = require("../cfn-output.json");
 const searchApiUrl = cfnOutput.InfraStack.SearchApiUrl;
 const MIN_SEARCH_STRING_LENGTH = 1;
@@ -187,6 +188,7 @@ function MainComponent(props) {
                     <Route exact path="/data-product-details/:dataProduct" element={<DataProductDetailsComponent />} />
                     {/* <Route exact path="/execution-details/:execArn" element={<WorkflowExecutionDetailsComponent />} /> */}
                     <Route exact path="/product-registration/:domainId/new" element={<RegisterNewProductComponent />} />
+                    <Route exact path="/approvals/pending" element={<PendingApprovalsComponent breadcrumbsCallback={setBreadcrumbs} />} />
                     {/* <Route exact path="/data-quality-reports/:dbname/:tablename">
                         <DataQualityReportsComponent />
                     </Route>

@@ -3,7 +3,7 @@ import { Table } from "aws-cdk-lib/aws-dynamodb";
 import { EventBus } from "aws-cdk-lib/aws-events";
 import { Effect, IRole, ManagedPolicy, Policy, PolicyDocument, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
 import { CfnDataLakeSettings } from "aws-cdk-lib/aws-lakeformation";
-import { Code, Function, Runtime } from "aws-cdk-lib/aws-lambda";
+import { Code, Function, LayerVersion, Runtime } from "aws-cdk-lib/aws-lambda";
 import { Choice, Condition, IntegrationPattern, JsonPath, StateMachine, TaskInput } from "aws-cdk-lib/aws-stepfunctions";
 import { CallAwsService, LambdaInvoke } from "aws-cdk-lib/aws-stepfunctions-tasks";
 import { Construct } from "constructs";
@@ -14,6 +14,7 @@ export interface TbacSharingWorkflowProps {
     cognitoAuthRole: IRole
     approvalsTable: Table
     centralEventBusArn: string
+    approvalsLayer: LayerVersion
 }
 
 export class TbacSharingWorkflow extends Construct {
@@ -112,7 +113,11 @@ export class TbacSharingWorkflow extends Construct {
                     statements: [
                         new PolicyStatement({
                             effect: Effect.ALLOW,
-                            actions: ["dynamodb:PutItem"],
+                            actions: [
+                                "dynamodb:TransactWriteItems",
+                                "dynamodb:PutItem",
+                                "dynamodb:UpdateItem"
+                            ],
                             resources: [props.approvalsTable.tableArn]
                         })
                     ]
@@ -127,7 +132,8 @@ export class TbacSharingWorkflow extends Construct {
             role: sendApprovalRole,
             environment: {
                 APPROVALS_TABLE_NAME: props.approvalsTable.tableName
-            }
+            },
+            layers: [props.approvalsLayer]
         });
 
         const invokeSendApprovalFunction = new LambdaInvoke(this, "InvokeSendApprovalFunction", {

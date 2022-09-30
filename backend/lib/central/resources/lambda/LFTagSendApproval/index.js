@@ -15,9 +15,7 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-const AWS = require("aws-sdk");
-const util = require("util");
-const SOURCE = "com.central.sharing-approval";
+const {Approvals} = require("/opt/nodejs/approvals")
 
 exports.handler = async (event) => {
     const input = event.Input;
@@ -26,10 +24,9 @@ exports.handler = async (event) => {
     const targetAccountId = input.targetAccountId;
     const dbName = input.databaseName;
     const lfTags = input.lfTags;
-    const sourceAccountId = dbName.split("_")[0];
+    const sourceAccountId = input.producerAccountId
 
-    const ddbClient = new AWS.DynamoDB()
-    await ddbClient.putItem({
+    const approvalsPayload = {
         TableName: process.env.APPROVALS_TABLE_NAME,
         Item: {
             "accountId": {
@@ -54,7 +51,9 @@ exports.handler = async (event) => {
                 "S": JSON.stringify(lfTags)
             }
         }
-    }).promise()
+    }
+
+    await Approvals.recordApproval(sourceAccountId, approvalsPayload)
     
     return {};
 };
