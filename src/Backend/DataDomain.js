@@ -75,6 +75,36 @@ const DataDomain = {
         })
 
         return data
+    },
+    async getListOfShared(domainId, product) {
+        const session = await Auth.currentSession()
+        const apiUrl = `${cfnOutput.InfraStack.WorkflowApiUrl}/data-products/list-of-shared?domainId=${domainId}&product=${product}`
+
+        const {data} = await axios({
+            method: "GET",
+            url: apiUrl,
+            headers: {
+                "Authorization": session.getAccessToken().getJwtToken(),
+                "Content-Type": "application/json"
+            }
+        })
+
+        return data
+    },
+    async getListOfConsumers(domainId, product) {
+        const session = await Auth.currentSession()
+        const apiUrl = `${cfnOutput.InfraStack.WorkflowApiUrl}/data-products/list-of-consumers?domainId=${domainId}&product=${product}`
+
+        const {data} = await axios({
+            method: "GET",
+            url: apiUrl,
+            headers: {
+                "Authorization": session.getAccessToken().getJwtToken(),
+                "Content-Type": "application/json"
+            }
+        })
+
+        return data
     }
 }
 

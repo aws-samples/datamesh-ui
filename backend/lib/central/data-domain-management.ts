@@ -14,7 +14,6 @@ export interface DataDomainManagementProps {
     uiAuthenticatedRole: IRole
     centralWorkflowRole: IRole
     httpApi: HttpApi
-    httpiApiUserPoolAuthorizer: HttpUserPoolAuthorizer
     centralEventBusArn: string
     adjustGlueResourcePolicyFunction: Function
     userDomainMappingTable: Table
@@ -133,8 +132,7 @@ export class DataDomainManagement extends Construct {
         props.httpApi.addRoutes({
             path: "/data-domain/register",
             methods: [HttpMethod.POST],
-            integration: new HttpLambdaIntegration("RegisterDataDomainIntegration", registerDataDomainFunction),
-            authorizer: props.httpiApiUserPoolAuthorizer
+            integration: new HttpLambdaIntegration("RegisterDataDomainIntegration", registerDataDomainFunction)
         })
 
         const getDataDomainOwnerRole = new Role(this, "GetDataDomainOwnerRole", {
@@ -169,8 +167,7 @@ export class DataDomainManagement extends Construct {
         props.httpApi.addRoutes({
             path: "/data-domain/validate-owner",
             methods: [HttpMethod.GET],
-            integration: new HttpLambdaIntegration("GetDataDomainOwnerIntegration", getDataDomainOwnerFunction),
-            authorizer: props.httpiApiUserPoolAuthorizer
+            integration: new HttpLambdaIntegration("GetDataDomainOwnerIntegration", getDataDomainOwnerFunction)
         })
 
         const getUserDataDomainsRole = new Role(this, "GetUserDataDomainsRole", {
@@ -205,8 +202,7 @@ export class DataDomainManagement extends Construct {
         props.httpApi.addRoutes({
             path: "/data-domain/list",
             methods: [HttpMethod.GET],
-            integration: new HttpLambdaIntegration("GetUserDataDomainsIntegration", getUserDataDomainsFunction),
-            authorizer: props.httpiApiUserPoolAuthorizer
+            integration: new HttpLambdaIntegration("GetUserDataDomainsIntegration", getUserDataDomainsFunction)
         })
     }
 }

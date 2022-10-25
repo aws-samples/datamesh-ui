@@ -46,6 +46,22 @@ exports.handler = async (event) => {
                 Name: source.table
             }
         }
+
+        const ddb = new AWS.DynamoDB()
+        const tableName = process.env.MAPPING_TABLE_NAME
+
+        await ddb.putItem({
+            TableName: tableName,
+            Item: {
+                "domainId": {
+                    "S": source.database
+                },
+                "resourceMapping": {
+                    "S": `${source.table}#${target.account_id}`
+                }
+            }
+        }).promise()
+
     }
     
     return await lakeformation.grantPermissions(grantParams).promise();

@@ -26,6 +26,7 @@ import DatabaseDetailsComponent from "./DatabaseDetailsComponent";
 import ResourceLFTagsWrapper from "./TBAC/ResourceLFTagsWrapper";
 import DisplayLFTagsFromContextComponent from "./TBAC/DisplayLFTagsFromContextComponent";
 import DataProductStateComponent from "./DataProductStateComponent";
+import ProductConsumersComponent from "./ProductConsumersComponent";
 
 const config = Amplify.configure();
 
@@ -69,9 +70,18 @@ function TableDetailsComponent(props) {
             return (
                 <Box margin={{top: "m"}}>
                     <RequestAccessComponent dbName={dbname} tableName={tablename} />
-                    {/* <Box margin={{top: "s", bottom: "s"}} display={requestSuccessful ? "block" : "none"}>
-                        <Flashbar items={[{type: "success", header: "Request Submitted ("+executionArn+")", content: "Successfully submitted request, once approved please accept RAM request."}]}></Flashbar>
-                    </Box> */}
+                </Box>  
+            )
+        }
+
+        return null
+    }
+
+    const renderConsumers = () => {
+        if (accessMode == "nrac" && owner) {
+            return (
+                <Box margin={{top: "m"}}>
+                    <ProductConsumersComponent dbName={dbname} tableName={tablename} />
                 </Box>  
             )
         }
@@ -135,6 +145,7 @@ function TableDetailsComponent(props) {
                         </Box>
                     </ResourceLFTagsWrapper>
                     {renderRequestAccess()}
+                    {renderConsumers()}
                 </ContentLayout>
             </div>
         );

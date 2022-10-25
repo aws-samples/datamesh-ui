@@ -15,7 +15,6 @@ export interface DataMeshUIAuthWorkflowProps {
     tbacApprovalWorkflow: IStateMachine
     userMappingTable: Table
     httpApi: HttpApi
-    httpiApiUserPoolAuthorizer: HttpUserPoolAuthorizer
 }
 
 export class DataMeshUIAuthWorkflow extends Construct {
@@ -63,8 +62,7 @@ export class DataMeshUIAuthWorkflow extends Construct {
         props.httpApi.addRoutes({
             path: "/workflow/exec",
             methods: [HttpMethod.POST],
-            integration: new HttpLambdaIntegration("AuthWorkflowIntegration", authWorkflowFunction),
-            authorizer: props.httpiApiUserPoolAuthorizer
+            integration: new HttpLambdaIntegration("AuthWorkflowIntegration", authWorkflowFunction)
         })
     }
 }

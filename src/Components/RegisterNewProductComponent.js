@@ -16,9 +16,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import { GetDatabaseCommand, GlueClient } from "@aws-sdk/client-glue";
-import { ListObjectsV2Command, S3Client } from "@aws-sdk/client-s3";
-import { SFNClient, StartExecutionCommand } from "@aws-sdk/client-sfn";
-import { Box, Button, Container, Form, FormField, Header, Input, Select, SpaceBetween, Table, Icon, Alert, ColumnLayout, BreadcrumbGroup, Spinner } from "@cloudscape-design/components";
+import { Box, Button, Container, Form, FormField, Header, Input, Select, SpaceBetween, Table, Icon, Alert, ColumnLayout, BreadcrumbGroup, Spinner, Modal } from "@cloudscape-design/components";
 import {Amplify, Auth } from "aws-amplify";
 import {useEffect, useState} from 'react';
 import { useParams } from "react-router";
@@ -40,6 +38,7 @@ function RegisterNewProductComponent() {
     const [products, setProducts] = useState([{"id": uuid(), "name": "", "location": "", "error": "", "nameError": "", "firstRow": true}])
     const [spinnerVisible, setSpinnerVisible] = useState(false)
     const [owner, setOwner] = useState(false)
+    const [modalVisible, setModalVisible] = useState(false)
  
     // const onCancel = () => {
     //     window.location.href="/product-registration/list";
@@ -59,8 +58,18 @@ function RegisterNewProductComponent() {
         setProducts([...products]);
     }
 
+    const onShowModal = async() => {
+        if (database && isProductListValid()) {
+            setModalVisible(true)
+        } else {
+            setError("Missing required fields.");
+            setModalVisible(false)
+        }
+    }
+
     const onSubmit = async() => {
         if (database && isProductListValid()) {
+            setModalVisible(false)
             setSpinnerVisible(true)
             const credentials = await Auth.currentCredentials();
             const isPathValid = await isS3PathsValid(credentials)
@@ -247,9 +256,19 @@ function RegisterNewProductComponent() {
             )
         } else {
             return (
-                <Button variant="primary" onClick={onSubmit} disabled={!database || !owner}>Submit</Button>
+                <Button variant="primary" onClick={() => onShowModal()} disabled={!database || !owner}>Submit</Button>
             )
         }
+    }
+
+    const renderProductList = () => {
+        const prodList = products.map((product) => {
+            return (
+                <li><strong>Name:</strong> {product.name}, <strong>Location:</strong> {product.location}</li>
+            )
+        })
+
+        return prodList
     }
 
     return (
@@ -288,6 +307,20 @@ function RegisterNewProductComponent() {
                         ]} items={products}></Table>
                     </Box>
                 </Form>
+                <Modal size="medium" onDismiss={() => setModalVisible(false)} visible={modalVisible} footer={
+                    <Box float="right">
+                        <SpaceBetween direction="horizontal" size="s">
+                            <Button onClick={() => setModalVisible(false)} variant="link">Cancel</Button>
+                            <Button onClick={() => onSubmit()} variant="primary">Confirm</Button>
+                        </SpaceBetween>
+                    </Box>
+                }>
+                    <Header variant="h3">Registration Confirmation</Header>
+                    You're registering the following data products in the <strong>{domainId}</strong> domain:
+                    <ul>
+                        {renderProductList()}
+                    </ul>
+                </Modal>
             </Box>
         </Box>
     );

@@ -1,8 +1,8 @@
-import { HttpApi } from "@aws-cdk/aws-apigatewayv2-alpha";
+import { CorsHttpMethod, HttpApi } from "@aws-cdk/aws-apigatewayv2-alpha";
 import { HttpUserPoolAuthorizer } from "@aws-cdk/aws-apigatewayv2-authorizers-alpha";
 import { HttpLambdaIntegration } from "@aws-cdk/aws-apigatewayv2-integrations-alpha";
 import { IdentityPool, UserPoolAuthenticationProvider } from "@aws-cdk/aws-cognito-identitypool-alpha";
-import { CfnOutput, CustomResource, RemovalPolicy } from "aws-cdk-lib";
+import { CfnOutput, CustomResource, Duration, RemovalPolicy } from "aws-cdk-lib";
 import { UserPool, UserPoolClient } from "aws-cdk-lib/aws-cognito";
 import { HttpMethod } from "aws-cdk-lib/aws-events";
 import { ManagedPolicy, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
@@ -12,16 +12,12 @@ import { Provider } from "aws-cdk-lib/custom-resources";
 import { NagSuppressions } from "cdk-nag";
 import { Construct } from "constructs";
 
-export interface DataMeshUIAuthProps {
-    httpApi: HttpApi
-}
-
 export class DataMeshUIAuth extends Construct {
     readonly userPool: UserPool;
     readonly identityPool: IdentityPool;
-    readonly httpApiUserPoolAuthorizer: HttpUserPoolAuthorizer;
+    readonly httpApi: HttpApi
 
-    constructor(scope: Construct, id: string, props: DataMeshUIAuthProps) {
+    constructor(scope: Construct, id: string) {
         super(scope, id);
 
         const userPool = new UserPool(this, "DataMeshUICognitoUserPool", {
@@ -115,7 +111,7 @@ export class DataMeshUIAuth extends Construct {
             value: identityProvider.identityPoolId
         })
 
-        this.httpApiUserPoolAuthorizer = new HttpUserPoolAuthorizer("WorkflowHttpAPIUserPoolAuthorizer", userPool, {
+        const httpApiUserPoolAuthorizer = new HttpUserPoolAuthorizer("WorkflowHttpAPIUserPoolAuthorizer", userPool, {
             userPoolClients: [client]
         });
 
@@ -130,11 +126,22 @@ export class DataMeshUIAuth extends Construct {
             }
         });
 
-        props.httpApi.addRoutes({
+        this.httpApi = new HttpApi(this, "DataLakeWorkflowAPIGW", {
+            corsPreflight: {
+                allowOrigins: ["*"],
+                allowHeaders: ["Authorization", "Content-Type"],
+                allowMethods: [
+                    CorsHttpMethod.ANY
+                ],
+                maxAge: Duration.days(1)
+            },
+            defaultAuthorizer: httpApiUserPoolAuthorizer
+        });
+
+        this.httpApi.addRoutes({
             path: "/data-domains/sync-permissions",
             methods: [HttpMethod.POST],
-            integration: new HttpLambdaIntegration("SyncDataDomainUIPermissionsIntegration", syncDataDomainUIPermissionsFunction),
-            authorizer: this.httpApiUserPoolAuthorizer
+            integration: new HttpLambdaIntegration("SyncDataDomainUIPermissionsIntegration", syncDataDomainUIPermissionsFunction)
         })
     }
 }
