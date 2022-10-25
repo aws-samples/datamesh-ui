@@ -11,7 +11,6 @@ import { Construct } from "constructs";
 export interface DataMeshUILFTagPermissionsProps {
     rolesToGrant: string[]
     httpApi: HttpApi
-    httpiApiUserPoolAuthorizer: HttpUserPoolAuthorizer
 }
 
 export default class DataMeshUILFTagPermissions extends Construct {
@@ -75,8 +74,7 @@ export default class DataMeshUILFTagPermissions extends Construct {
         props.httpApi.addRoutes({
             path: "/tags/sync-permissions",
             methods: [HttpMethod.POST],
-            integration: new HttpLambdaIntegration("SyncDataMeshUITagAccessIntegration", syncDataMeshUITagAccessFunction),
-            authorizer: props.httpiApiUserPoolAuthorizer
+            integration: new HttpLambdaIntegration("SyncDataMeshUITagAccessIntegration", syncDataMeshUITagAccessFunction)
         })
     }
 }

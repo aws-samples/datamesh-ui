@@ -1,8 +1,9 @@
-import { CorsHttpMethod, HttpApi } from "@aws-cdk/aws-apigatewayv2-alpha";
+import { CorsHttpMethod, HttpApi, HttpNoneAuthorizer } from "@aws-cdk/aws-apigatewayv2-alpha";
 import { HttpLambdaIntegration } from "@aws-cdk/aws-apigatewayv2-integrations-alpha";
 import { IdentityPool, UserPoolAuthenticationProvider } from "@aws-cdk/aws-cognito-identitypool-alpha";
 import { Duration, RemovalPolicy, Stack } from "aws-cdk-lib";
 import { UserPool } from "aws-cdk-lib/aws-cognito";
+import { AttributeType, BillingMode, Table } from "aws-cdk-lib/aws-dynamodb";
 import { EventBus, EventField, Rule, RuleTargetInput } from "aws-cdk-lib/aws-events";
 import { SfnStateMachine } from "aws-cdk-lib/aws-events-targets";
 import { Effect, FederatedPrincipal, ManagedPolicy, Policy, PolicyDocument, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
@@ -16,7 +17,8 @@ const util = require("util");
 export interface ApprovalWorkflowProps {
     dpmStateMachineArn?:string,
     dpmStateMachineRoleArn?: string,
-    centralEventBusArn: string
+    centralEventBusArn: string,
+    httpApi: HttpApi
 }
 
 export class ApprovalWorkflow extends Construct {
@@ -30,7 +32,8 @@ export class ApprovalWorkflow extends Construct {
     readonly stateMachine: StateMachine;
     readonly centralApprovalEventBus: EventBus;
     readonly approvalBaseUrl: string;
-    readonly httpApi: HttpApi;
+
+    readonly productShareMappingTable: Table
 
     constructor(scope: Construct, id: string, props:ApprovalWorkflowProps) {
         super(scope, id);
@@ -116,6 +119,18 @@ export class ApprovalWorkflow extends Construct {
             }
         ])
 
+        this.productShareMappingTable = new Table(this, "ProductShareMappingTable", {
+            partitionKey: {
+                name: "domainId",
+                type: AttributeType.STRING
+            },
+            sortKey: {
+                name: "resourceMapping",
+                type: AttributeType.STRING
+            },
+            billingMode: BillingMode.PAY_PER_REQUEST
+        })
+
         this.workflowLambdaShareCatalogItemRole = new Role(this, "WorkflowLambdaShareCatalogItemRole", {
             assumedBy: new ServicePrincipal("lambda.amazonaws.com"),
             managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole"), ManagedPolicy.fromAwsManagedPolicyName("AWSLakeFormationCrossAccountManager")],
@@ -129,6 +144,13 @@ export class ApprovalWorkflow extends Construct {
                             "glue:GetDatabase"
                         ],
                         resources: ["*"]
+                    }),
+                    new PolicyStatement({
+                        effect: Effect.ALLOW,
+                        actions: [
+                            "dynamodb:PutItem"
+                        ],
+                        resources: [this.productShareMappingTable.tableArn]
                     })
                 ]
             })}
@@ -197,24 +219,14 @@ export class ApprovalWorkflow extends Construct {
             role: this.workflowLambdaSMApproverRole
         });
 
-        const httpApi = new HttpApi(this, "DataLakeWorkflowAPIGW", {
-            corsPreflight: {
-                allowOrigins: ["*"],
-                allowHeaders: ["Authorization", "Content-Type"],
-                allowMethods: [
-                    CorsHttpMethod.ANY
-                ],
-                maxAge: Duration.days(1)
-            }
-        });
-
-        httpApi.addRoutes({
+        props.httpApi.addRoutes({
             path: '/workflow/update-state',
             methods: [HttpMethod.GET],
-            integration: new HttpLambdaIntegration("ApprovalStateIntegration", workflowActivityApprover)
+            integration: new HttpLambdaIntegration("ApprovalStateIntegration", workflowActivityApprover),
+            authorizer: new HttpNoneAuthorizer()
         });
 
-        NagSuppressions.addResourceSuppressions(httpApi, [
+        NagSuppressions.addResourceSuppressions(props.httpApi, [
             {
                 id: "AwsSolutions-APIG1",
                 reason: "API is only used for access approvals."
@@ -244,13 +256,12 @@ export class ApprovalWorkflow extends Construct {
             code: Code.fromAsset(__dirname+"/resources/lambda/WorkflowSendApprovalNotification"),
             role: this.workflowLambdaSendApprovalEmailRole,
             environment: {
-                "API_GATEWAY_BASE_URL": httpApi.apiEndpoint+"/workflow",
+                "API_GATEWAY_BASE_URL": props.httpApi.apiEndpoint+"/workflow",
                 "CENTRAL_APPROVAL_BUS_NAME": centralApprovalEventBus.eventBusName
             }
         });
 
-        this.approvalBaseUrl = httpApi.apiEndpoint+"/workflow";
-        this.httpApi = httpApi;
+        this.approvalBaseUrl = props.httpApi.apiEndpoint+"/workflow";
 
         const workflowGetTableDetails = new Function(this, "WorkflowGetTableDetails", {
             runtime: Runtime.NODEJS_16_X,
@@ -263,7 +274,10 @@ export class ApprovalWorkflow extends Construct {
             runtime: Runtime.NODEJS_16_X,
             handler: 'index.handler',
             code: Code.fromAsset(__dirname+"/resources/lambda/WorkflowShareCatalogItem"),
-            role: this.workflowLambdaShareCatalogItemRole
+            role: this.workflowLambdaShareCatalogItemRole,
+            environment: {
+                MAPPING_TABLE_NAME: this.productShareMappingTable.tableName
+            }
         });
 
         const sfnDeriveBaseDbName = new LambdaInvoke(this, "DeriveBaseDbName", {

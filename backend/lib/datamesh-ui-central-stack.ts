@@ -70,6 +70,7 @@ export class DataMeshUICentralStack extends Stack {
         const centralOpensearchVpcCidrRange =
             this.node.tryGetContext("centralOpensearchVpcCidrRange") ||
             "10.37.0.0/16";
+        const dataMeshUIAuth = new DataMeshUIAuth(this, "DataMeshUIAuth");
 
         const approvalWorkflow = new ApprovalWorkflow(
             this,
@@ -78,12 +79,10 @@ export class DataMeshUICentralStack extends Stack {
                 centralEventBusArn: centralEventBusArn.valueAsString,
                 dpmStateMachineArn: centralStateMachineArn.valueAsString,
                 dpmStateMachineRoleArn: centralLfAdminRoleArn.valueAsString,
+                httpApi: dataMeshUIAuth.httpApi
             }
         );
 
-        const dataMeshUIAuth = new DataMeshUIAuth(this, "DataMeshUIAuth", {
-            httpApi: approvalWorkflow.httpApi
-        });
 
         // const dataQuality = new DataQualityCentralAccount(
         //     this,
@@ -121,26 +120,24 @@ export class DataMeshUICentralStack extends Stack {
             userPool: dataMeshUIAuth.userPool,
             identityPool: dataMeshUIAuth.identityPool,
             tbacSharingWorkflow: tbacSharingWorkflow.tbacSharingWorkflow,
-            workflowApiUrl: approvalWorkflow.httpApi.apiEndpoint,
-            httpApi: approvalWorkflow.httpApi,
-            httpiApiUserPoolAuthorizer: dataMeshUIAuth.httpApiUserPoolAuthorizer,
+            workflowApiUrl: dataMeshUIAuth.httpApi.apiEndpoint,
+            httpApi: dataMeshUIAuth.httpApi,
             centralEventBusArn: centralEventBusArn.valueAsString,
-            centralEventHash: centralEventHash.valueAsString
+            centralEventHash: centralEventHash.valueAsString,
+            productShareMappingTable: approvalWorkflow.productShareMappingTable
         });
 
         new DataMeshUILFTagPermissions(this, "LFTagPermissionManagement", {
             rolesToGrant: [
                 dataMeshUIAuth.identityPool.authenticatedRole.roleArn
             ],
-            httpApi: approvalWorkflow.httpApi,
-            httpiApiUserPoolAuthorizer: dataMeshUIAuth.httpApiUserPoolAuthorizer
+            httpApi: dataMeshUIAuth.httpApi
         })
 
         new DataDomainManagement(this, "DataDomainManagement", {
             centralWorkflowRole: Role.fromRoleArn(this, "CentralWorkflowRole", centralLfAdminRoleArn.valueAsString),
             uiAuthenticatedRole: dataMeshUIAuth.identityPool.authenticatedRole,
-            httpApi: approvalWorkflow.httpApi,
-            httpiApiUserPoolAuthorizer: dataMeshUIAuth.httpApiUserPoolAuthorizer,
+            httpApi: dataMeshUIAuth.httpApi,
             centralEventBusArn: centralEventBusArn.valueAsString,
             adjustGlueResourcePolicyFunction: tbacSharingWorkflow.adjustGlueResourcePolicyFunction,
             userDomainMappingTable: dataMeshUI.userDomainMappingTable
@@ -152,8 +149,7 @@ export class DataMeshUICentralStack extends Stack {
             registrationWorkflow: registrationStateMachine,
             nracApprovalWorkflow: approvalWorkflow.stateMachine,
             tbacApprovalWorkflow: tbacSharingWorkflow.tbacSharingWorkflow,
-            httpApi: approvalWorkflow.httpApi,
-            httpiApiUserPoolAuthorizer: dataMeshUIAuth.httpApiUserPoolAuthorizer,
+            httpApi: dataMeshUIAuth.httpApi,
             userMappingTable: dataMeshUI.userDomainMappingTable
         })
     }

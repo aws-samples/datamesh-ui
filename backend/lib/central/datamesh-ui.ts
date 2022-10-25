@@ -28,9 +28,9 @@ export interface DataMeshUIProps {
     dpmStateMachineArn?: string
     dpmStateMachineRoleArn?: string
     httpApi: HttpApi
-    httpiApiUserPoolAuthorizer: HttpUserPoolAuthorizer
     centralEventBusArn: string
     centralEventHash: string
+    productShareMappingTable: Table
 }
 
 export class DataMeshUI extends Construct {
@@ -164,8 +164,7 @@ export class DataMeshUI extends Construct {
         props.httpApi.addRoutes({
             path: "/data-products/validate",
             methods: [HttpMethod.POST],
-            integration: new HttpLambdaIntegration("ValidateProductPathIntegration", validateProductPathFunction),
-            authorizer: props.httpiApiUserPoolAuthorizer
+            integration: new HttpLambdaIntegration("ValidateProductPathIntegration", validateProductPathFunction)
         })
 
 
@@ -311,8 +310,7 @@ export class DataMeshUI extends Construct {
             props.httpApi.addRoutes({
                 path: "/data-products/latest-state",
                 methods: [HttpMethod.GET],
-                integration: new HttpLambdaIntegration("getCrawlerStateIntegration", getCrawlerStateFunction),
-                authorizer: props.httpiApiUserPoolAuthorizer
+                integration: new HttpLambdaIntegration("getCrawlerStateIntegration", getCrawlerStateFunction)
             })
 
             const getEventSecretRole = new Role(this, "GetEventSecretRole", {
@@ -345,8 +343,60 @@ export class DataMeshUI extends Construct {
             props.httpApi.addRoutes({
                 path: "/event/details",
                 methods: [HttpMethod.GET],
-                integration: new HttpLambdaIntegration("getEventSecretIntegration", getEventSecretFunction),
-                authorizer: props.httpiApiUserPoolAuthorizer
+                integration: new HttpLambdaIntegration("getEventSecretIntegration", getEventSecretFunction)
+            })
+
+            const productShareMappingAccessRole = new Role(this, "ProductShareMappingAccessRole", {
+                assumedBy: new ServicePrincipal("lambda.amazonaws.com"),
+                managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole")],
+                inlinePolicies: {inline0: new PolicyDocument({
+                    statements: [
+                        new PolicyStatement({
+                            effect: Effect.ALLOW,
+                            actions: [
+                                "dynamodb:GetItem",
+                                "dynamodb:Query"
+                            ],
+                            resources: [props.productShareMappingTable.tableArn, this.userDomainMappingTable.tableArn]
+                        })
+                    ]
+                })}
+            });
+    
+            const getListOfConsumersFunction = new Function(this, "GetListOfConsumers", {
+                runtime: Runtime.NODEJS_16_X,
+                role: productShareMappingAccessRole,
+                handler: "index.handler",
+                timeout: Duration.seconds(30),
+                code: Code.fromAsset(__dirname+"/resources/lambda/GetListOfConsumers"),
+                environment: {
+                    MAPPING_TABLE_NAME: props.productShareMappingTable.tableName,
+                    USER_MAPPING_TABLE_NAME: this.userDomainMappingTable.tableName
+                }
+            }) 
+
+            props.httpApi.addRoutes({
+                path: "/data-products/list-of-consumers",
+                methods: [HttpMethod.GET],
+                integration: new HttpLambdaIntegration("getListOfConsumersIntegration", getListOfConsumersFunction)
+            })
+
+            const getListOfSharedFunction = new Function(this, "GetListOfShared", {
+                runtime: Runtime.NODEJS_16_X,
+                role: productShareMappingAccessRole,
+                handler: "index.handler",
+                timeout: Duration.seconds(30),
+                code: Code.fromAsset(__dirname+"/resources/lambda/GetListOfShared"),
+                environment: {
+                    MAPPING_TABLE_NAME: props.productShareMappingTable.tableName,
+                    USER_MAPPING_TABLE_NAME: this.userDomainMappingTable.tableName
+                }
+            }) 
+
+            props.httpApi.addRoutes({
+                path: "/data-products/list-of-shared",
+                methods: [HttpMethod.GET],
+                integration: new HttpLambdaIntegration("getListOfSharedIntegration", getListOfSharedFunction)
             })
 
             // uiPayload.InfraStack.RegisterProductTable = {

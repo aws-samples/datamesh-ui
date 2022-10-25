@@ -67,19 +67,19 @@ function RequestAccessComponent({dbName, tableName, successHandler}) {
 
     useEffect(() => {
         async function run() {
-            const {domainIds} = await DataDomain.getOwnedDomainIds()
+            const {sharedAccountIds} = await DataDomain.getListOfShared(dbName, tableName)
         
-            if (domainIds && domainIds.length > 0) {
-                const formatted = []
-                for (const domainId of domainIds) {
-                    formatted.push({
-                        label: domainId,
-                        value: domainId
-                    })
-                }
+            if (sharedAccountIds && sharedAccountIds.length > 0) {
+                const formatted = sharedAccountIds.map((row) => {
+                    return {
+                        label: row.accountId,
+                        value: row.accountId,
+                        description: row.shared ? "Shared" : null,
+                        disabled: row.shared
+                    }
+                })
 
                 setOwnedDomainids(formatted)
-                setTargetAccount(formatted[0])
             }
 
         }
