@@ -67,7 +67,7 @@ function RequestAccessComponent({dbName, tableName, successHandler}) {
 
     const renderSuccess = () => {
         if (success) {
-            return (<StatusIndicator>Request Sent Successfully</StatusIndicator>)
+            return (<StatusIndicator>Product shared successfully. You can now query the product in your data domain.</StatusIndicator>)
         }
 
         return;
