@@ -56,7 +56,7 @@ function RequestAccessComponent({dbName, tableName, successHandler}) {
                 await AuthWorkflow.exec(SM_ARN, smExecutionParams, targetAccount.value)
 
                 setTargetAccount(null);
-                setTimeout(backgroundCheckOfPendingSubmission, 1000)
+                setTimerHandler(setTimeout(backgroundCheckOfPendingSubmission, 1000))
             } catch (e) {
                 setError("An unexpected error has occurred: "+e);
             }
