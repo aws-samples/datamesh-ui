@@ -21,10 +21,12 @@ import {Amplify, Auth } from "aws-amplify";
 import { Button, Container, Form, FormField, Header, Input, Select, Spinner, StatusIndicator } from "@cloudscape-design/components";
 import DataDomain from "../Backend/DataDomain";
 import AuthWorkflow from "../Backend/AuthWorkflow";
+import { v4 as uuidv4 } from 'uuid';
 const cfnOutput = require("../cfn-output.json");
 
 const config = Amplify.configure();
 const SM_ARN = cfnOutput.InfraStack.StateMachineArn;
+
 
 function RequestAccessComponent({dbName, tableName, successHandler}) {
     const [targetAccount, setTargetAccount] = useState(null);
@@ -36,7 +38,7 @@ function RequestAccessComponent({dbName, tableName, successHandler}) {
     const [timerHandler, setTimerHandler] = useState(null)
 
     const backgroundCheckOfPendingSubmission = () => {
-        setForceReload(forceReload + 1)
+        setForceReload(uuidv4())
     }
 
     const submitRequestAccess = async() => {
@@ -56,7 +58,7 @@ function RequestAccessComponent({dbName, tableName, successHandler}) {
                 await AuthWorkflow.exec(SM_ARN, smExecutionParams, targetAccount.value)
 
                 setTargetAccount(null);
-                setTimerHandler(setTimeout(backgroundCheckOfPendingSubmission, 1000))
+                setTimerHandler(setInterval(backgroundCheckOfPendingSubmission, 1000))
             } catch (e) {
                 setError("An unexpected error has occurred: "+e);
             }
@@ -83,7 +85,7 @@ function RequestAccessComponent({dbName, tableName, successHandler}) {
                         setPendingSubmission(null)
 
                         if (timerHandler) {
-                            clearTimeout(timerHandler)
+                            clearInterval(timerHandler)
                             setTimerHandler(null)
                         }
 
