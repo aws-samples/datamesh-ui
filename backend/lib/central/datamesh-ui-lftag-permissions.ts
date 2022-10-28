@@ -2,7 +2,7 @@ import { HttpApi, HttpMethod } from "@aws-cdk/aws-apigatewayv2-alpha";
 import { HttpLambdaIntegration } from "@aws-cdk/aws-apigatewayv2-integrations-alpha";
 import { HttpUserPoolAuthorizer } from "@aws-cdk/aws-apigatewayv2-authorizers-alpha";
 import { CustomResource } from "aws-cdk-lib";
-import { Effect, ManagedPolicy, PolicyDocument, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
+import { Effect, IRole, ManagedPolicy, PolicyDocument, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
 import { CfnDataLakeSettings } from "aws-cdk-lib/aws-lakeformation";
 import { Code, Function, Runtime } from "aws-cdk-lib/aws-lambda";
 import { Provider } from "aws-cdk-lib/custom-resources";
@@ -14,6 +14,8 @@ export interface DataMeshUILFTagPermissionsProps {
 }
 
 export default class DataMeshUILFTagPermissions extends Construct {
+    readonly crDataMeshUITagAccessRole: IRole
+
     constructor(scope: Construct, id: string, props: DataMeshUILFTagPermissionsProps) {
         super(scope, id);
 
@@ -37,13 +39,15 @@ export default class DataMeshUILFTagPermissions extends Construct {
             })}
         });
 
-        new CfnDataLakeSettings(this, "LakeFormationSettings", {
-            admins: [
-                {
-                    dataLakePrincipalIdentifier: crDataMeshUITagAccessRole.roleArn
-                }
-            ]
-        });
+        // new CfnDataLakeSettings(this, "LakeFormationSettings", {
+        //     admins: [
+        //         {
+        //             dataLakePrincipalIdentifier: crDataMeshUITagAccessRole.roleArn
+        //         }
+        //     ]
+        // });
+
+        this.crDataMeshUITagAccessRole = crDataMeshUITagAccessRole
 
         const crDataMeshUITagAccessFunction = new Function(this, "CRDataMeshUITagAccessFunction", {
             runtime: Runtime.NODEJS_16_X,

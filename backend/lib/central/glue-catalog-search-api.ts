@@ -17,6 +17,7 @@ import {
     ServicePrincipal,
     ManagedPolicy,
     PolicyDocument,
+    IRole,
 } from "aws-cdk-lib/aws-iam";
 import { Domain, EngineVersion } from "aws-cdk-lib/aws-opensearchservice";
 import { Rule } from "aws-cdk-lib/aws-events";
@@ -71,6 +72,9 @@ function isVpcProps(
 
 export class GlueCatalogSearchApi extends Construct {
     readonly osEndpoint: string;
+    readonly indexAllLambdaRole: IRole
+    readonly indexDeltaLambdaRole: IRole
+
     constructor(
         scope: Construct,
         id: string,
@@ -400,32 +404,35 @@ export class GlueCatalogSearchApi extends Construct {
         });
 
         // Watch for the CDK issue 19492: renaming of IAM roles breaks the LF permissions https://github.com/aws/aws-cdk/issues/19492
-        const indexDeltaLFSettings = new CfnDataLakeSettings(
-            this,
-            "indexDeltaLFAdmin",
-            {
-                admins: [
-                    {
-                        dataLakePrincipalIdentifier:
-                            indexDeltaLambdaRole.roleArn,
-                    },
-                ],
-            }
-        );
-        indexDeltaLFSettings.node.addDependency(indexDeltaLambdaRole);
+        // const indexDeltaLFSettings = new CfnDataLakeSettings(
+        //     this,
+        //     "indexDeltaLFAdmin",
+        //     {
+        //         admins: [
+        //             {
+        //                 dataLakePrincipalIdentifier:
+        //                     indexDeltaLambdaRole.roleArn,
+        //             },
+        //         ],
+        //     }
+        // );
+        // indexDeltaLFSettings.node.addDependency(indexDeltaLambdaRole);
+        this.indexDeltaLambdaRole = indexDeltaLambdaRole
 
-        const indexAllLFSettings = new CfnDataLakeSettings(
-            this,
-            "indexAllLFAdmin",
-            {
-                admins: [
-                    {
-                        dataLakePrincipalIdentifier: indexAllLambdaRole.roleArn,
-                    },
-                ],
-            }
-        );
-        indexAllLFSettings.node.addDependency(indexAllLambdaRole);
+        // const indexAllLFSettings = new CfnDataLakeSettings(
+        //     this,
+        //     "indexAllLFAdmin",
+        //     {
+        //         admins: [
+        //             {
+        //                 dataLakePrincipalIdentifier: indexAllLambdaRole.roleArn,
+        //             },
+        //         ],
+        //     }
+        // );
+        // indexAllLFSettings.node.addDependency(indexAllLambdaRole);
+
+        this.indexAllLambdaRole = indexAllLambdaRole
 
         const indexAllLambdaTrigger = new custom_resources.AwsCustomResource(
             this,
@@ -468,8 +475,7 @@ export class GlueCatalogSearchApi extends Construct {
             }
         );
         indexAllLambdaTrigger.node.addDependency(
-            indexAllLambda,
-            indexAllLFSettings
+            indexAllLambda
         );
 
         NagSuppressions.addResourceSuppressions(

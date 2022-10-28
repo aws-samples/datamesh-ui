@@ -20,6 +20,8 @@ export interface DataDomainManagementProps {
 }
 
 export class DataDomainManagement extends Construct {
+    readonly registerDataDomainRole: IRole
+
     constructor(scope: Construct, id: string, props: DataDomainManagementProps) {
         super(scope, id)
 
@@ -101,13 +103,15 @@ export class DataDomainManagement extends Construct {
             })}
         });
 
-        new CfnDataLakeSettings(this, "LakeFormationSettings", {
-            admins: [
-                {
-                    dataLakePrincipalIdentifier: registerDataDomainRole.roleArn
-                }
-            ]
-        });
+        this.registerDataDomainRole = registerDataDomainRole
+
+        // new CfnDataLakeSettings(this, "LakeFormationSettings", {
+        //     admins: [
+        //         {
+        //             dataLakePrincipalIdentifier: registerDataDomainRole.roleArn
+        //         }
+        //     ]
+        // });
 
         const registerDataDomainFunction = new Function(this, "RegisterDataDomainFunction", {
             runtime: Runtime.NODEJS_16_X,

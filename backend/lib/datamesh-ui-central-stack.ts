@@ -1,5 +1,6 @@
 import { Aws, CfnParameter, Stack } from "aws-cdk-lib";
 import { Role } from "aws-cdk-lib/aws-iam";
+import { CfnDataLakeSettings } from "aws-cdk-lib/aws-lakeformation";
 import { StateMachine } from "aws-cdk-lib/aws-stepfunctions";
 import { Construct } from "constructs";
 import { ApprovalWorkflow } from "./central/approval-workflow";
@@ -127,14 +128,14 @@ export class DataMeshUICentralStack extends Stack {
             productShareMappingTable: approvalWorkflow.productShareMappingTable
         });
 
-        new DataMeshUILFTagPermissions(this, "LFTagPermissionManagement", {
+        const uiLFTagPermissions = new DataMeshUILFTagPermissions(this, "LFTagPermissionManagement", {
             rolesToGrant: [
                 dataMeshUIAuth.identityPool.authenticatedRole.roleArn
             ],
             httpApi: dataMeshUIAuth.httpApi
         })
 
-        new DataDomainManagement(this, "DataDomainManagement", {
+        const dataDomainManagement = new DataDomainManagement(this, "DataDomainManagement", {
             centralWorkflowRole: Role.fromRoleArn(this, "CentralWorkflowRole", centralLfAdminRoleArn.valueAsString),
             uiAuthenticatedRole: dataMeshUIAuth.identityPool.authenticatedRole,
             httpApi: dataMeshUIAuth.httpApi,
@@ -151,6 +152,29 @@ export class DataMeshUICentralStack extends Stack {
             tbacApprovalWorkflow: tbacSharingWorkflow.tbacSharingWorkflow,
             httpApi: dataMeshUIAuth.httpApi,
             userMappingTable: dataMeshUI.userDomainMappingTable
+        })
+
+        new CfnDataLakeSettings(this, "DataMeshUILFAdmins", {
+            admins: [
+                {
+                    dataLakePrincipalIdentifier: dataDomainManagement.registerDataDomainRole.roleArn
+                },
+                {
+                    dataLakePrincipalIdentifier: dataMeshUIAuth.crDataDomainUIAccessRole.roleArn
+                },
+                {
+                    dataLakePrincipalIdentifier: uiLFTagPermissions.crDataMeshUITagAccessRole.roleArn
+                },
+                {
+                    dataLakePrincipalIdentifier: searchCatalog.indexAllLambdaRole.roleArn
+                },
+                {
+                    dataLakePrincipalIdentifier: searchCatalog.indexDeltaLambdaRole.roleArn
+                },
+                {
+                    dataLakePrincipalIdentifier: tbacSharingWorkflow.lfTagGrantPermissionsRole.roleArn
+                }
+            ]
         })
     }
 }

@@ -191,12 +191,12 @@ export class TbacSharingWorkflow extends Construct {
             ]
         }))
 
-        new CfnDataLakeSettings(this, "LakeFormationSettings", {
-            admins: [
-                {
-                    dataLakePrincipalIdentifier: grantPermissionRole.roleArn
-                }
-            ]
-        });
+        // new CfnDataLakeSettings(this, "LakeFormationSettings", {
+        //     admins: [
+        //         {
+        //             dataLakePrincipalIdentifier: grantPermissionRole.roleArn
+        //         }
+        //     ]
+        // });
     }
 }

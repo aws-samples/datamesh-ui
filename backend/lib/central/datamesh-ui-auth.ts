@@ -5,7 +5,7 @@ import { IdentityPool, UserPoolAuthenticationProvider } from "@aws-cdk/aws-cogni
 import { CfnOutput, CustomResource, Duration, RemovalPolicy } from "aws-cdk-lib";
 import { UserPool, UserPoolClient } from "aws-cdk-lib/aws-cognito";
 import { HttpMethod } from "aws-cdk-lib/aws-events";
-import { ManagedPolicy, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
+import { IRole, ManagedPolicy, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
 import { CfnDataLakeSettings } from "aws-cdk-lib/aws-lakeformation";
 import { Code, Function, Runtime } from "aws-cdk-lib/aws-lambda";
 import { Provider } from "aws-cdk-lib/custom-resources";
@@ -16,6 +16,7 @@ export class DataMeshUIAuth extends Construct {
     readonly userPool: UserPool;
     readonly identityPool: IdentityPool;
     readonly httpApi: HttpApi
+    readonly crDataDomainUIAccessRole: IRole
 
     constructor(scope: Construct, id: string) {
         super(scope, id);
@@ -70,13 +71,15 @@ export class DataMeshUIAuth extends Construct {
             managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole"), ManagedPolicy.fromAwsManagedPolicyName("AWSLakeFormationDataAdmin")],
         });
 
-        new CfnDataLakeSettings(this, "LakeFormationSettings", {
-            admins: [
-                {
-                    dataLakePrincipalIdentifier: crDataDomainUIAccessRole.roleArn
-                }
-            ]
-        });
+        // new CfnDataLakeSettings(this, "LakeFormationSettings", {
+        //     admins: [
+        //         {
+        //             dataLakePrincipalIdentifier: crDataDomainUIAccessRole.roleArn
+        //         }
+        //     ]
+        // });
+
+        this.crDataDomainUIAccessRole = crDataDomainUIAccessRole
 
         const crDataDomainUIAccessFunction = new Function(this, "CRDataDomainUIAccessFunction", {
             runtime: Runtime.NODEJS_16_X,
