@@ -47,7 +47,7 @@ exports.handler = async(event) => {
             const getItemPromises = userAccountIds.map((userAccountId) => {
                 return ddbClient.getItem({
                     TableName: process.env.MAPPING_TABLE_NAME,
-                    ConsistentRead: false,
+                    ConsistentRead: true,
                     Key: {
                         "domainId": {
                             "S": domainId

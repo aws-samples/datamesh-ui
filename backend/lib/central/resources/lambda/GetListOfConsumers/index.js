@@ -40,7 +40,7 @@ exports.handler = async(event) => {
                 const queryResp = (await ddbClient.query({
                     TableName: process.env.MAPPING_TABLE_NAME,
                     KeyConditionExpression: "domainId = :domainId and begins_with(resourceMapping, :resourceMapping)",
-                    ConsistentRead: false,
+                    ConsistentRead: true,
                     ExpressionAttributeValues: {
                         ":domainId": {
                             "S": domainId

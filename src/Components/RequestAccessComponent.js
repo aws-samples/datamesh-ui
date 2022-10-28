@@ -18,7 +18,7 @@
 import { SFNClient, StartExecutionCommand } from "@aws-sdk/client-sfn";
 import { useEffect, useState } from "react";
 import {Amplify, Auth } from "aws-amplify";
-import { Button, Container, Form, FormField, Header, Input, Select, StatusIndicator } from "@cloudscape-design/components";
+import { Button, Container, Form, FormField, Header, Input, Select, Spinner, StatusIndicator } from "@cloudscape-design/components";
 import DataDomain from "../Backend/DataDomain";
 import AuthWorkflow from "../Backend/AuthWorkflow";
 const cfnOutput = require("../cfn-output.json");
@@ -31,10 +31,18 @@ function RequestAccessComponent({dbName, tableName, successHandler}) {
     const [error, setError] = useState();
     const [success, setSuccess] = useState(false)
     const [ownedDomainIds, setOwnedDomainids] = useState([])
+    const [forceReload, setForceReload] = useState(1)
+    const [pendingSubmission, setPendingSubmission] = useState(null)
+    const [timerHandler, setTimerHandler] = useState(null)
+
+    const backgroundCheckOfPendingSubmission = () => {
+        setForceReload(forceReload + 1)
+    }
 
     const submitRequestAccess = async() => {
         if (targetAccount) {
             try {
+                setPendingSubmission(targetAccount.value)
                 const smExecutionParams = JSON.stringify({
                     source: {
                         database: dbName,
@@ -48,7 +56,7 @@ function RequestAccessComponent({dbName, tableName, successHandler}) {
                 await AuthWorkflow.exec(SM_ARN, smExecutionParams, targetAccount.value)
 
                 setTargetAccount(null);
-                setSuccess(true)
+                setTimeout(backgroundCheckOfPendingSubmission, 1000)
             } catch (e) {
                 setError("An unexpected error has occurred: "+e);
             }
@@ -71,6 +79,17 @@ function RequestAccessComponent({dbName, tableName, successHandler}) {
         
             if (sharedAccountIds && sharedAccountIds.length > 0) {
                 const formatted = sharedAccountIds.map((row) => {
+                    if (pendingSubmission && pendingSubmission === row.accountId && row.shared) {
+                        setPendingSubmission(null)
+
+                        if (timerHandler) {
+                            clearTimeout(timerHandler)
+                            setTimerHandler(null)
+                        }
+
+                        setSuccess(true)
+                    }
+
                     return {
                         label: row.accountId,
                         value: row.accountId,
@@ -85,10 +104,22 @@ function RequestAccessComponent({dbName, tableName, successHandler}) {
         }
 
         run()
-    }, [])
+    }, [forceReload])
+
+    const renderSubmitRequestAccess = () => {
+        if (pendingSubmission) {
+            return (
+                <Button variant="primary" disabled="true"><Spinner /> Submit</Button>
+            )
+        } else {
+            return (
+                <Button variant="primary" onClick={submitRequestAccess}>Submit</Button>
+            )
+        }
+    }
 
     return (
-        <Form actions={<Button variant="primary" onClick={submitRequestAccess}>Submit</Button>} errorText={error}>
+        <Form actions={renderSubmitRequestAccess()} errorText={error}>
             <Container header={<Header variant="h3">Request Access</Header>}>                                
                 <FormField label="Target Account ID">
                     <Select selectedOption={targetAccount} options={ownedDomainIds} onChange={({detail}) => setTargetAccount(detail.selectedOption)} />
