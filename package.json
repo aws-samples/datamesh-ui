@@ -14,7 +14,7 @@
     "@aws-sdk/client-s3": "^3.170.0",
     "@aws-sdk/client-sfn": "^3.25.0",
     "@aws-sdk/client-sts": "^3.99.0",
-    "@cloudscape-design/components": "^3.0.60",
+    "@cloudscape-design/components": "^3.0.99",
     "@cloudscape-design/global-styles": "^1.0.1",
     "@testing-library/jest-dom": "^5.11.4",
     "@testing-library/react": "^11.1.0",
