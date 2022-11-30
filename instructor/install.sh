@@ -1,0 +1,147 @@
+#!/usr/bin/env bash
+npm install --location=global aws-cdk-lib@2.35.0
+npm install --location=global yarn
+npm install --location=global @aws-amplify/cli
+sudo yum -y install jq
+aws lakeformation get-data-lake-settings --profile central | jq '.DataLakeSettings|.CreateDatabaseDefaultPermissions=[]|.CreateTableDefaultPermissions=[]|.Parameters+={CROSS_ACCOUNT_VERSION:"2"}' > dl_settings_central.json
+aws lakeformation put-data-lake-settings --data-lake-settings file://dl_settings_central.json --profile central
+
+aws lakeformation get-data-lake-settings --profile customer | jq '.DataLakeSettings|.CreateDatabaseDefaultPermissions=[]|.CreateTableDefaultPermissions=[]|.Parameters+={CROSS_ACCOUNT_VERSION:"2"}' > dl_settings_customer.json
+aws lakeformation put-data-lake-settings --data-lake-settings file://dl_settings_customer.json --profile customer
+
+mkdir data-mesh-cdk && cd "$_"
+cdk init --language=python && source .venv/bin/activate
+pip install --upgrade pip
+
+cat <<EOT > requirements.txt
+aws-cdk-lib==2.35.0
+constructs>=10.0.0,<11.0.0
+aws_analytics_reference_architecture==2.4.4
+EOT
+
+pip install -r requirements.txt
+mkdir stacks && touch stacks/central.py stacks/customer.py
+cat cdk.json | jq --arg centralAccountId "$CENTRAL_ACC_ID" --arg customerAccountId "$CUSTOMER_ACC_ID" '.context += {"central_account_id": $centralAccountId, "customer_account_id": $customerAccountId}' > cdk_temp.json
+rm -f cdk.json
+mv cdk_temp.json cdk.json
+
+cat <<EOT > stacks/central.py
+from aws_cdk import Stack
+from constructs import Construct
+
+import aws_analytics_reference_architecture as ara
+
+class CentralGovernanceStack(Stack):
+    """This stack provisions Central Governance account for data mesh,
+    and creates two Lake Formation tags that will be shared with each data domain."""
+    
+    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
+        super().__init__(scope, construct_id, **kwargs)
+        
+        # Define LF tags that will be shared with each Data Domain
+        tags = [
+            ara.LfTag(key="channel", values=["b2b", "b2c"]),
+            ara.LfTag(key="confidentiality", values=["sensitive", "non-sensitive"]),
+        ]
+        
+        self.central_gov = ara.CentralGovernance(self, "Mesh", lf_tags=tags)
+
+EOT
+
+cat <<EOT > stacks/customer.py
+from aws_cdk import Stack
+from constructs import Construct
+
+import aws_analytics_reference_architecture as ara
+
+
+class CustomerDataDomain(Stack):
+    """This stack provisions a Data Domain account for Customer LOB that you will use in this workshop 
+    to act as both Producer and Consumer in data mesh context. """
+
+    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
+        super().__init__(scope, construct_id, **kwargs)
+
+        CENTRAL_ACC_ID = self.node.try_get_context("central_account_id")
+        DATA_DOMAIN_ACC_ID = self.node.try_get_context("customer_account_id")
+
+        domain_name = f"Customer-{DATA_DOMAIN_ACC_ID}"
+
+        self.data_domain = ara.DataDomain(
+            self,
+            "DataDomain",
+            domain_name=domain_name,
+            central_account_id=CENTRAL_ACC_ID,
+            crawler_workflow=True,
+        )
+EOT
+
+cat <<EOT > app.py
+import os
+import aws_cdk as cdk
+
+from stacks.central import CentralGovernanceStack
+from stacks.customer import CustomerDataDomain
+
+app = cdk.App()
+
+CENTRAL_ACC_ID = app.node.try_get_context("central_account_id")
+CUSTOMER_ACC_ID = app.node.try_get_context("customer_account_id")
+REGION = os.environ.get("AWS_REGION") or "us-west-2"
+
+CentralGovernanceStack(
+  app, "Central", env=cdk.Environment(account=CENTRAL_ACC_ID, region=REGION)
+)
+
+CustomerDataDomain(
+  app, "Customer", env=cdk.Environment(account=CUSTOMER_ACC_ID, region=REGION)
+)
+
+app.synth()
+
+EOT
+
+cdk bootstrap aws://$CENTRAL_ACC_ID/us-west-2 --profile central
+cdk bootstrap aws://$CUSTOMER_ACC_ID/us-west-2 --profile customer
+cdk deploy --require-approval never Central --profile central
+cdk deploy --require-approval never Customer --profile customer
+
+cd ..
+
+cat <<'EOT' > load_seed_data.sh
+#!/bin/bash
+SOURCE_TABLE="${1}"
+TARGET_BUCKET_NAME="${2}"
+PROFILE="${3}"
+SOURCE_BUCKET="aws-analytics-reference-architecture/datasets/retail/1GB"
+
+echo "Loading ${SOURCE_TABLE} data to ${TARGET_BUCKET_NAME}/data-products/${SOURCE_TABLE}"
+
+FILES="$(aws s3 ls s3://${SOURCE_BUCKET}/${SOURCE_TABLE}/ --request-payer requester --profile ${PROFILE} | awk '{print $4}')"
+for f in ${FILES}
+do
+  echo "Processing ${f}"
+  aws s3api copy-object --copy-source ${SOURCE_BUCKET}/${SOURCE_TABLE}/${f} --bucket ${TARGET_BUCKET_NAME} --key data-products/${SOURCE_TABLE}/${f} --request-payer requester --profile ${PROFILE}
+done
+EOT
+
+chmod +x load_seed_data.sh
+./load_seed_data.sh customer clean-$CUSTOMER_ACC_ID-us-west-2 customer
+./load_seed_data.sh customer-address clean-$CUSTOMER_ACC_ID-us-west-2 customer
+
+
+git clone https://github.com/aws-samples/datamesh-ui -b v1.7.5
+cd datamesh-ui
+export MESHBASELINE_SM_ARN=$(aws stepfunctions list-state-machines --profile central --region us-west-2 | jq -r '.stateMachines | map(select(.stateMachineArn | contains("MeshRegisterDataProduct"))) | .[].stateMachineArn')
+export MESHBASELINE_LF_ADMIN=$(aws stepfunctions describe-state-machine --state-machine-arn=$MESHBASELINE_SM_ARN --profile central --region us-west-2 | jq -r '.roleArn')
+export MESHBASELINE_EVENT_BUS_ARN=$(aws events list-event-buses --profile central --region us-west-2 | jq -r '.EventBuses | map(select(.Name | contains("central-mesh-bus"))) | .[].Arn')
+yarn deploy-central \
+--profile central \
+--parameters centralStateMachineArn=$MESHBASELINE_SM_ARN \
+--parameters centralLfAdminRoleArn=$MESHBASELINE_LF_ADMIN \
+--parameters centralEventBusArn=$MESHBASELINE_EVENT_BUS_ARN \
+--parameters centralOpensearchSize=t3.small.search
+
+yarn deploy-ui
+
+cat src/cfn-output.json | jq -r '.InfraStack.RegistrationToken'
