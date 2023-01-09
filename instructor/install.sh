@@ -9,7 +9,7 @@ aws lakeformation put-data-lake-settings --data-lake-settings file://dl_settings
 aws lakeformation get-data-lake-settings --profile customer | jq '.DataLakeSettings|.CreateDatabaseDefaultPermissions=[]|.CreateTableDefaultPermissions=[]|.Parameters+={CROSS_ACCOUNT_VERSION:"2"}' > dl_settings_customer.json
 aws lakeformation put-data-lake-settings --data-lake-settings file://dl_settings_customer.json --profile customer
 
-mkdir data-mesh-cdk && cd "$_"
+mkdir -p data-mesh-cdk && cd "$_"
 cdk init --language=python && source .venv/bin/activate
 pip install --upgrade pip
 
@@ -20,7 +20,7 @@ aws_analytics_reference_architecture==2.4.4
 EOT
 
 pip install -r requirements.txt
-mkdir stacks && touch stacks/central.py stacks/customer.py
+mkdir -p stacks && touch stacks/central.py stacks/customer.py
 cat cdk.json | jq --arg centralAccountId "$CENTRAL_ACC_ID" --arg customerAccountId "$CUSTOMER_ACC_ID" '.context += {"central_account_id": $centralAccountId, "customer_account_id": $customerAccountId}' > cdk_temp.json
 rm -f cdk.json
 mv cdk_temp.json cdk.json
