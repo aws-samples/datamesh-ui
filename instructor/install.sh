@@ -1,14 +1,31 @@
 #!/usr/bin/env bash
+
+aws --version > /dev/null 2>&1 || { echo &2 "[ERROR] aws is missing. aborting..."; exit 1; }
+npm --version > /dev/null 2>&1 || { echo &2 "[ERROR] npm is missing. aborting..."; exit 1; }
+pip3 --version > /dev/null 2>&1 || { echo &2 "[ERROR] pip3 is missing. aborting..."; exit 1; }
+
+#########################################
+# ### MAKE SURE YOU RUN ON AWS CLI V2 ###
+#########################################
+# curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+# unzip awscliv2.zip
+# sudo ./aws/install -i /usr/bin/aws-cli -b /usr/bin
+
+aws sts get-caller-identity --profile central > /dev/null 2>&1 || { echo &2 "[ERROR] aws profile 'central' is not properly configured. aborting..."; exit 1; }
+aws sts get-caller-identity --profile customer > /dev/null 2>&1 || { echo &2 "[ERROR] aws profile 'customer' is not properly configured. aborting..."; exit 1; }
+
 npm install --location=global aws-cdk-lib@2.35.0
 npm install --location=global yarn
 npm install --location=global @aws-amplify/cli
 sudo yum -y install jq
+sudo yum -y install expect
 aws lakeformation get-data-lake-settings --profile central | jq '.DataLakeSettings|.CreateDatabaseDefaultPermissions=[]|.CreateTableDefaultPermissions=[]|.Parameters+={CROSS_ACCOUNT_VERSION:"2"}' > dl_settings_central.json
 aws lakeformation put-data-lake-settings --data-lake-settings file://dl_settings_central.json --profile central
 
 aws lakeformation get-data-lake-settings --profile customer | jq '.DataLakeSettings|.CreateDatabaseDefaultPermissions=[]|.CreateTableDefaultPermissions=[]|.Parameters+={CROSS_ACCOUNT_VERSION:"2"}' > dl_settings_customer.json
 aws lakeformation put-data-lake-settings --data-lake-settings file://dl_settings_customer.json --profile customer
 
+rm -rf data*
 mkdir -p data-mesh-cdk && cd "$_"
 cdk init --language=python && source .venv/bin/activate
 pip install --upgrade pip
@@ -130,7 +147,7 @@ chmod +x load_seed_data.sh
 ./load_seed_data.sh customer-address clean-$CUSTOMER_ACC_ID-us-west-2 customer
 
 
-git clone https://github.com/aws-samples/datamesh-ui -b v1.7.5
+git clone https://github.com/aws-samples/datamesh-ui
 cd datamesh-ui
 export MESHBASELINE_SM_ARN=$(aws stepfunctions list-state-machines --profile central --region us-west-2 | jq -r '.stateMachines | map(select(.stateMachineArn | contains("MeshRegisterDataProduct"))) | .[].stateMachineArn')
 export MESHBASELINE_LF_ADMIN=$(aws stepfunctions describe-state-machine --state-machine-arn=$MESHBASELINE_SM_ARN --profile central --region us-west-2 | jq -r '.roleArn')
@@ -142,6 +159,15 @@ yarn deploy-central \
 --parameters centralEventBusArn=$MESHBASELINE_EVENT_BUS_ARN \
 --parameters centralOpensearchSize=t3.small.search
 
-yarn deploy-ui
+export AWSCLOUDFORMATIONCONFIG="{\
+\"useProfile\":true,\
+\"profileName\":\"central\"\
+}"
+
+export AMPLIFYPROVIDERS="{\
+\"awscloudformation\":$AWSCLOUDFORMATIONCONFIG\
+}"
+
+yarn deploy-ui-headless
 
 cat src/cfn-output.json | jq -r '.InfraStack.RegistrationToken'
