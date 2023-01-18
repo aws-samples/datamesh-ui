@@ -4,12 +4,9 @@ aws --version > /dev/null 2>&1 || { echo &2 "[ERROR] aws is missing. aborting...
 npm --version > /dev/null 2>&1 || { echo &2 "[ERROR] npm is missing. aborting..."; exit 1; }
 pip3 --version > /dev/null 2>&1 || { echo &2 "[ERROR] pip3 is missing. aborting..."; exit 1; }
 
-#########################################
-# ### MAKE SURE YOU RUN ON AWS CLI V2 ###
-#########################################
-# curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-# unzip awscliv2.zip
-# sudo ./aws/install -i /usr/bin/aws-cli -b /usr/bin
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip
+sudo ./aws/install -i /usr/bin/aws-cli -b /usr/bin
 
 aws sts get-caller-identity --profile central > /dev/null 2>&1 || { echo &2 "[ERROR] aws profile 'central' is not properly configured. aborting..."; exit 1; }
 aws sts get-caller-identity --profile customer > /dev/null 2>&1 || { echo &2 "[ERROR] aws profile 'customer' is not properly configured. aborting..."; exit 1; }
