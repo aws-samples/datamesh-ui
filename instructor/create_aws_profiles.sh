@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Placeholder for environment variables credentials
+# Placeholder for AWS credentials environment variables
 # export AWS_ACCESS_KEY_ID_CENTRAL="TO_BE_REPLACED"
 # export AWS_SECRET_ACCESS_KEY_CENTRAL="TO_BE_REPLACED"
 # export AWS_SESSION_TOKEN_CENTRAL="TO_BE_REPLACED"
