@@ -3,9 +3,11 @@
 npm --version > /dev/null 2>&1 || { echo &2 "[ERROR] npm is missing. aborting..."; exit 1; }
 pip3 --version > /dev/null 2>&1 || { echo &2 "[ERROR] pip3 is missing. aborting..."; exit 1; }
 
-curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-unzip awscliv2.zip
-sudo ./aws/install -i /usr/bin/aws-cli -b /usr/bin
+if [ ! -f "awscliv2.zip" ]; then
+  curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+  unzip awscliv2.zip
+  sudo ./aws/install -i /usr/bin/aws-cli -b /usr/bin
+fi
 
 aws --version > /dev/null 2>&1 || { echo &2 "[ERROR] aws is missing. aborting..."; exit 1; }
 CENTRAL_ACC_ID=$(aws sts get-caller-identity --profile central --query Account) || { echo &2 "[ERROR] aws profile 'central' is not properly configured. aborting..."; exit 1; }
@@ -120,10 +122,10 @@ app.synth()
 
 EOT
 
-cdk bootstrap aws://$CENTRAL_ACC_ID/$AWS_REGION --profile central
-cdk bootstrap aws://$CUSTOMER_ACC_ID/$AWS_REGION --profile customer
-cdk deploy --require-approval never Central --profile central
-cdk deploy --require-approval never Customer --profile customer
+cdk bootstrap aws://${CENTRAL_ACC_ID}/${AWS_REGION} --profile central
+cdk bootstrap aws://${CUSTOMER_ACC_ID}/${AWS_REGION} --profile customer
+cdk deploy Central --require-approval never --profile central
+cdk deploy Customer --require-approval never --profile customer
 
 cd ..
 
@@ -145,8 +147,8 @@ done
 EOT
 
 chmod +x load_seed_data.sh
-./load_seed_data.sh customer clean-$CUSTOMER_ACC_ID-$AWS_REGION customer
-./load_seed_data.sh customer-address clean-$CUSTOMER_ACC_ID-$AWS_REGION customer
+./load_seed_data.sh customer clean-${CUSTOMER_ACC_ID}-${AWS_REGION} customer
+./load_seed_data.sh customer-address clean-${CUSTOMER_ACC_ID}-${AWS_REGION} customer
 
 
 git clone https://github.com/aws-samples/datamesh-ui
