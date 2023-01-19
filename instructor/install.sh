@@ -12,6 +12,7 @@ CENTRAL_ACC_ID=$(aws sts get-caller-identity --profile central --query Account) 
 CENTRAL_ACC_ID=${CENTRAL_ACC_ID//\"/}
 CUSTOMER_ACC_ID=$(aws sts get-caller-identity --profile customer --query Account) || { echo &2 "[ERROR] aws profile 'customer' is not properly configured. aborting..."; exit 1; }
 CUSTOMER_ACC_ID=${CUSTOMER_ACC_ID//\"/}
+AWS_REGION=$(aws configure get region --profile central)
 
 npm install --location=global aws-cdk-lib@2.35.0
 npm install --location=global yarn
@@ -119,8 +120,8 @@ app.synth()
 
 EOT
 
-cdk bootstrap aws://$CENTRAL_ACC_ID/us-west-2 --profile central
-cdk bootstrap aws://$CUSTOMER_ACC_ID/us-west-2 --profile customer
+cdk bootstrap aws://$CENTRAL_ACC_ID/$AWS_REGION --profile central
+cdk bootstrap aws://$CUSTOMER_ACC_ID/$AWS_REGION --profile customer
 cdk deploy --require-approval never Central --profile central
 cdk deploy --require-approval never Customer --profile customer
 
@@ -144,15 +145,15 @@ done
 EOT
 
 chmod +x load_seed_data.sh
-./load_seed_data.sh customer clean-$CUSTOMER_ACC_ID-us-west-2 customer
-./load_seed_data.sh customer-address clean-$CUSTOMER_ACC_ID-us-west-2 customer
+./load_seed_data.sh customer clean-$CUSTOMER_ACC_ID-$AWS_REGION customer
+./load_seed_data.sh customer-address clean-$CUSTOMER_ACC_ID-$AWS_REGION customer
 
 
 git clone https://github.com/aws-samples/datamesh-ui
 cd datamesh-ui
-export MESHBASELINE_SM_ARN=$(aws stepfunctions list-state-machines --profile central --region us-west-2 | jq -r '.stateMachines | map(select(.stateMachineArn | contains("MeshRegisterDataProduct"))) | .[].stateMachineArn')
-export MESHBASELINE_LF_ADMIN=$(aws stepfunctions describe-state-machine --state-machine-arn=$MESHBASELINE_SM_ARN --profile central --region us-west-2 | jq -r '.roleArn')
-export MESHBASELINE_EVENT_BUS_ARN=$(aws events list-event-buses --profile central --region us-west-2 | jq -r '.EventBuses | map(select(.Name | contains("central-mesh-bus"))) | .[].Arn')
+export MESHBASELINE_SM_ARN=$(aws stepfunctions list-state-machines --profile central | jq -r '.stateMachines | map(select(.stateMachineArn | contains("MeshRegisterDataProduct"))) | .[].stateMachineArn')
+export MESHBASELINE_LF_ADMIN=$(aws stepfunctions describe-state-machine --state-machine-arn=$MESHBASELINE_SM_ARN --profile central | jq -r '.roleArn')
+export MESHBASELINE_EVENT_BUS_ARN=$(aws events list-event-buses --profile central | jq -r '.EventBuses | map(select(.Name | contains("central-mesh-bus"))) | .[].Arn')
 yarn deploy-central \
 --profile central \
 --parameters centralStateMachineArn=$MESHBASELINE_SM_ARN \
