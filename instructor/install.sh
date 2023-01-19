@@ -8,8 +8,10 @@ unzip awscliv2.zip
 sudo ./aws/install -i /usr/bin/aws-cli -b /usr/bin
 
 aws --version > /dev/null 2>&1 || { echo &2 "[ERROR] aws is missing. aborting..."; exit 1; }
-aws sts get-caller-identity --profile central > /dev/null 2>&1 || { echo &2 "[ERROR] aws profile 'central' is not properly configured. aborting..."; exit 1; }
-aws sts get-caller-identity --profile customer > /dev/null 2>&1 || { echo &2 "[ERROR] aws profile 'customer' is not properly configured. aborting..."; exit 1; }
+CENTRAL_ACC_ID=$(aws sts get-caller-identity --profile central --query Account)
+CENTRAL_ACC_ID=${CENTRAL_ACC_ID//\"/}
+CUSTOMER_ACC_ID=$(aws sts get-caller-identity --profile customer --query Account)
+CUSTOMER_ACC_ID=${CUSTOMER_ACC_ID//\"/}
 
 npm install --location=global aws-cdk-lib@2.35.0
 npm install --location=global yarn
