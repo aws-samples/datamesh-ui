@@ -1,21 +1,28 @@
 #!/usr/bin/env bash
 
-aws --version > /dev/null 2>&1 || { echo &2 "[ERROR] aws is missing. aborting..."; exit 1; }
 npm --version > /dev/null 2>&1 || { echo &2 "[ERROR] npm is missing. aborting..."; exit 1; }
 pip3 --version > /dev/null 2>&1 || { echo &2 "[ERROR] pip3 is missing. aborting..."; exit 1; }
 
-curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-unzip awscliv2.zip
-sudo ./aws/install -i /usr/bin/aws-cli -b /usr/bin
+if [ ! -f "awscliv2.zip" ]; then
+  curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+  unzip awscliv2.zip
+  sudo ./aws/install -i /usr/bin/aws-cli -b /usr/bin
+fi
 
-aws sts get-caller-identity --profile central > /dev/null 2>&1 || { echo &2 "[ERROR] aws profile 'central' is not properly configured. aborting..."; exit 1; }
-aws sts get-caller-identity --profile customer > /dev/null 2>&1 || { echo &2 "[ERROR] aws profile 'customer' is not properly configured. aborting..."; exit 1; }
+aws --version > /dev/null 2>&1 || { echo &2 "[ERROR] aws is missing. aborting..."; exit 1; }
+CENTRAL_ACC_ID=$(aws sts get-caller-identity --profile central --query Account) || { echo &2 "[ERROR] aws profile 'central' is not properly configured. aborting..."; exit 1; }
+CENTRAL_ACC_ID=${CENTRAL_ACC_ID//\"/}
+CUSTOMER_ACC_ID=$(aws sts get-caller-identity --profile customer --query Account) || { echo &2 "[ERROR] aws profile 'customer' is not properly configured. aborting..."; exit 1; }
+CUSTOMER_ACC_ID=${CUSTOMER_ACC_ID//\"/}
+AWS_REGION=$(aws configure get region --profile central)
 
 npm install --location=global aws-cdk-lib@2.35.0
 npm install --location=global yarn
 npm install --location=global @aws-amplify/cli
+
 sudo yum -y install jq
 sudo yum -y install expect
+
 aws lakeformation get-data-lake-settings --profile central | jq '.DataLakeSettings|.CreateDatabaseDefaultPermissions=[]|.CreateTableDefaultPermissions=[]|.Parameters+={CROSS_ACCOUNT_VERSION:"2"}' > dl_settings_central.json
 aws lakeformation put-data-lake-settings --data-lake-settings file://dl_settings_central.json --profile central
 
@@ -25,7 +32,7 @@ aws lakeformation put-data-lake-settings --data-lake-settings file://dl_settings
 rm -rf data*
 mkdir -p data-mesh-cdk && cd "$_"
 cdk init --language=python && source .venv/bin/activate
-pip install --upgrade pip
+pip3 install --upgrade pip
 
 cat <<EOT > requirements.txt
 aws-cdk-lib==2.35.0
@@ -33,7 +40,7 @@ constructs>=10.0.0,<11.0.0
 aws_analytics_reference_architecture==2.4.4
 EOT
 
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 mkdir -p stacks && touch stacks/central.py stacks/customer.py
 cat cdk.json | jq --arg centralAccountId "$CENTRAL_ACC_ID" --arg customerAccountId "$CUSTOMER_ACC_ID" '.context += {"central_account_id": $centralAccountId, "customer_account_id": $customerAccountId}' > cdk_temp.json
 rm -f cdk.json
@@ -115,10 +122,10 @@ app.synth()
 
 EOT
 
-cdk bootstrap aws://$CENTRAL_ACC_ID/us-west-2 --profile central
-cdk bootstrap aws://$CUSTOMER_ACC_ID/us-west-2 --profile customer
-cdk deploy --require-approval never Central --profile central
-cdk deploy --require-approval never Customer --profile customer
+cdk bootstrap aws://${CENTRAL_ACC_ID}/${AWS_REGION} --profile central
+cdk bootstrap aws://${CUSTOMER_ACC_ID}/${AWS_REGION} --profile customer
+cdk deploy Central --require-approval never --profile central
+cdk deploy Customer --require-approval never --profile customer
 
 cd ..
 
@@ -140,15 +147,15 @@ done
 EOT
 
 chmod +x load_seed_data.sh
-./load_seed_data.sh customer clean-$CUSTOMER_ACC_ID-us-west-2 customer
-./load_seed_data.sh customer-address clean-$CUSTOMER_ACC_ID-us-west-2 customer
+./load_seed_data.sh customer clean-${CUSTOMER_ACC_ID}-${AWS_REGION} customer
+./load_seed_data.sh customer-address clean-${CUSTOMER_ACC_ID}-${AWS_REGION} customer
 
 
 git clone https://github.com/aws-samples/datamesh-ui
 cd datamesh-ui
-export MESHBASELINE_SM_ARN=$(aws stepfunctions list-state-machines --profile central --region us-west-2 | jq -r '.stateMachines | map(select(.stateMachineArn | contains("MeshRegisterDataProduct"))) | .[].stateMachineArn')
-export MESHBASELINE_LF_ADMIN=$(aws stepfunctions describe-state-machine --state-machine-arn=$MESHBASELINE_SM_ARN --profile central --region us-west-2 | jq -r '.roleArn')
-export MESHBASELINE_EVENT_BUS_ARN=$(aws events list-event-buses --profile central --region us-west-2 | jq -r '.EventBuses | map(select(.Name | contains("central-mesh-bus"))) | .[].Arn')
+export MESHBASELINE_SM_ARN=$(aws stepfunctions list-state-machines --profile central | jq -r '.stateMachines | map(select(.stateMachineArn | contains("MeshRegisterDataProduct"))) | .[].stateMachineArn')
+export MESHBASELINE_LF_ADMIN=$(aws stepfunctions describe-state-machine --state-machine-arn=$MESHBASELINE_SM_ARN --profile central | jq -r '.roleArn')
+export MESHBASELINE_EVENT_BUS_ARN=$(aws events list-event-buses --profile central | jq -r '.EventBuses | map(select(.Name | contains("central-mesh-bus"))) | .[].Arn')
 yarn deploy-central \
 --profile central \
 --parameters centralStateMachineArn=$MESHBASELINE_SM_ARN \
