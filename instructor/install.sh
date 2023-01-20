@@ -172,6 +172,6 @@ export AMPLIFYPROVIDERS="{\
 \"awscloudformation\":$AWSCLOUDFORMATIONCONFIG\
 }"
 
-yarn deploy-ui-headless
+yarn deploy-ui s3://datamesh-ui-hosting-${CENTRAL_ACC_ID}-${AWS_REGION}/ --profile central
 
 cat src/cfn-output.json | jq -r '.InfraStack.RegistrationToken'

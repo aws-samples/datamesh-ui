@@ -9,6 +9,7 @@ import { DataQualityCentralAccount } from "./central/data-quality-central-accoun
 import { DataMeshUI } from "./central/datamesh-ui";
 import { DataMeshUIAuth } from "./central/datamesh-ui-auth";
 import { DataMeshUIAuthWorkflow } from "./central/datamesh-ui-auth-workflow";
+import { DataMeshUIHosting } from "./central/datamesh-ui-hosting";
 import DataMeshUILFTagPermissions from "./central/datamesh-ui-lftag-permissions";
 import { GlueCatalogSearchApi } from "./central/glue-catalog-search-api";
 import { TbacSharingWorkflow } from "./central/tbac-sharing-workflow";
@@ -153,6 +154,8 @@ export class DataMeshUICentralStack extends Stack {
             httpApi: dataMeshUIAuth.httpApi,
             userMappingTable: dataMeshUI.userDomainMappingTable
         })
+
+        new DataMeshUIHosting(this, "DataMeshUIHosting")
 
         new CfnDataLakeSettings(this, "DataMeshUILFAdmins", {
             admins: [
