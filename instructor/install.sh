@@ -174,4 +174,7 @@ export AMPLIFYPROVIDERS="{\
 
 yarn deploy-ui s3://datamesh-ui-hosting-${CENTRAL_ACC_ID}-${AWS_REGION}/ --profile central
 
-cat src/cfn-output.json | jq -r '.InfraStack.RegistrationToken'
+export REGISTRATION_TOKEN=$(cat src/cfn-output.json | jq -r '.InfraStack.RegistrationToken')
+export DOMAIN_DISTRIBUTION=$(aws cloudfront list-distributions --profile central | jq -r '.DistributionList.Items[0].DomainName')
+echo https://${DOMAIN_DISTRIBUTION}/?token=${REGISTRATION_TOKEN}
+aws secretsmanager list-secrets --profile=customer | jq -r '.SecretList[0].ARN'
