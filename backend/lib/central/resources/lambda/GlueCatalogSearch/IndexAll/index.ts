@@ -17,7 +17,7 @@ AWS.config.update({ region: awsRegion });
 
 const interceptor = aws4Interceptor({
     region: awsRegion,
-    service: "es",
+    service: "aoss",
 });
 
 axios.interceptors.request.use(interceptor);

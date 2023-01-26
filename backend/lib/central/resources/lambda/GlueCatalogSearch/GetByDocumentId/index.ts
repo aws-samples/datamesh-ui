@@ -8,7 +8,7 @@ const awsRegion = process.env.AWS_REGION;
 
 const interceptor = aws4Interceptor({
     region: awsRegion,
-    service: "es",
+    service: "aoss",
 });
 
 axios.interceptors.request.use(interceptor);
