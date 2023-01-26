@@ -31,6 +31,7 @@ import {
 import { UserPool } from "aws-cdk-lib/aws-cognito";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { NagSuppressions } from "cdk-nag";
+import { CfnAccessPolicy, CfnCollection, CfnSecurityConfig, CfnSecurityPolicy, CfnVpcEndpoint } from "aws-cdk-lib/aws-opensearchserverless";
 
 interface GlueCatalogSearchApiWithCommonProps {
     accountId: string;
@@ -101,18 +102,18 @@ export class GlueCatalogSearchApi extends Construct {
             },
         ]);
 
-        const privateSubnetSelection = [{ subnets: vpc.privateSubnets }];
+        // const privateSubnetSelection = [{ subnets: vpc.privateSubnets }];
         const privateSubnets = vpc.selectSubnets({
-            subnetType: SubnetType.PRIVATE_WITH_NAT,
+            subnetType: SubnetType.PRIVATE_WITH_EGRESS,
         });
 
-        const opensearchServiceLinkedRole = new CfnServiceLinkedRole(
-            this,
-            "OpensearchSLR",
-            {
-                awsServiceName: "es.amazonaws.com",
-            }
-        );
+        // const opensearchServiceLinkedRole = new CfnServiceLinkedRole(
+        //     this,
+        //     "OpensearchSLR",
+        //     {
+        //         awsServiceName: "es.amazonaws.com",
+        //     }
+        // );
 
         const opensearchDomainSecurityGroup = new SecurityGroup(
             this,
@@ -125,59 +126,73 @@ export class GlueCatalogSearchApi extends Construct {
             }
         );
 
-        const opensearchDomain = new Domain(this, "CatalogDomain", {
-            removalPolicy: RemovalPolicy.DESTROY,
-            version: EngineVersion.OPENSEARCH_1_1,
-            enableVersionUpgrade: true,
-            enforceHttps: true,
-            encryptionAtRest: {
-                enabled: true,
-            },
-            nodeToNodeEncryption: true,
-            capacity: {
-                dataNodes: vpc.availabilityZones.length,
-                dataNodeInstanceType: opensearchDataNodeInstanceSize,
-            },
-            vpc,
-            vpcSubnets: privateSubnetSelection,
-            logging: {
-                appLogEnabled: true,
-                slowIndexLogEnabled: true,
-                slowSearchLogEnabled: true,
-            },
-            securityGroups: [opensearchDomainSecurityGroup],
-            zoneAwareness: {
-                enabled: true,
-                availabilityZoneCount: vpc.availabilityZones.length,
-            },
-        });
-
-        NagSuppressions.addResourceSuppressions(
-            opensearchDomain,
-            [
-                {
-                    id: "AwsSolutions-IAM5",
-                    reason: "For logging purposes",
-                },
-                {
-                    id: "AwsSolutions-OS3",
-                    reason: "Not applicable",
-                },
-                {
-                    id: "AwsSolutions-OS4",
-                    reason: "Not applicable",
-                },
-                {
-                    id: "AwsSolutions-OS5",
-                    reason: "Not applicable",
-                },
-            ],
-            true
-        );
-
-        opensearchDomain.node.addDependency(opensearchServiceLinkedRole);
-
         const opensearchIndex = "glue_catalog";
+        const opensearchCollectionName = "datamesh-catalog"
+
+        // const opensearchDomain = new Domain(this, "CatalogDomain", {
+        //     removalPolicy: RemovalPolicy.DESTROY,
+        //     version: EngineVersion.OPENSEARCH_1_1,
+        //     enableVersionUpgrade: true,
+        //     enforceHttps: true,
+        //     encryptionAtRest: {
+        //         enabled: true,
+        //     },
+        //     nodeToNodeEncryption: true,
+        //     capacity: {
+        //         dataNodes: vpc.availabilityZones.length,
+        //         dataNodeInstanceType: opensearchDataNodeInstanceSize,
+        //     },
+        //     vpc,
+        //     vpcSubnets: privateSubnetSelection,
+        //     logging: {
+        //         appLogEnabled: true,
+        //         slowIndexLogEnabled: true,
+        //         slowSearchLogEnabled: true,
+        //     },
+        //     securityGroups: [opensearchDomainSecurityGroup],
+        //     zoneAwareness: {
+        //         enabled: true,
+        //         availabilityZoneCount: vpc.availabilityZones.length,
+        //     },
+        // });
+
+        const osEncryptionPolicy = new CfnSecurityPolicy(this, "OSEncryptionPolicy", {
+            type: "encryption",
+            policy: JSON.stringify({
+                Rules: [
+                    {
+                        ResourceType: "collection",
+                        Resource: [`collection/${opensearchCollectionName}`]
+                    }
+                ],
+                AWSOwnedKey: true
+            })
+        })
+
+        const osVPCEndpoint = new CfnVpcEndpoint(this, "OSVPCEndpoint", {
+            vpcId: vpc.vpcId,
+            name: `VPC Endpoint for ${opensearchCollectionName}`,
+            subnetIds: privateSubnets.subnetIds,
+            securityGroupIds: [opensearchDomainSecurityGroup.securityGroupId]
+        })
+
+        const osNetworkPolicy = new CfnSecurityPolicy(this, "OSNetworkPolicy", {
+            type: "network",
+            policy: JSON.stringify([
+                {
+                    Rules: [
+                        {
+                            ResourceType: "collection",
+                            Resource: [`collection/${opensearchCollectionName}`]
+                        }
+                    ],
+                    AllowFromPublic: false,
+                    SourceVPCEs: [
+                        osVPCEndpoint.attrId
+                    ]
+                }
+            ])
+        })
 
         const glueCatalogLambdaRolePolicy = new PolicyDocument({
             statements: [
@@ -199,12 +214,7 @@ export class GlueCatalogSearchApi extends Construct {
                 new PolicyStatement({
                     effect: Effect.ALLOW,
                     actions: [
-                        "es:ESHttpGet",
-                        "es:ESHttpHead",
-                        "es:ESHttpDelete",
-                        "es:ESHttpPost",
-                        "es:ESHttpPut",
-                        "es:ESHttpPatch",
+                        "aoss:*"
                     ],
                     resources: ["*"],
                 }),
@@ -220,7 +230,7 @@ export class GlueCatalogSearchApi extends Construct {
             ],
         });
 
-        const indexDeltaLambdaRole = new Role(this, "IndexDeltaLambdaRole", {
+        const osLambdaRole = new Role(this, "IndexDeltaLambdaRole", {
             assumedBy: new ServicePrincipal("lambda.amazonaws.com"),
             managedPolicies: [
                 ManagedPolicy.fromAwsManagedPolicyName(
@@ -233,16 +243,44 @@ export class GlueCatalogSearchApi extends Construct {
             inlinePolicies: { inline0: glueCatalogLambdaRolePolicy },
         });
 
-        NagSuppressions.addResourceSuppressions(indexDeltaLambdaRole, [
-            {
-                id: "AwsSolutions-IAM4",
-                reason: "Basic loggic and Lake Formation access",
-            },
-            {
-                id: "AwsSolutions-IAM5",
-                reason: "Permissions are handled by Lake Formation",
-            },
-        ]);
+        const osAccessPolicy = new CfnAccessPolicy(this, "OSAccessPolicy", {
+            policy: JSON.stringify([
+                {
+                    Description: `Access policy for ${opensearchCollectionName}`,
+                    Rules: [
+                        {
+                            ResourceType: "collection",
+                            Resource: [
+                                `collection/${opensearchCollectionName}`
+                            ],
+                            Permission: [
+                                "aoss:*"
+                            ]
+                        },
+                        {
+                            ResourceType: "index",
+                            Resource: [
+                                `collection/${opensearchCollectionName}/${opensearchIndex}`
+                            ],
+                            Permission: [
+                                "aoss:*"
+                            ]
+                        }
+                    ],
+                    Principal: [
+                        osLambdaRole.roleArn
+                    ]
+                }
+            ])
+        })
+
+        const osCollection = new CfnCollection(this, "OSCollection", {
+            type: "SEARCH",
+            name: opensearchCollectionName
+        })
+        
+
+        // opensearchDomain.node.addDependency(opensearchServiceLinkedRole);
 
         const indexDeltaLambda = new NodejsFunction(this, "IndexDeltaLambda", {
             entry:
@@ -252,7 +290,7 @@ export class GlueCatalogSearchApi extends Construct {
             vpc,
             vpcSubnets: privateSubnets,
             securityGroups: [opensearchDomainSecurityGroup],
-            role: indexDeltaLambdaRole,
+            role: osLambdaRole,
             logRetention: RetentionDays.ONE_DAY,
             environment: {
                 OPENSEARCH_INDEX: opensearchIndex,
@@ -267,7 +305,7 @@ export class GlueCatalogSearchApi extends Construct {
         );
         indexDeltaLambda.addEnvironment(
             "DOMAIN_ENDPOINT",
-            opensearchDomain.domainEndpoint
+            osCollection.attrCollectionEndpoint
         );
 
         // TODO split in two rules
@@ -294,11 +332,10 @@ export class GlueCatalogSearchApi extends Construct {
             logRetention: RetentionDays.ONE_DAY,
             environment: {
                 OPENSEARCH_INDEX: opensearchIndex,
-                DOMAIN_ENDPOINT: opensearchDomain.domainEndpoint,
+                DOMAIN_ENDPOINT: osCollection.attrCollectionEndpoint,
             },
+            role: osLambdaRole
         });
-
-        opensearchDomain.grantIndexReadWrite(opensearchIndex, searchLambda);
 
         const cognitoAuthorizer = new CognitoUserPoolsAuthorizer(
             this,
@@ -347,11 +384,11 @@ export class GlueCatalogSearchApi extends Construct {
                 logRetention: RetentionDays.ONE_DAY,
                 environment: {
                     OPENSEARCH_INDEX: opensearchIndex,
-                    DOMAIN_ENDPOINT: opensearchDomain.domainEndpoint,
+                    DOMAIN_ENDPOINT: osCollection.attrCollectionEndpoint,
                 },
+                role: osLambdaRole
             }
         );
-        opensearchDomain.grantIndexRead(opensearchIndex, getByDocumentIdLambda);
 
         searchApi.root
             .addResource("document")
@@ -372,19 +409,6 @@ export class GlueCatalogSearchApi extends Construct {
             value: searchApi.arnForExecuteApi(),
         });
 
-        const indexAllLambdaRole = new Role(this, "IndexAllLambdaRole", {
-            assumedBy: new ServicePrincipal("lambda.amazonaws.com"),
-            managedPolicies: [
-                ManagedPolicy.fromAwsManagedPolicyName(
-                    "service-role/AWSLambdaBasicExecutionRole"
-                ),
-                ManagedPolicy.fromAwsManagedPolicyName(
-                    "AWSLakeFormationCrossAccountManager"
-                ),
-            ],
-            inlinePolicies: { inline0: glueCatalogLambdaRolePolicy },
-        });
-
         const indexAllLambda = new NodejsFunction(this, "IndexAllLambda", {
             entry:
                 __dirname +
@@ -394,11 +418,11 @@ export class GlueCatalogSearchApi extends Construct {
             vpcSubnets: privateSubnets,
             securityGroups: [opensearchDomainSecurityGroup],
             logRetention: RetentionDays.ONE_DAY,
-            role: indexAllLambdaRole,
+            role: osLambdaRole,
             timeout: Duration.seconds(30),
             environment: {
                 OPENSEARCH_INDEX: opensearchIndex,
-                DOMAIN_ENDPOINT: opensearchDomain.domainEndpoint,
+                DOMAIN_ENDPOINT: osCollection.attrCollectionEndpoint,
                 CatalogId: accountId,
             },
         });
@@ -417,7 +441,6 @@ export class GlueCatalogSearchApi extends Construct {
         //     }
         // );
         // indexDeltaLFSettings.node.addDependency(indexDeltaLambdaRole);
-        this.indexDeltaLambdaRole = indexDeltaLambdaRole
 
         // const indexAllLFSettings = new CfnDataLakeSettings(
         //     this,
@@ -431,8 +454,6 @@ export class GlueCatalogSearchApi extends Construct {
         //     }
         // );
         // indexAllLFSettings.node.addDependency(indexAllLambdaRole);
-
-        this.indexAllLambdaRole = indexAllLambdaRole
 
         const indexAllLambdaTrigger = new custom_resources.AwsCustomResource(
             this,
@@ -518,21 +539,6 @@ export class GlueCatalogSearchApi extends Construct {
 
         NagSuppressions.addResourceSuppressions(
             getByDocumentIdLambda,
-            [
-                {
-                    id: "AwsSolutions-IAM4",
-                    reason: "Foundational permissions",
-                },
-                {
-                    id: "AwsSolutions-IAM5",
-                    reason: "Permissions managed by Lake Formation",
-                },
-            ],
-            true
-        );
-
-        NagSuppressions.addResourceSuppressions(
-            indexAllLambdaRole,
             [
                 {
                     id: "AwsSolutions-IAM4",
