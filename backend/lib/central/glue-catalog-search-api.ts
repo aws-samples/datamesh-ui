@@ -73,8 +73,7 @@ function isVpcProps(
 
 export class GlueCatalogSearchApi extends Construct {
     readonly osEndpoint: string;
-    readonly indexAllLambdaRole: IRole
-    readonly indexDeltaLambdaRole: IRole
+    readonly osLambdaRole: IRole
 
     constructor(
         scope: Construct,
@@ -242,6 +241,8 @@ export class GlueCatalogSearchApi extends Construct {
             ],
             inlinePolicies: { inline0: glueCatalogLambdaRolePolicy },
         });
+
+        this.osLambdaRole = osLambdaRole
 
         const osAccessPolicy = new CfnAccessPolicy(this, "OSAccessPolicy", {
             policy: JSON.stringify([

@@ -172,10 +172,7 @@ export class DataMeshUICentralStack extends Stack {
                     dataLakePrincipalIdentifier: uiLFTagPermissions.crDataMeshUITagAccessRole.roleArn
                 },
                 {
-                    dataLakePrincipalIdentifier: searchCatalog.indexAllLambdaRole.roleArn
-                },
-                {
-                    dataLakePrincipalIdentifier: searchCatalog.indexDeltaLambdaRole.roleArn
+                    dataLakePrincipalIdentifier: searchCatalog.osLambdaRole.roleArn
                 },
                 {
                     dataLakePrincipalIdentifier: tbacSharingWorkflow.lfTagGrantPermissionsRole.roleArn
