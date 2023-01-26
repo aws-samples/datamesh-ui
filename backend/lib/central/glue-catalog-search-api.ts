@@ -534,6 +534,14 @@ export class GlueCatalogSearchApi extends Construct {
                     id: "AwsSolutions-APIG6",
                     reason: "Not needed",
                 },
+                {
+                    id: "AwsSolutions-APIG4",
+                    reason: "Not needed"
+                },
+                {
+                    id: "AwsSolutions-COG4",
+                    reason: "Not needed"
+                }
             ],
             true
         );
