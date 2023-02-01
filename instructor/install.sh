@@ -163,9 +163,6 @@ yarn deploy-central \
 --parameters centralEventBusArn=$MESHBASELINE_EVENT_BUS_ARN \
 --parameters centralOpensearchSize=t3.small.search
 
-./deployment/verify-lf-admin-list.js central $AWS_REGION
-./deployment/verify-lf-admin-list.js customer $AWS_REGION
-
 export AWSCLOUDFORMATIONCONFIG="{\
 \"useProfile\":true,\
 \"profileName\":\"central\"\
@@ -176,6 +173,9 @@ export AMPLIFYPROVIDERS="{\
 }"
 
 yarn deploy-ui s3://datamesh-ui-hosting-${CENTRAL_ACC_ID}-${AWS_REGION}/ --profile central
+
+./deployment/verify-lf-admin-list.js central $AWS_REGION
+./deployment/verify-lf-admin-list.js customer $AWS_REGION
 
 export REGISTRATION_TOKEN=$(cat src/cfn-output.json | jq -r '.InfraStack.RegistrationToken')
 export DOMAIN_DISTRIBUTION=$(aws cloudfront list-distributions --profile central | jq -r '.DistributionList.Items[0].DomainName')
