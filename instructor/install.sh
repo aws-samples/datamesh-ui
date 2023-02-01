@@ -163,6 +163,9 @@ yarn deploy-central \
 --parameters centralEventBusArn=$MESHBASELINE_EVENT_BUS_ARN \
 --parameters centralOpensearchSize=t3.small.search
 
+./deployment/verify-lf-admin-list.js central $AWS_REGION
+./deployment/verify-lf-admin-list.js customer $AWS_REGION
+
 export AWSCLOUDFORMATIONCONFIG="{\
 \"useProfile\":true,\
 \"profileName\":\"central\"\
