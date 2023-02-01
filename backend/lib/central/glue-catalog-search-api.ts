@@ -193,6 +193,8 @@ export class GlueCatalogSearchApi extends Construct {
             ])
         })
 
+        osNetworkPolicy.addDependency(osVPCEndpoint)
+
         const glueCatalogLambdaRolePolicy = new PolicyDocument({
             statements: [
                 new PolicyStatement({
@@ -280,6 +282,10 @@ export class GlueCatalogSearchApi extends Construct {
             name: opensearchCollectionName
         })
         
+
+        osCollection.addDependency(osEncryptionPolicy)
+        osCollection.addDependency(osNetworkPolicy)
+        osCollection.addDependency(osAccessPolicy)
 
         // opensearchDomain.node.addDependency(opensearchServiceLinkedRole);
 
