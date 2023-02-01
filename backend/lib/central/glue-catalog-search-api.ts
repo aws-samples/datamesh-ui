@@ -306,6 +306,7 @@ export class GlueCatalogSearchApi extends Construct {
             environment: {
                 OPENSEARCH_INDEX: opensearchIndex,
             },
+            timeout: Duration.minutes(5)
         });
         // TODO create a more tight security group setting
         opensearchDomainSecurityGroup.addIngressRule(
@@ -345,7 +346,8 @@ export class GlueCatalogSearchApi extends Construct {
                 OPENSEARCH_INDEX: opensearchIndex,
                 DOMAIN_ENDPOINT: osCollection.attrCollectionEndpoint,
             },
-            role: osLambdaRole
+            role: osLambdaRole,
+            timeout: Duration.minutes(5)
         });
 
         const cognitoAuthorizer = new CognitoUserPoolsAuthorizer(
@@ -397,7 +399,8 @@ export class GlueCatalogSearchApi extends Construct {
                     OPENSEARCH_INDEX: opensearchIndex,
                     DOMAIN_ENDPOINT: osCollection.attrCollectionEndpoint,
                 },
-                role: osLambdaRole
+                role: osLambdaRole,
+                timeout: Duration.minutes(5)
             }
         );
 
@@ -430,7 +433,7 @@ export class GlueCatalogSearchApi extends Construct {
             securityGroups: [opensearchDomainSecurityGroup],
             logRetention: RetentionDays.ONE_DAY,
             role: osLambdaRole,
-            timeout: Duration.seconds(30),
+            timeout: Duration.minutes(5),
             environment: {
                 OPENSEARCH_INDEX: opensearchIndex,
                 DOMAIN_ENDPOINT: osCollection.attrCollectionEndpoint,
