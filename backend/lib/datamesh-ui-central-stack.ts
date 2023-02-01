@@ -1,4 +1,4 @@
-import { Aws, CfnParameter, Stack } from "aws-cdk-lib";
+import { Aws, CfnOutput, CfnParameter, Stack } from "aws-cdk-lib";
 import { Role } from "aws-cdk-lib/aws-iam";
 import { CfnDataLakeSettings } from "aws-cdk-lib/aws-lakeformation";
 import { StateMachine } from "aws-cdk-lib/aws-stepfunctions";
@@ -160,6 +160,9 @@ export class DataMeshUICentralStack extends Stack {
         new CfnDataLakeSettings(this, "DataMeshUILFAdmins", {
             admins: [
                 {
+                    dataLakePrincipalIdentifier: centralLfAdminRoleArn.valueAsString
+                },
+                {
                     dataLakePrincipalIdentifier: dataDomainManagement.registerDataDomainRole.roleArn
                 },
                 {
@@ -178,6 +181,18 @@ export class DataMeshUICentralStack extends Stack {
                     dataLakePrincipalIdentifier: tbacSharingWorkflow.lfTagGrantPermissionsRole.roleArn
                 }
             ]
+        })
+
+        new CfnOutput(this, "LFAdminList", {
+            value: JSON.stringify([
+                centralLfAdminRoleArn.valueAsString,
+                dataDomainManagement.registerDataDomainRole.roleArn,
+                dataMeshUIAuth.crDataDomainUIAccessRole.roleArn,
+                uiLFTagPermissions.crDataMeshUITagAccessRole.roleArn,
+                searchCatalog.indexAllLambdaRole.roleArn,
+                searchCatalog.indexDeltaLambdaRole.roleArn,
+                tbacSharingWorkflow.lfTagGrantPermissionsRole.roleArn
+            ])
         })
     }
 }

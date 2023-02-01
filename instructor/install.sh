@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+DATAMESH_UI_VERSION=v1.7.7
 
 npm --version > /dev/null 2>&1 || { echo &2 "[ERROR] npm is missing. aborting..."; exit 1; }
 pip3 --version > /dev/null 2>&1 || { echo &2 "[ERROR] pip3 is missing. aborting..."; exit 1; }
@@ -151,7 +152,7 @@ chmod +x load_seed_data.sh
 ./load_seed_data.sh customer-address clean-${CUSTOMER_ACC_ID}-${AWS_REGION} customer
 
 
-git clone https://github.com/aws-samples/datamesh-ui -b v1.7.6
+git clone https://github.com/aws-samples/datamesh-ui -b $DATAMESH_UI_VERSION
 cd datamesh-ui
 export MESHBASELINE_SM_ARN=$(aws stepfunctions list-state-machines --profile central | jq -r '.stateMachines | map(select(.stateMachineArn | contains("MeshRegisterDataProduct"))) | .[].stateMachineArn')
 export MESHBASELINE_LF_ADMIN=$(aws stepfunctions describe-state-machine --state-machine-arn=$MESHBASELINE_SM_ARN --profile central | jq -r '.roleArn')
@@ -173,6 +174,9 @@ export AMPLIFYPROVIDERS="{\
 }"
 
 yarn deploy-ui s3://datamesh-ui-hosting-${CENTRAL_ACC_ID}-${AWS_REGION}/ --profile central
+
+./deployment/verify-lf-admin-list.js central $AWS_REGION
+./deployment/verify-lf-admin-list.js customer $AWS_REGION
 
 export REGISTRATION_TOKEN=$(cat src/cfn-output.json | jq -r '.InfraStack.RegistrationToken')
 export DOMAIN_DISTRIBUTION=$(aws cloudfront list-distributions --profile central | jq -r '.DistributionList.Items[0].DomainName')
