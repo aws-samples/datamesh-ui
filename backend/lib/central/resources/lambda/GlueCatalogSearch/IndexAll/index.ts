@@ -6,32 +6,43 @@ import {
     DatabaseList,
 } from "aws-sdk/clients/glue";
 import * as AWS from "aws-sdk";
-import axios, { AxiosError, AxiosResponse } from "axios";
-import { aws4Interceptor } from "aws4-axios";
-
+const { Client } = require('@opensearch-project/opensearch');
+const { AwsSigv4Signer } = require('@opensearch-project/opensearch/aws');
 const opensearchDomainEndpoint = process.env.DOMAIN_ENDPOINT;
 const awsRegion = process.env.AWS_REGION;
 const CatalogId = process.env.accountId;
 
 AWS.config.update({ region: awsRegion });
 
-const interceptor = aws4Interceptor({
-    region: awsRegion,
-    service: "aoss",
-});
-
-axios.interceptors.request.use(interceptor);
-
 var glue = new AWS.Glue();
 
-async function deleteIndex(indexName: string): Promise<AxiosResponse> {
-    return axios.delete(`https://${opensearchDomainEndpoint}/${indexName}`);
+const client = new Client({
+    ...AwsSigv4Signer({
+        region: awsRegion,
+        service: "aoss",
+        getCredentials: () => 
+            new Promise((resolve, reject) => {
+                // Any other method to acquire a new Credentials object can be used.
+                AWS.config.getCredentials((err, credentials) => {
+                  if (err) {
+                    reject(err);
+                  } else {
+                    resolve(credentials);
+                  }
+                });
+            }),
+    }),
+    node: opensearchDomainEndpoint
+})
+
+async function deleteIndex(indexName: string) {
+    await client.indices.delete({index: indexName})
 }
 
-async function createIndex(indexName: string): Promise<AxiosResponse> {
-    return axios.put(
-        `https://${opensearchDomainEndpoint}/${indexName}`,
-        {
+async function createIndex(indexName: string) {
+    await client.indices.create({
+        index: indexName,
+        body: {
             mappings: {
                 properties: {
                     catalogName: {
@@ -47,14 +58,9 @@ async function createIndex(indexName: string): Promise<AxiosResponse> {
                         type: "search_as_you_type",
                     },
                 },
-            },
-        },
-        {
-            headers: {
-                "Content-Type": "application/json",
-            },
+            }
         }
-    );
+    })
 }
 
 exports.handler = async (): Promise<void> => {
@@ -70,12 +76,10 @@ exports.handler = async (): Promise<void> => {
         await deleteIndex(indexName);
         console.log(`Deleted the index "${indexName}"`);
     } catch (error) {
-        // If index doesn't exist, we will get the expected 404. In other cases, we got an unexpected error
-        if ((error as AxiosError).response?.status != 404) {
-            throw error;
-        }
+        console.log(`Error: ${JSON.stringify(error)}`)
     }
 
+    console.log(`Index name: ${indexName}`)
     await createIndex(indexName);
     console.log(`Created the index "${indexName}"`);
 
@@ -216,17 +220,11 @@ exports.handler = async (): Promise<void> => {
     }
 
     async function indexTable(tableInformation: TableSearchInformation) {
-        await axios.post(
-            `https://${opensearchDomainEndpoint}/${
-                process.env.OPENSEARCH_INDEX
-            }/_doc/${tableToOpensearchId(tableInformation)}`,
-            tableInformation,
-            {
-                headers: {
-                    "Content-Type": "application/json",
-                },
-            }
-        );
+        await client.index({
+            id: tableToOpensearchId(tableInformation),
+            index: process.env.OPENSEARCH_INDEX,
+            body: tableInformation
+        })
     }
 
     function tableToOpensearchId(table: TableSearchInformation): string {

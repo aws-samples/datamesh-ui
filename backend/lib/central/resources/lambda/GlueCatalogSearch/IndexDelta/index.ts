@@ -1,22 +1,33 @@
 import { EventBridgeEvent } from "aws-lambda";
-import axios from "axios";
-import { aws4Interceptor } from "aws4-axios";
 import * as AWS from "aws-sdk";
 import {
     TableSearchInformation,
     tableToOpensearchId,
     glueTableToTableSearchInformation,
 } from "../utilities";
-
+const { Client } = require('@opensearch-project/opensearch');
+const { AwsSigv4Signer } = require('@opensearch-project/opensearch/aws');
 const opensearchDomainEndpoint = process.env.DOMAIN_ENDPOINT;
 const awsRegion = process.env.AWS_REGION;
 
-const interceptor = aws4Interceptor({
-    region: awsRegion,
-    service: "aoss",
-});
-
-axios.interceptors.request.use(interceptor);
+const client = new Client({
+    ...AwsSigv4Signer({
+        region: awsRegion,
+        service: "aoss",
+        getCredentials: () => 
+            new Promise((resolve, reject) => {
+                // Any other method to acquire a new Credentials object can be used.
+                AWS.config.getCredentials((err, credentials) => {
+                  if (err) {
+                    reject(err);
+                  } else {
+                    resolve(credentials);
+                  }
+                });
+            }),
+    }),
+    node: opensearchDomainEndpoint
+})
 
 const glue = new AWS.Glue({ apiVersion: "2017-03-31" });
 
@@ -79,17 +90,11 @@ async function onCreateTable(event: GlueDatabaseChangeEvent) {
 
     return Promise.all(
         tableInformation.map((table) =>
-            axios.post(
-                `https://${opensearchDomainEndpoint}/${
-                    process.env.OPENSEARCH_INDEX
-                }/_doc/${tableToOpensearchId(table)}`,
-                table,
-                {
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                }
-            )
+            client.index({
+                id: tableToOpensearchId(table),
+                index: process.env.OPENSEARCH_INDEX,
+                body: table
+            })    
         )
     );
 }
@@ -102,17 +107,11 @@ async function onUpdateTable(event: GlueTableChangeEvent) {
         tableName
     );
 
-    return axios.put(
-        `https://${opensearchDomainEndpoint}/${
-            process.env.OPENSEARCH_INDEX
-        }/_doc/${tableToOpensearchId(tableInformation)}`,
-        tableInformation,
-        {
-            headers: {
-                "Content-Type": "application/json",
-            },
-        }
-    );
+    return client.index({
+        id: tableToOpensearchId(tableInformation),
+        index: process.env.OPENSEARCH_INDEX,
+        body: tableInformation
+    })
 }
 
 async function onDeleteTables(event: GlueDatabaseChangeEvent) {
@@ -137,38 +136,28 @@ async function onDeleteTables(event: GlueDatabaseChangeEvent) {
 
     return Promise.all(
         deletedCatalogTables.map((table) =>
-            axios.delete(
-                `https://${opensearchDomainEndpoint}/${
-                    process.env.OPENSEARCH_INDEX
-                }/_doc/${tableToOpensearchId(table)}`,
-                {
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                }
-            )
+
+            client.delete({
+                index: process.env.OPENSEARCH_INDEX,
+                id: tableToOpensearchId(table)
+            })
         )
     );
 }
 
 async function getDatabaseTableIds(databaseName: string): Promise<string[]> {
-    const searchResponse = await axios.post(
-        `https://${opensearchDomainEndpoint}/${process.env.OPENSEARCH_INDEX}/_search`,
-        {
+    const searchResponse = await client.search({
+        index: process.env.OPENSEARCH_INDEX,
+        body: {
             query: {
                 match: {
                     databaseName: databaseName,
                 },
-            },
-        },
-        {
-            headers: {
-                "Content-Type": "application/json",
-            },
+            }
         }
-    );
+    })
 
-    const searchHits: { _id: string }[] = searchResponse.data.hits?.hits ?? [];
+    const searchHits: { _id: string }[] = searchResponse.body.hits?.hits ?? [];
     if (searchHits.length == 0) {
         return [];
     }
@@ -191,14 +180,10 @@ async function onDeleteDatabase(event: GlueDatabaseChangeEvent) {
 
     return Promise.all(
         tableIdsToDelete.map((tableId) =>
-            axios.delete(
-                `https://${opensearchDomainEndpoint}/${process.env.OPENSEARCH_INDEX}/_doc/${tableId}`,
-                {
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                }
-            )
+            client.delete({
+                index: process.env.OPENSEARCH_INDEX,
+                id: tableId
+            })
         )
     );
 }

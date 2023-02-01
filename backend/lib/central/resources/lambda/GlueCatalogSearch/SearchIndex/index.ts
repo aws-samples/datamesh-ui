@@ -1,17 +1,30 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
-import axios from "axios";
-import { aws4Interceptor } from "aws4-axios";
 import { TableSearchInformation } from "../utilities";
+const { Client } = require('@opensearch-project/opensearch');
+const { AwsSigv4Signer } = require('@opensearch-project/opensearch/aws');
+import * as AWS from "aws-sdk";
 
 const opensearchDomainEndpoint = process.env.DOMAIN_ENDPOINT;
 const awsRegion = process.env.AWS_REGION;
 
-const interceptor = aws4Interceptor({
-    region: awsRegion,
-    service: "aoss",
-});
-
-axios.interceptors.request.use(interceptor);
+const client = new Client({
+    ...AwsSigv4Signer({
+        region: awsRegion,
+        service: "aoss",
+        getCredentials: () => 
+            new Promise((resolve, reject) => {
+                // Any other method to acquire a new Credentials object can be used.
+                AWS.config.getCredentials((err, credentials) => {
+                  if (err) {
+                    reject(err);
+                  } else {
+                    resolve(credentials);
+                  }
+                });
+            }),
+    }),
+    node: opensearchDomainEndpoint
+})
 
 interface OpensearchHit {
     _id: string;
@@ -29,7 +42,6 @@ exports.handler = async (
     console.log(`Search term is: "${searchValue}"`);
 
     try {
-        const searchPath = `https://${opensearchDomainEndpoint}/${process.env.OPENSEARCH_INDEX}/_search`;
         const searchBody = {
             query: {
                 multi_match: {
@@ -44,14 +56,15 @@ exports.handler = async (
                 },
             },
         };
-        const response = await axios.post(searchPath, searchBody, {
-            headers: {
-                "Content-Type": "application/json",
-            },
-        });
-        console.log(response.data);
 
-        const hits: OpensearchHit[] = response.data?.hits?.hits ?? [];
+        const response = await client.search({
+            index: process.env.OPENSEARCH_INDEX,
+            body: searchBody
+        })
+
+        console.log(response.body);
+
+        const hits: OpensearchHit[] = response.body?.hits?.hits ?? [];
         const searchResponse = hits.map((hit) => ({
             documentId: hit._id,
             score: hit._score,

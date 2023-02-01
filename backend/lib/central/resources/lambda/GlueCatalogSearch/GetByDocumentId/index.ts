@@ -29,7 +29,7 @@ exports.handler = async (
     console.log(`Document ID is: "${documentId}"`);
 
     try {
-        const searchPath = `https://${opensearchDomainEndpoint}/${process.env.OPENSEARCH_INDEX}/_doc/${documentId}`;
+        const searchPath = `${opensearchDomainEndpoint}/${process.env.OPENSEARCH_INDEX}/_doc/${documentId}`;
 
         const response = await axios.get(searchPath, {
             headers: {
