@@ -156,6 +156,7 @@ export class GlueCatalogSearchApi extends Construct {
         // });
 
         const osEncryptionPolicy = new CfnSecurityPolicy(this, "OSEncryptionPolicy", {
+            name: `EncryptionPolicy-${opensearchCollectionName}`,
             type: "encryption",
             policy: JSON.stringify({
                 Rules: [
@@ -176,6 +177,7 @@ export class GlueCatalogSearchApi extends Construct {
         })
 
         const osNetworkPolicy = new CfnSecurityPolicy(this, "OSNetworkPolicy", {
+            name: `NetworkPolicy-${opensearchCollectionName}`,
             type: "network",
             policy: JSON.stringify([
                 {
@@ -247,6 +249,7 @@ export class GlueCatalogSearchApi extends Construct {
         this.osLambdaRole = osLambdaRole
 
         const osAccessPolicy = new CfnAccessPolicy(this, "OSAccessPolicy", {
+            name: `AccessPolicy-${opensearchCollectionName}`,
             policy: JSON.stringify([
                 {
                     Description: `Access policy for ${opensearchCollectionName}`,
