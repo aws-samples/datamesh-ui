@@ -267,7 +267,7 @@ export class GlueCatalogSearchApi extends Construct {
                         {
                             ResourceType: "index",
                             Resource: [
-                                `collection/${opensearchCollectionName}/${opensearchIndex}`
+                                `index/${opensearchCollectionName}/${opensearchIndex}`
                             ],
                             Permission: [
                                 "aoss:*"
