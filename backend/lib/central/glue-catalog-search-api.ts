@@ -250,6 +250,7 @@ export class GlueCatalogSearchApi extends Construct {
 
         const osAccessPolicy = new CfnAccessPolicy(this, "OSAccessPolicy", {
             name: `datamesh-acc`,
+            type: "data",
             policy: JSON.stringify([
                 {
                     Description: `Access policy for ${opensearchCollectionName}`,
