@@ -171,7 +171,7 @@ export class GlueCatalogSearchApi extends Construct {
 
         const osVPCEndpoint = new CfnVpcEndpoint(this, "OSVPCEndpoint", {
             vpcId: vpc.vpcId,
-            name: `VPC Endpoint for ${opensearchCollectionName}`,
+            name: `datamesh-vpce`,
             subnetIds: privateSubnets.subnetIds,
             securityGroupIds: [opensearchDomainSecurityGroup.securityGroupId]
         })
