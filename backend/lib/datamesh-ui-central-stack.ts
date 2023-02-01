@@ -186,8 +186,7 @@ export class DataMeshUICentralStack extends Stack {
                 dataDomainManagement.registerDataDomainRole.roleArn,
                 dataMeshUIAuth.crDataDomainUIAccessRole.roleArn,
                 uiLFTagPermissions.crDataMeshUITagAccessRole.roleArn,
-                searchCatalog.indexAllLambdaRole.roleArn,
-                searchCatalog.indexDeltaLambdaRole.roleArn,
+                searchCatalog.osLambdaRole.roleArn,
                 tbacSharingWorkflow.lfTagGrantPermissionsRole.roleArn
             ])
         })
