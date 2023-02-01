@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-DATAMESH_UI_VERSION=v1.7.7
+sudo yum -y install jq
+DATAMESH_UI_VERSION=$(curl "https://api.github.com/repos/aws-samples/datamesh-ui/releases" | jq -r '.[0].name')
 
 npm --version > /dev/null 2>&1 || { echo &2 "[ERROR] npm is missing. aborting..."; exit 1; }
 pip3 --version > /dev/null 2>&1 || { echo &2 "[ERROR] pip3 is missing. aborting..."; exit 1; }
@@ -20,9 +21,6 @@ AWS_REGION=$(aws configure get region --profile central)
 npm install --location=global aws-cdk-lib@2.35.0
 npm install --location=global yarn
 npm install --location=global @aws-amplify/cli
-
-sudo yum -y install jq
-sudo yum -y install expect
 
 aws lakeformation get-data-lake-settings --profile central | jq '.DataLakeSettings|.CreateDatabaseDefaultPermissions=[]|.CreateTableDefaultPermissions=[]|.Parameters+={CROSS_ACCOUNT_VERSION:"2"}' > dl_settings_central.json
 aws lakeformation put-data-lake-settings --data-lake-settings file://dl_settings_central.json --profile central
