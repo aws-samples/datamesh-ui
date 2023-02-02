@@ -23,6 +23,7 @@ import ResourceLFTagsComponent from "./TBAC/ResourceLFTagsComponent";
 import { v4 as uuid } from 'uuid';
 import DataDomain from "../Backend/DataDomain";
 import DataDomainActionComponent from "./DataDomainActionComponent";
+import { useNavigate } from "react-router";
 const cfnOutput = require("../cfn-output.json")
 const config = Amplify.configure();
 const axios = require("axios").default;
@@ -44,6 +45,8 @@ function CatalogComponent(props) {
     const [registerDisabled, setRegisterDisabled] = useState(false)
     const [filterAccountId, setFilterAccountId] = useState(null)
     const [filtered, setFiltered] = useState(false)
+
+    const navigate = useNavigate()
 
     useEffect(() => {
         async function run() {
@@ -222,7 +225,7 @@ function CatalogComponent(props) {
                     columnDefinitions={[
                         {
                             header: "Data Domain Database Name",
-                            cell: item => <Link variant="primary" href={"/tables/"+item.Name}>{item.Name}</Link>
+                            cell: item => <Link variant="primary" onFollow={() => navigate("/tables/"+item.Name)}>{item.Name}</Link>
 
                         },
                         {

@@ -18,11 +18,12 @@
 import { GlueClient, GetTablesCommand, GetDatabasesCommand, GetDatabaseCommand } from "@aws-sdk/client-glue";
 import { ColumnLayout, Box, BreadcrumbGroup, Flashbar, Header, Link, Table, SpaceBetween, Button, Spinner, ContentLayout, Container } from "@cloudscape-design/components";
 import { useEffect, useState } from "react";
-import { useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import {Amplify, Auth } from "aws-amplify";
 import DatabaseDetailsComponent from "./DatabaseDetailsComponent";
 import ResourceLFTagsComponent from "./TBAC/ResourceLFTagsComponent";
 import DataProductStateComponent from "./DataProductStateComponent";
+import RouterAwareBreadcrumbComponent from "./RouterAwareBreadcrumbComponent";
 
 const config = Amplify.configure();
 
@@ -36,11 +37,12 @@ function CatalogTablesComponent(props) {
     const [forceRefresh, setForceRefresh] = useState(0)
     const [owner, setOwner] = useState(false)
 
+    const navigate = useNavigate()
 
     useEffect(() => {
         if (props.breadcrumbsCallback) {
             props.breadcrumbsCallback(
-                <BreadcrumbGroup items={[
+                <RouterAwareBreadcrumbComponent items={[
                     { text: "Data Domains", href: "/"},
                     { text: dbname, href: "/tables/"+dbname }
                 ]} />
@@ -79,7 +81,10 @@ function CatalogTablesComponent(props) {
 
     const renderRegisterDataProduct = () => {
         return (
-            <Button iconName="add-plus" disabled={!owner} href={`/product-registration/${dbname}/new`}>Register Data Products</Button>
+            <Button iconName="add-plus" disabled={!owner} onClick={(event) => {
+                event.preventDefault()
+                navigate(`/product-registration/${dbname}/new`)
+            }}>Register Data Products</Button>
         )
     }
 
@@ -107,7 +112,10 @@ function CatalogTablesComponent(props) {
                             },
                             {
                                 header: "Actions",
-                                cell: item => <ColumnLayout columns={2} variant="text-grid"><div><Link variant="primary" href={"/request-access/"+dbname+"/"+item.Name}>View or Request Access</Link></div></ColumnLayout>
+                                cell: item => <ColumnLayout columns={2} variant="text-grid"><div><Link variant="primary" onFollow={(event) => {
+                                    event.preventDefault()
+                                    navigate(`/request-access/${dbname}/${item.Name}`)
+                                }}>View or Request Access</Link></div></ColumnLayout>
                             }
                         ]}
 

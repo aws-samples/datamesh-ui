@@ -31,6 +31,7 @@ import {
 import ValueWithLabel from "./ValueWithLabel";
 import BadgeStatus from "./BadgeStatus";
 import axios from "axios";
+import RouterAwareBreadcrumbComponent from "./RouterAwareBreadcrumbComponent";
 
 const cfnOutput = require("../cfn-output.json");
 const SearchApiUrl = cfnOutput.InfraStack.SearchApiUrl;
@@ -91,7 +92,7 @@ function DataProductDetailsComponent(props) {
     } else if (detail.tableDescription) {
         return (
             <div>
-                <BreadcrumbGroup
+                <RouterAwareBreadcrumbComponent
                     items={[
                         { text: "Search", href: "/search" },
                         {

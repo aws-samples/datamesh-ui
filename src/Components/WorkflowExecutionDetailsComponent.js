@@ -22,6 +22,7 @@ import { useParams } from 'react-router';
 import { Box, BreadcrumbGroup, ColumnLayout, Container, Flashbar, Header, SpaceBetween } from '@cloudscape-design/components';
 import ValueWithLabel from './ValueWithLabel';
 import BadgeStatus from './BadgeStatus';
+import RouterAwareBreadcrumbComponent from './RouterAwareBreadcrumbComponent';
 
 const config = Amplify.configure();
 
@@ -53,7 +54,7 @@ function WorkflowExecutionDetailsComponent(props) {
     } else if (detail) {
         return (
             <div>
-                <BreadcrumbGroup items={[
+                <RouterAwareBreadcrumbComponent items={[
                             { text: "Workflow Executions", href: "/workflow-executions"},
                             { text: "Execution Details", href: "/execution-details/"+execArn },
                         ]} />
