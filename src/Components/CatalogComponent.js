@@ -24,6 +24,7 @@ import { v4 as uuid } from 'uuid';
 import DataDomain from "../Backend/DataDomain";
 import DataDomainActionComponent from "./DataDomainActionComponent";
 import { useNavigate } from "react-router";
+import RouterAwareBreadcrumbComponent from "./RouterAwareBreadcrumbComponent";
 const cfnOutput = require("../cfn-output.json")
 const config = Amplify.configure();
 const axios = require("axios").default;
@@ -47,6 +48,16 @@ function CatalogComponent(props) {
     const [filtered, setFiltered] = useState(false)
 
     const navigate = useNavigate()
+
+    useEffect(() => {
+        if (props.breadcrumbsCallback) {
+            props.breadcrumbsCallback(
+                <RouterAwareBreadcrumbComponent items={[
+                    { text: "Data Domains", href: "/"}
+                ]} />
+            )
+        }
+    }, [])
 
     useEffect(() => {
         async function run() {

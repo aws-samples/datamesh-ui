@@ -167,8 +167,7 @@ function MainComponent(props) {
             <SideNavigation 
                 activeHref={window.location.pathname} 
                 items={[
-                    {type: "link", text: "Data Domains", href: "/"},
-                    {type: "link", text: "Sharing Workflow Executions", href: "/workflow-executions"},
+                    {type: "link", text: "Data Domains", href: "/"}
                 ]}
                 onFollow={async(event) => {
                     event.preventDefault();
@@ -177,10 +176,10 @@ function MainComponent(props) {
                 />
         } content={
             <Routes>
-                <Route exact path="/" element={<CatalogComponent />} />
+                <Route exact path="/" element={<CatalogComponent breadcrumbsCallback={setBreadcrumbs} />} />
                 <Route exact path="/tables/:dbname" element={<CatalogTablesComponent breadcrumbsCallback={setBreadcrumbs} />} />
                 <Route exact path="/request-access/:dbname/:tablename" element={<TableDetailsComponent breadcrumbsCallback={setBreadcrumbs} />} />
-                <Route exact path="/workflow-executions" element={<WorkflowExecutionsComponent />} />
+                <Route exact path="/workflow-executions" element={<WorkflowExecutionsComponent breadcrumbsCallback={setBreadcrumbs} />} />
                 <Route exact path="/data-product-details/:dataProduct" element={<DataProductDetailsComponent />} />
                 <Route exact path="/execution-details/:execArn" element={<WorkflowExecutionDetailsComponent />} />
                 <Route exact path="/product-registration/:domainId/new" element={<RegisterNewProductComponent breadcrumbsCallback={setBreadcrumbs} />} />

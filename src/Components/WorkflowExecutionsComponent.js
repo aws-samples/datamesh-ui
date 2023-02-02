@@ -20,6 +20,7 @@ import { useEffect, useState } from "react";
 import { SFNClient, ListExecutionsCommand } from "@aws-sdk/client-sfn";
 import { Header, Table, Link, Box, ContentLayout } from "@cloudscape-design/components";
 import BadgeStatus from "./BadgeStatus";
+import RouterAwareBreadcrumbComponent from "./RouterAwareBreadcrumbComponent";
 const cfnOutput = require("../cfn-output.json");
 
 const config = Amplify.configure();
@@ -29,6 +30,16 @@ function WorkflowExecutionsComponent(props) {
     const [executions, setExecutions] = useState([]);
     const [response, setResponse] = useState();
     const [nextToken, setNextToken] = useState(null);
+
+    useEffect(() => {
+        if (props.breadcrumbsCallback) {
+            props.breadcrumbsCallback(
+                <RouterAwareBreadcrumbComponent items={[
+                    { text: "Data Domains", href: "/"}
+                ]} />
+            )
+        }
+    }, [])
 
     useEffect(() => {
         async function run() {
