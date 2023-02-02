@@ -118,7 +118,7 @@ function RegisterNewProductComponent(props) {
                 }
                 
    
-                window.location.href = `/tables/${domainId}`
+                navigate(`/tables/${domainId}`)
             } else {
                 setSpinnerVisible(false)
             }
