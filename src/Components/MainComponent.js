@@ -16,7 +16,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import { AppLayout, SideNavigation, Box, TopNavigation, Link, Input, Autosuggest, HelpPanel, Header } from "@cloudscape-design/components";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, createBrowserRouter, Route, RouterProvider, Routes, useNavigate } from "react-router-dom";
 import CatalogComponent from "./CatalogComponent";
 import CatalogTablesComponent from "./CatalogTablesComponent";
 import {Auth} from "aws-amplify";
@@ -24,13 +24,11 @@ import WorkflowExecutionsComponent from "./WorkflowExecutionsComponent";
 import WorkflowExecutionDetailsComponent from "./WorkflowExecutionDetailsComponent";
 import TableDetailsComponent from "./TableDetailsComponent";
 import RegisterNewProductComponent from "./RegisterNewProductComponent";
-import SearchComponent from "./SearchComponent";
 import DataProductDetailsComponent from "./DataProductDetailsComponent"
 import { useEffect, useState } from "react";
 import Event from "../Backend/Event";
 const cfnOutput = require("../cfn-output.json");
 const searchApiUrl = cfnOutput.InfraStack.SearchApiUrl;
-const MIN_SEARCH_STRING_LENGTH = 1;
 const axios = require("axios")
 
 function MainComponent(props) {
@@ -41,7 +39,7 @@ function MainComponent(props) {
     const [breadcrumbs, setBreadcrumbs] = useState(null)
     const [navigationOpen, setNavigationOpen] = useState(false)
     const [eventHash, setEventHash] = useState(null)
-
+    const navigate = useNavigate()
     const i18nStrings = {
         searchIconAriaLabel: "Search",
         searchDismissIconAriaLabel: "Close search",
@@ -154,9 +152,9 @@ function MainComponent(props) {
         const payload = JSON.parse(detail.value)
         setSearchInput(payload.label)
         if (payload.type == "database") {
-            window.location.href = `/tables/${payload.db}`
+            navigate(`/tables/${payload.db}`)
         } else {
-            window.location.href = `/request-access/${payload.db}/${payload.table}`
+            navigate(`/request-access/${payload.db}/${payload.table}`)
         }
     }
 
@@ -169,33 +167,23 @@ function MainComponent(props) {
             <SideNavigation 
                 activeHref={window.location.pathname} 
                 items={[
-                    {type: "link", text: "Data Domains", href: "/"},
-                    {type: "link", text: "Sharing Workflow Executions", href: "/workflow-executions"},
+                    {type: "link", text: "Data Domains", href: "/"}
                 ]}
                 onFollow={async(event) => {
                     event.preventDefault();
-                    window.location = event.detail.href;
+                    navigate(event.detail.href);
                 }}
                 />
         } content={
-            <BrowserRouter>
-                <Routes>
-                    <Route exact path="/" element={<CatalogComponent />} />
-                    <Route exact path="/tables/:dbname" element={<CatalogTablesComponent breadcrumbsCallback={setBreadcrumbs} />} />
-                    <Route exact path="/request-access/:dbname/:tablename" element={<TableDetailsComponent breadcrumbsCallback={setBreadcrumbs} />} />
-                    <Route exact path="/workflow-executions" element={<WorkflowExecutionsComponent />} />
-                    <Route exact path="/search" element={<SearchComponent />} />
-                    <Route exact path="/data-product-details/:dataProduct" element={<DataProductDetailsComponent />} />
-                    <Route exact path="/execution-details/:execArn" element={<WorkflowExecutionDetailsComponent />} />
-                    <Route exact path="/product-registration/:domainId/new" element={<RegisterNewProductComponent />} />
-                    {/* <Route exact path="/data-quality-reports/:dbname/:tablename">
-                        <DataQualityReportsComponent />
-                    </Route>
-                    <Route exact path="/data-quality-report-results/:dbname/:tablename/:bucket/:key">
-                        <DataQualityReportResultsComponent />
-                    </Route> */}
-                </Routes>
-            </BrowserRouter>
+            <Routes>
+                <Route exact path="/" element={<CatalogComponent breadcrumbsCallback={setBreadcrumbs} />} />
+                <Route exact path="/tables/:dbname" element={<CatalogTablesComponent breadcrumbsCallback={setBreadcrumbs} />} />
+                <Route exact path="/request-access/:dbname/:tablename" element={<TableDetailsComponent breadcrumbsCallback={setBreadcrumbs} />} />
+                <Route exact path="/workflow-executions" element={<WorkflowExecutionsComponent breadcrumbsCallback={setBreadcrumbs} />} />
+                <Route exact path="/data-product-details/:dataProduct" element={<DataProductDetailsComponent />} />
+                <Route exact path="/execution-details/:execArn" element={<WorkflowExecutionDetailsComponent />} />
+                <Route exact path="/product-registration/:domainId/new" element={<RegisterNewProductComponent breadcrumbsCallback={setBreadcrumbs} />} />
+            </Routes>
         } tools={
             <HelpPanel header={<Header variant="h3">Additional Resources</Header>}>
                 <h4>Event Information</h4>

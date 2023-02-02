@@ -27,6 +27,7 @@ import ResourceLFTagsWrapper from "./TBAC/ResourceLFTagsWrapper";
 import DisplayLFTagsFromContextComponent from "./TBAC/DisplayLFTagsFromContextComponent";
 import DataProductStateComponent from "./DataProductStateComponent";
 import ProductConsumersComponent from "./ProductConsumersComponent";
+import RouterAwareBreadcrumbComponent from "./RouterAwareBreadcrumbComponent";
 
 const config = Amplify.configure();
 
@@ -42,7 +43,7 @@ function TableDetailsComponent(props) {
     useEffect(() => {
         if (props.breadcrumbsCallback) {
             props.breadcrumbsCallback(
-                <BreadcrumbGroup items={[
+                <RouterAwareBreadcrumbComponent items={[
                     { text: "Data Domains", href: "/"},
                     { text: dbname, href: "/tables/"+dbname },
                     { text: "Request Access ("+tablename+")", href: "/request-access/"+dbname+"/"+tablename }

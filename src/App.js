@@ -24,6 +24,7 @@ import '@aws-amplify/ui-react/styles.css';
 import "@cloudscape-design/global-styles/index.css"
 import MainComponent from './Components/MainComponent';
 import { useEffect, useState } from 'react';
+import { BrowserRouter } from 'react-router-dom';
 const cfnOutput = require("./cfn-output.json");
 
 Amplify.configure(awsconfig);
@@ -51,7 +52,9 @@ function App() {
   
   return (
     <Authenticator variation='modal' hideSignUp={!canRegister}>
-      <MainComponent />
+      <BrowserRouter>
+        <MainComponent />
+      </BrowserRouter>
     </Authenticator>
   )
 }

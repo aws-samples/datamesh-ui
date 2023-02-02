@@ -16,22 +16,23 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import { GetDatabaseCommand, GlueClient } from "@aws-sdk/client-glue";
-import { Box, Button, Container, Form, FormField, Header, Input, Select, SpaceBetween, Table, Icon, Alert, ColumnLayout, BreadcrumbGroup, Spinner, Modal } from "@cloudscape-design/components";
+import { Box, Button, Container, Form, FormField, Header, Input, Select, SpaceBetween, Table, Icon, Alert, ColumnLayout, BreadcrumbGroup, Spinner, Modal, ContentLayout } from "@cloudscape-design/components";
 import {Amplify, Auth } from "aws-amplify";
 import {useEffect, useState} from 'react';
-import { useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import {v4 as uuid} from 'uuid';
 import DataDomain from "../Backend/DataDomain";
 import AuthWorkflow from "../Backend/AuthWorkflow";
 import ResourceLFTagsComponent from "./TBAC/ResourceLFTagsComponent";
 import ValueWithLabel from "./ValueWithLabel";
+import RouterAwareBreadcrumbComponent from "./RouterAwareBreadcrumbComponent";
 const cfnOutput = require("../cfn-output.json");
 const axios = require("axios").default;
 
 const config = Amplify.configure();
 const dpmStateMachineArn = cfnOutput.InfraStack.DPMStateMachineArn;
 
-function RegisterNewProductComponent() {
+function RegisterNewProductComponent(props) {
     const {domainId} = useParams()
     const [error, setError] = useState();
     const [database, setDatabase] = useState(null)
@@ -43,6 +44,20 @@ function RegisterNewProductComponent() {
     // const onCancel = () => {
     //     window.location.href="/product-registration/list";
     // }
+
+    const navigate = useNavigate()
+
+    useEffect(() => {
+        if (props.breadcrumbsCallback) {
+            props.breadcrumbsCallback(
+                <RouterAwareBreadcrumbComponent items={[
+                    { text: "Data Domains", href: "/"},
+                    { text: domainId, href: `/tables/${domainId}`},
+                    { text: "Register New Data Products" }
+                ]} />
+            )
+        }
+    }, [])
 
     const addProductRow = () => {
         setProducts([...products, {"id": uuid(), "name": "", "location": "", "error": "", "nameError": "", "firstRow": false}])
@@ -272,21 +287,24 @@ function RegisterNewProductComponent() {
     }
 
     return (
+        <ContentLayout header={
+            <Header variant="h1">Register Data Products into Data Domain</Header>
+        }>
         <Box>
-            <BreadcrumbGroup items={[
-                        { text: "Data Domains", href: "/"},
-                        { text: domainId, href: `/tables/${domainId}`},
-                        { text: "Register New Data Products" }
-                    ]} />
             <Box margin={{top: "m"}}>
                 <Form errorText={error} actions={
                     <SpaceBetween direction="horizontal" size="s">
-                        <Button variant="link" href={`/tables/${domainId}`} disabled={spinnerVisible}>Cancel</Button>
+                        <Button variant="link" onClick={(event) => {
+                            event.preventDefault()
+                            navigate(`/tables/${domainId}`)
+                        }} disabled={spinnerVisible}>Cancel</Button>
                         {renderSubmit()}
                     </SpaceBetween>
                 }>
                     <Box margin={{top: "m"}}>
-                        <Container header={<Header variant="h3">Register Data Products into Data Domain</Header>}>
+                        <Container header={
+                            <Header variant="h3">Data Domain Details</Header>
+                        }>
                             {renderDatabaseDetails()}
                         </Container>
                     </Box>
@@ -323,6 +341,8 @@ function RegisterNewProductComponent() {
                 </Modal>
             </Box>
         </Box>
+        </ContentLayout>
+
     );
 }
 

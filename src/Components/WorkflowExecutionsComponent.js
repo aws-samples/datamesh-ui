@@ -18,8 +18,9 @@
 import {Amplify, Auth} from "aws-amplify";
 import { useEffect, useState } from "react";
 import { SFNClient, ListExecutionsCommand } from "@aws-sdk/client-sfn";
-import { Header, Table, Link, Box } from "@cloudscape-design/components";
+import { Header, Table, Link, Box, ContentLayout } from "@cloudscape-design/components";
 import BadgeStatus from "./BadgeStatus";
+import RouterAwareBreadcrumbComponent from "./RouterAwareBreadcrumbComponent";
 const cfnOutput = require("../cfn-output.json");
 
 const config = Amplify.configure();
@@ -29,6 +30,16 @@ function WorkflowExecutionsComponent(props) {
     const [executions, setExecutions] = useState([]);
     const [response, setResponse] = useState();
     const [nextToken, setNextToken] = useState(null);
+
+    useEffect(() => {
+        if (props.breadcrumbsCallback) {
+            props.breadcrumbsCallback(
+                <RouterAwareBreadcrumbComponent items={[
+                    { text: "Data Domains", href: "/"}
+                ]} />
+            )
+        }
+    }, [])
 
     useEffect(() => {
         async function run() {
@@ -48,8 +59,8 @@ function WorkflowExecutionsComponent(props) {
     }, [nextToken]);
 
     return (
-        <div>
-            <Table footer={<Box textAlign="center" display={(response && response.nextToken) ? "block" : "none"}><Link variant="primary" onFollow={(event) => setNextToken(response.nextToken)}>View More</Link></Box>} header={<Header variant="h2">Workflow Executions</Header>} items={executions} columnDefinitions={[
+        <ContentLayout header={<Header variant="h1">Workflow Executions</Header>}>
+            <Table footer={<Box textAlign="center" display={(response && response.nextToken) ? "block" : "none"}><Link variant="primary" onFollow={(event) => setNextToken(response.nextToken)}>View More</Link></Box>} items={executions} columnDefinitions={[
                 {
                     header: "Name",
                     cell: item => <Link variant="primary" href={"/execution-details/"+item.executionArn}>{item.name}</Link>
@@ -67,7 +78,7 @@ function WorkflowExecutionsComponent(props) {
                     cell: item => <BadgeStatus>{item.status}</BadgeStatus>
                 }
             ]} />
-        </div>
+        </ContentLayout>
     );
 }
 
