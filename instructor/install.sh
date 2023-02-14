@@ -176,6 +176,6 @@ yarn deploy-ui s3://datamesh-ui-hosting-${CENTRAL_ACC_ID}-${AWS_REGION}/ --profi
 ./deployment/verify-lf-admin-list.js customer $AWS_REGION
 
 export REGISTRATION_TOKEN=$(cat src/cfn-output.json | jq -r '.InfraStack.RegistrationToken')
-export DOMAIN_DISTRIBUTION=$(aws cloudfront list-distributions --profile central | jq -r '.DistributionList.Items[0].DomainName')
+export DOMAIN_DISTRIBUTION=$(cat backend/central-output.json | jq -r '.DataMeshUICentralStack|with_entries(select(.key|contains("DataMeshUIHostingHostingCFDomain")))|to_entries[0].value')
 echo https://${DOMAIN_DISTRIBUTION}/?token=${REGISTRATION_TOKEN}
 aws secretsmanager list-secrets --profile=customer | jq -r '.SecretList[0].ARN'
