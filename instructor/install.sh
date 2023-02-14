@@ -16,7 +16,6 @@ CENTRAL_ACC_ID=$(aws sts get-caller-identity --profile central --query Account) 
 CENTRAL_ACC_ID=${CENTRAL_ACC_ID//\"/}
 CUSTOMER_ACC_ID=$(aws sts get-caller-identity --profile customer --query Account) || { echo &2 "[ERROR] aws profile 'customer' is not properly configured. aborting..."; exit 1; }
 CUSTOMER_ACC_ID=${CUSTOMER_ACC_ID//\"/}
-AWS_REGION=$(aws configure get region --profile central)
 
 npm install --location=global aws-cdk-lib@2.35.0
 npm install --location=global yarn

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-
+export AWS_REGION="us-west-2"
 # Placeholder for AWS credentials environment variables
 # export AWS_ACCESS_KEY_ID_CENTRAL="TO_BE_REPLACED"
 # export AWS_SECRET_ACCESS_KEY_CENTRAL="TO_BE_REPLACED"
@@ -9,7 +9,7 @@
 # export AWS_SESSION_TOKEN_CUSTOMER="TO_BE_REPLACED"
 
 # Set profile for Central Governance account - *central*
-aws configure set profile.central.region us-west-2
+aws configure set profile.central.region $AWS_REGION
 if [ ! -z "$AWS_ACCESS_KEY_ID_CENTRAL" ]; then
   aws configure set profile.central.aws_access_key_id $AWS_ACCESS_KEY_ID_CENTRAL
 fi
@@ -21,7 +21,7 @@ if [ ! -z "$AWS_SESSION_TOKEN_CENTRAL" ]; then
 fi
 
 # Set profile for Customer Data Domain account - *customer*
-aws configure set profile.customer.region us-west-2
+aws configure set profile.customer.region $AWS_REGION
 if [ ! -z "$AWS_ACCESS_KEY_ID_CUSTOMER" ]; then
   aws configure set profile.customer.aws_access_key_id $AWS_ACCESS_KEY_ID_CUSTOMER
 fi
