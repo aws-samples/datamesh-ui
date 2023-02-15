@@ -97,7 +97,7 @@ function RequestAccessComponent({dbName, tableName, successHandler}) {
                         label: row.accountId,
                         value: row.accountId,
                         description: row.status,
-                        disabled: row.status
+                        disabled: row.status && row.status != "rejected"
                     }
                 })
 

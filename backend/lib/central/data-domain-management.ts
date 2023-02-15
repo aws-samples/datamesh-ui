@@ -18,6 +18,7 @@ export interface DataDomainManagementProps {
     adjustGlueResourcePolicyFunction: Function
     userDomainMappingTable: Table
     approvalsTable: Table
+    productShareMappingTable: Table
     crDataDomainUIAccessRole: IRole
     confidentialityKey: string
     approvalsLayer: LayerVersion
@@ -310,7 +311,8 @@ export class DataDomainManagement extends Construct {
                             "dynamodb:TransactWriteItems"
                         ],
                         resources: [
-                            props.approvalsTable.tableArn
+                            props.approvalsTable.tableArn,
+                            props.productShareMappingTable.tableArn
                         ]
                     }),
                     new PolicyStatement({
@@ -333,7 +335,8 @@ export class DataDomainManagement extends Construct {
             code: Code.fromAsset(__dirname+"/resources/lambda/ProcessApproval"),
             environment: {
                 USER_MAPPING_TABLE_NAME: props.userDomainMappingTable.tableName,
-                APPROVALS_TABLE_NAME: props.approvalsTable.tableName
+                APPROVALS_TABLE_NAME: props.approvalsTable.tableName,
+                PRODUCT_SHARE_MAPPING_TABLE_NAME: props.productShareMappingTable.tableName
             },
             layers: [this.dataDomainLayer, props.approvalsLayer]
         })

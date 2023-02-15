@@ -146,6 +146,7 @@ export class DataMeshUICentralStack extends Stack {
             userDomainMappingTable: dataMeshUI.userDomainMappingTable,
             approvalsLayer: approvalWorkflow.approvalsLayer,
             approvalsTable: approvalWorkflow.approvalsTable,
+            productShareMappingTable: approvalWorkflow.productShareMappingTable,
             crDataDomainUIAccessRole: dataMeshUIAuth.crDataDomainUIAccessRole,
             confidentialityKey: tbacConfig.TagKeys.Confidentiality
         })

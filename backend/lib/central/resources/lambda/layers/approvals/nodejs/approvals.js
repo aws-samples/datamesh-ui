@@ -10,7 +10,7 @@ const Approvals = {
         const buffer = Buffer.from(JSON.stringify(lfTags))
         return `tags-${buffer.toString('base64')}#${targetAccountId}`
     },
-    async processApproval(sourceAccountId, requestIdentifier, actionType, approvalsTableName) {
+    async processApproval(sourceAccountId, requestIdentifier, actionType, approvalsTableName, productShareMappingTableName) {
         const resp = await ddbClient.getItem({
             TableName: approvalsTableName,
             Key: {
@@ -25,54 +25,108 @@ const Approvals = {
 
         if (resp && resp.Item) {
             const {Item} = resp
-            const {token} = Item
+            const {token, mode, sourceDomain, targetAccountId} = Item
 
             switch (actionType) {
                 case "approve":
                     await sfnClient.sendTaskSuccess({taskToken: decodeURIComponent(token.S), output: "{}"}).promise()
                     break;
                 case "reject":
-                    await sfnClient.sendTaskFailure({taskToken: decodeURIComponent(token.S), output: "{}"}).promise()
+                    await sfnClient.sendTaskFailure({taskToken: decodeURIComponent(token.S)}).promise()
                     break;
                 default:
                     throw new Error("Invalid actionType")
             }
 
-            const updateResp = await ddbClient.transactWriteItems({
-                TransactItems: [
-                    {
-                        Delete: {
-                            TableName: approvalsTableName,
-                            Key: {
-                                "accountId": {
-                                    "S": sourceAccountId
-                                },
-                                "requestIdentifier": {
-                                    "S": requestIdentifier
-                                }
-                            }
-                        }
-                    },
-                    {
-                        Update: {
-                            TableName: approvalsTableName,
-                            Key: {
-                                "accountId": {
-                                    "S": sourceAccountId
-                                },
-                                "requestIdentifier": {
-                                    "S": SORT_KEY_COUNTER_NAME
-                                }
+            const transactPayload = [
+                {
+                    Delete: {
+                        TableName: approvalsTableName,
+                        Key: {
+                            "accountId": {
+                                "S": sourceAccountId
                             },
-                            UpdateExpression: "SET pendingCount = pendingCount - :num",
-                            ExpressionAttributeValues: {
-                                ":num": {
-                                    "N": "1"
-                                }
+                            "requestIdentifier": {
+                                "S": requestIdentifier
                             }
                         }
                     }
-                ]
+                },
+                {
+                    Update: {
+                        TableName: approvalsTableName,
+                        Key: {
+                            "accountId": {
+                                "S": sourceAccountId
+                            },
+                            "requestIdentifier": {
+                                "S": SORT_KEY_COUNTER_NAME
+                            }
+                        },
+                        UpdateExpression: "SET pendingCount = pendingCount - :num",
+                        ExpressionAttributeValues: {
+                            ":num": {
+                                "N": "1"
+                            }
+                        }
+                    }
+                }
+            ]
+
+            if (actionType == "reject") {
+                let rejectPayload = null
+
+                if (mode.S == "tbac") {
+                    const {lfTags} = Item
+                    rejectPayload = {
+                        TableName: productShareMappingTableName,
+                        Key: {
+                            "domainId": {
+                                "S": sourceDomain.S
+                            },
+                            "resourceMapping": {
+                                "S": `tags-${(Buffer.from(lfTags.S)).toString("base64")}#${targetAccountId.S}`
+                            }
+                        },
+                        UpdateExpression: "SET #status = :status",
+                        ExpressionAttributeNames: {
+                            "#status": "status"
+                        },
+                        ExpressionAttributeValues: {
+                            ":status": {
+                                "S": "rejected"
+                            }
+                        }
+                    }
+                } else if (mode.S == "nrac") {
+                    const {sourceProduct} = Item
+                    rejectPayload = {
+                        TableName: productShareMappingTableName,
+                        Key: {
+                            "domainId": {
+                                "S": sourceDomain.S
+                            },
+                            "resourceMapping": {
+                                "S": `${sourceProduct.S}#${targetAccountId.S}`
+                            }
+                        },
+                        UpdateExpression: "SET #status = :status",
+                        ExpressionAttributeNames: {
+                            "#status": "status"
+                        },
+                        ExpressionAttributeValues: {
+                            ":status": {
+                                "S": "rejected"
+                            }
+                        }
+                    }
+                }
+
+                transactPayload.push({Update: rejectPayload})
+            }
+
+            const updateResp = await ddbClient.transactWriteItems({
+                TransactItems: transactPayload
             }).promise()
 
             return updateResp

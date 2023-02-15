@@ -21,9 +21,10 @@ exports.handler = async(event) => {
         payload.body = JSON.stringify({"error": "Object not found"})
     } else {
         try {
-            const resp = await Approvals.processApproval(sourceAccountId, requestIdentifier, actionType, process.env.APPROVALS_TABLE_NAME)
+            const resp = await Approvals.processApproval(sourceAccountId, requestIdentifier, actionType, process.env.APPROVALS_TABLE_NAME, process.env.PRODUCT_SHARE_MAPPING_TABLE_NAME)
             payload.body = JSON.stringify({"result": resp})
         } catch (e) {
+            console.log(e)
             payload.statusCode = 400
             payload.body = JSON.stringify({"error": "Invalid request"})
         }
