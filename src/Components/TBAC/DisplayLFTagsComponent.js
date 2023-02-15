@@ -1,5 +1,5 @@
 import { SFNClient, StartExecutionCommand } from "@aws-sdk/client-sfn";
-import { Box, Button, ColumnLayout, Container, FormField, Grid, Header, Icon, Input, Link, Modal, SpaceBetween, StatusIndicator, Badge, ExpandableSection, Table, Select } from "@cloudscape-design/components";
+import { Box, Button, ColumnLayout, Container, FormField, Grid, Header, Icon, Input, Link, Modal, SpaceBetween, StatusIndicator, Badge, ExpandableSection, Table, Select, Spinner } from "@cloudscape-design/components";
 import {Amplify, Auth } from "aws-amplify";
 import { useEffect, useState } from "react";
 import DataDomain from "../../Backend/DataDomain"
@@ -9,6 +9,7 @@ const tbacConfig = require("../../tbac-config.json");
 const config = Amplify.configure();
 const SM_ARN = cfnOutput.InfraStack.TbacStateMachineArn;
 const EXTRACT_PRODUCER_ACCOUNT_ID = /^.+?(\d{12})$/
+const Buffer = require("buffer/").Buffer
 
 function DisplayLFTagsComponent(props) {
     const [modalVisible, setModalVisible] = useState(false);
@@ -21,17 +22,67 @@ function DisplayLFTagsComponent(props) {
     const [producerAccountId, setProducerAccountId] = useState()
     const [domainIdOptions, setDomainIdOptions] = useState([])
     const [dataDomain, setDataDomain] = useState(null)
+    const [spinner, setSpinner] = useState(false)
 
-    const showShareDialog = (key, value) => {
+    const renderSubmitRequestAccess = () => {
+        if (spinner) {
+            return (
+                <Button variant="primary" disabled="true"><Spinner /> Request Access</Button>
+            )
+        } else {
+            return (
+                <Button variant="primary" onClick={requestAccess}>Request Access</Button>
+            )
+        }
+    }
+
+    const generateLfTagArrayPayload = (key, value) => {
+        return  [
+            {
+                "TagKey": tbacConfig.TagKeys.LineOfBusiness,
+                "TagValues": [dataDomain.TagValues[0]]
+            },
+            {
+                "TagKey": key,
+                "TagValues": [value]
+            }
+        ]
+    }
+
+    const showShareDialog = async(key, value) => {
         setShareTagKey(key);
         setShareTagValue(value)
+
+        await refreshSelection(key, value)
         setModalVisible(true);
+    }
+
+    const refreshSelection = async(key, value) => {
+        const payload = `tags-${(Buffer.from(JSON.stringify(generateLfTagArrayPayload(key, value)))).toString("base64")}`
+        
+        const {sharedAccountIds} = await DataDomain.getListOfShared(props.database, payload)
+        
+        let selectFormatted = []
+
+        if (sharedAccountIds && sharedAccountIds.length > 0) {
+            selectFormatted = sharedAccountIds.map((row) => {
+                return {
+                    label: row.accountId,
+                    value: row.accountId,
+                    description: row.status,
+                    disabled: row.status && row.status != "rejected"
+                }
+            })
+        }
+
+        setDomainIdOptions(selectFormatted)
     }
 
     const requestAccess = async() => {
         if (!targetAccountId) {
             setError("Target Account ID is required");
         } else {
+            setSpinner(true)
             try {
                 
                 const params = JSON.stringify({
@@ -52,10 +103,11 @@ function DisplayLFTagsComponent(props) {
 
                 await AuthWorkflow.exec(SM_ARN, params, targetAccountId.value)
 
-
+                await refreshSelection(shareTagKey, shareTagValue)
                 setTargetAccountId(null);
                 setError(null);
                 setSuccess("Request for access sent successfully")
+                setSpinner(false)
             } catch (e) {
                 setError("An unexpected error occurred: "+e);
                 setSuccess(null);
@@ -66,7 +118,7 @@ function DisplayLFTagsComponent(props) {
     const cancelModal = () => {
         setShareTagKey(null);
         setShareTagValue(null);
-        setTargetAccountId(null);
+        // setTargetAccountId(null);
         setError(null);
         setSuccess(null);
         setModalVisible(false);
@@ -91,19 +143,6 @@ function DisplayLFTagsComponent(props) {
                 setProducerAccountId(prodAccountId)
                 setOwner(await DataDomain.isOwner(prodAccountId))
                 setDataDomain(props.lfTags ? props.lfTags.find((row) => row.TagKey == tbacConfig.TagKeys.LineOfBusiness) : null)
-    
-                const {domainIds} = await DataDomain.getOwnedDomainIds()
-                const selectFormatted = []
-    
-                if (domainIds && domainIds.length > 0) {
-                    for (const domainId of domainIds) {
-                        selectFormatted.push({label: domainId, value: domainId})
-                    }
-    
-                    setTargetAccountId(selectFormatted[0])
-                }
-    
-                setDomainIdOptions(selectFormatted)
             }
         }
 
@@ -126,10 +165,10 @@ function DisplayLFTagsComponent(props) {
                     ]}></Table>
                 </ExpandableSection>
 
-                <Modal onDismiss={() => setModalVisible(false)} visible={modalVisible} header={<Header variant="h3">Requesting Tag Access from {dataDomain ? dataDomain.TagValues[0] : null}</Header>} footer={
+                <Modal onDismiss={() => cancelModal()} visible={modalVisible} header={<Header variant="h3">Requesting Tag Access from {dataDomain ? dataDomain.TagValues[0] : null}</Header>} footer={
                     <SpaceBetween direction="horizontal" size="xs">
                         <Button variant="link" onClick={cancelModal}>Cancel</Button>
-                        <Button variant="primary" onClick={requestAccess}>Request Access</Button>
+                        {renderSubmitRequestAccess()}
                     </SpaceBetween>}>
                     <Box margin={{bottom: "l"}}>
                         You're requesting access to <strong>{shareTagKey}</strong> = <strong>{shareTagValue}</strong>.

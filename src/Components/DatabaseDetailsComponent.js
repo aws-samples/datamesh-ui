@@ -22,11 +22,15 @@ import { Badge, ColumnLayout, Container, Header, SpaceBetween } from "@cloudscap
 import ValueWithLabel from "./ValueWithLabel";
 import ResourceLFTagsComponent from "./TBAC/ResourceLFTagsComponent";
 import DataDomain from "../Backend/DataDomain"
+import TogglePiiFlagComponent from "./TogglePiiFlagComponent"
 
 const config = Amplify.configure();
 
-function DatabaseDetailsComponent({dbName, accessModeCallback, ownerCallback}) {
+function DatabaseDetailsComponent({dbName, accessModeCallback, ownerCallback, domainIdCallback}) {
     const [db, setDb] = useState();
+    const [forceReload, setForceReload] = useState(1)
+    const [owner, setOwner] = useState(false)
+    const [tags, setTags] = useState(null)
 
     useEffect(() => {
         async function run() {
@@ -42,12 +46,37 @@ function DatabaseDetailsComponent({dbName, accessModeCallback, ownerCallback}) {
 
             if (ownerCallback) {
                 const isOwner = await DataDomain.isOwner(parameters.data_owner)
+                setOwner(isOwner)
                 ownerCallback(isOwner)
+            }
+
+            if (domainIdCallback) {
+                domainIdCallback(parameters.data_owner)
             }
         }
 
         run()
-    }, []);
+    }, [forceReload]);
+
+    const toggleCallback = () => {
+        setForceReload(forceReload + 1)
+    }
+
+    const renderPii = () => {
+        const accessMode = (db.Parameters && "access_mode" in db.Parameters) ? db.Parameters.access_mode : null
+
+        if (accessMode === "nrac") {
+            return (
+                <TogglePiiFlagComponent objectParameters={db.Parameters} type="database" owner={owner} domainId={db.Parameters.data_owner} dbName={dbName} toggleCallback={toggleCallback} />
+            )
+        } else if (accessMode === "tbac") {
+            return (
+                <TogglePiiFlagComponent objectParameters={db.Parameters} type="tags" resourceType="database" tags={tags} owner={owner} domainId={db.Parameters.data_owner} dbName={dbName} toggleCallback={toggleCallback} />
+            )
+        }
+
+        return null
+    }
 
     if (db) {
         return (
@@ -60,8 +89,8 @@ function DatabaseDetailsComponent({dbName, accessModeCallback, ownerCallback}) {
                         <ValueWithLabel label="Location">
                             {db.LocationUri}
                         </ValueWithLabel>
-                        <ValueWithLabel label="Has PII">
-                            {(db.Parameters && "pii_flag" in db.Parameters && db.Parameters.pii_flag === "true") ? <Badge color="red">Yes</Badge> : <Badge color="green">No</Badge>}
+                        <ValueWithLabel label="Access Approval">
+                            {renderPii()}
                         </ValueWithLabel>
                         <ValueWithLabel label="Access Mode">
                             {(db.Parameters && "access_mode" in db.Parameters) ? db.Parameters.access_mode : "n/a"}
@@ -75,7 +104,7 @@ function DatabaseDetailsComponent({dbName, accessModeCallback, ownerCallback}) {
                             {(db.Parameters && "data_owner" in db.Parameters) ? db.Parameters.data_owner : "n/a"}   
                         </ValueWithLabel>
                         <ValueWithLabel label="Tags">
-                            <ResourceLFTagsComponent resourceType="database" resourceName={dbName} />
+                            <ResourceLFTagsComponent tagsCallback={setTags} resourceType="database" resourceName={dbName} forceReload={forceReload} />
                         </ValueWithLabel>
                     </SpaceBetween>
                 </ColumnLayout>

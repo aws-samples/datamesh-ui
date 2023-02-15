@@ -4,6 +4,26 @@ const axios = require("axios").default;
 const cfnOutput = require("../cfn-output.json")
 
 const DataDomain = {
+    async togglePiiFlag(type, domainId, dbName, tableName, columnName, resourceType) {
+        const apiUrl = `${cfnOutput.InfraStack.WorkflowApiUrl}/data-products/toggle-pii-flag`
+        const session = await Auth.currentSession()  
+        
+        await axios({
+            method: "POST",
+            url: apiUrl,
+            headers: {
+                "Authorization": session.getAccessToken().getJwtToken()
+            },
+            data: {
+                type,
+                domainId,
+                dbName,
+                tableName,
+                columnName,
+                resourceType
+            }
+        })
+    },
     async isOwner(accountId) {
         const apiUrl = `${cfnOutput.InfraStack.WorkflowApiUrl}/data-domain/validate-owner?accountId=${accountId}`
         const session = await Auth.currentSession()

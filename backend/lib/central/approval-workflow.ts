@@ -3,11 +3,11 @@ import { HttpLambdaIntegration } from "@aws-cdk/aws-apigatewayv2-integrations-al
 import { IdentityPool, UserPoolAuthenticationProvider } from "@aws-cdk/aws-cognito-identitypool-alpha";
 import { Duration, RemovalPolicy, Stack } from "aws-cdk-lib";
 import { UserPool } from "aws-cdk-lib/aws-cognito";
-import { AttributeType, BillingMode, Table } from "aws-cdk-lib/aws-dynamodb";
+import { AttributeType, BillingMode, Table, TableEncryption } from "aws-cdk-lib/aws-dynamodb";
 import { EventBus, EventField, Rule, RuleTargetInput } from "aws-cdk-lib/aws-events";
 import { SfnStateMachine } from "aws-cdk-lib/aws-events-targets";
 import { Effect, FederatedPrincipal, ManagedPolicy, Policy, PolicyDocument, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
-import { Code, Function, Runtime } from "aws-cdk-lib/aws-lambda";
+import { Code, Function, LayerVersion, Runtime } from "aws-cdk-lib/aws-lambda";
 import { Choice, Condition, IntegrationPattern, JsonPath, Pass, StateMachine, StateMachineType, TaskInput } from "aws-cdk-lib/aws-stepfunctions";
 import { CallAwsService, HttpMethod, LambdaInvoke } from "aws-cdk-lib/aws-stepfunctions-tasks";
 import { NagSuppressions } from "cdk-nag";
@@ -34,90 +34,25 @@ export class ApprovalWorkflow extends Construct {
     readonly approvalBaseUrl: string;
 
     readonly productShareMappingTable: Table
+    readonly approvalsTable: Table
+    readonly approvalsLayer: LayerVersion
 
     constructor(scope: Construct, id: string, props:ApprovalWorkflowProps) {
         super(scope, id);
-        
-        //event bus for workflow
-        const centralApprovalEventBus = new EventBus(this, "CentralApprovalEventBus", {
-            eventBusName: util.format("%s_centralApprovalBus", Stack.of(this).account)
-        });
 
-        this.centralApprovalEventBus = centralApprovalEventBus;
-
-        centralApprovalEventBus.applyRemovalPolicy(RemovalPolicy.DESTROY);
-
-        const eventBridgeCrossAccountRole = new Role(this, "EventBridgeCrossAccountRole", {
-            assumedBy: new ServicePrincipal("events.amazonaws.com"),
-            inlinePolicies: {
-                "AllowPutEvents": new PolicyDocument({
-                    statements: [
-                        new PolicyStatement({
-                            effect: Effect.ALLOW,
-                            actions: ["events:PutEvents"],
-                            resources: ["arn:aws:events:*:*:event-bus/*_sharingApprovalBus"]
-                        })
-                    ]
-                })
-            }
-        })
-
-        NagSuppressions.addResourceSuppressions(eventBridgeCrossAccountRole, [{
-            id: "AwsSolutions-IAM5",
-            reason: "Used by Step Function to dynamically create EventBridge Rule Targets for new data products.",
-            appliesTo: ["Resource::arn:aws:events:*:*:event-bus/*_sharingApprovalBus"]
-        }])
-
-        this.workflowLambdaSMApproverRole = new Role(this, "WorkflowLambdaSMApproverRole", {
-            assumedBy: new ServicePrincipal("lambda.amazonaws.com"),
-            managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole")],
-            inlinePolicies: {inline0: new PolicyDocument({
-                statements: [
-                    new PolicyStatement({
-                        effect: Effect.ALLOW,
-                        actions: [
-                            "states:SendTaskSuccess",
-                            "states:SendTaskFailure"
-                        ],
-                        resources: ["*"]
-                    })
-                ]
-            })}
-        });
-
-        NagSuppressions.addResourceSuppressions(this.workflowLambdaSMApproverRole, [
-            {
-                id: "AwsSolutions-IAM4",
-                reason: "Basic logging functionality"
+        this.approvalsTable = new Table(this, "DataProductShareApprovals", {
+            partitionKey: {
+                name: "accountId",
+                type: AttributeType.STRING
             },
-            {
-                id: "AwsSolutions-IAM5",
-                reason: "Activities are created dynamically"
-            }
-        ])
-
-        this.workflowLambdaSendApprovalEmailRole = new Role(this, "WorkflowLambdaSendApprovalEmailRole", {
-            assumedBy: new ServicePrincipal("lambda.amazonaws.com"),
-            managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole")],
-            inlinePolicies: {
-                "AllowCentralApprovalBus": new PolicyDocument({
-                    statements: [
-                        new PolicyStatement({
-                            effect: Effect.ALLOW,
-                            actions: ["events:PutEvents"],
-                            resources: [centralApprovalEventBus.eventBusArn]
-                        })
-                    ]
-                })
-            }
+            sortKey: {
+                name: "requestIdentifier",
+                type: AttributeType.STRING
+            },
+            billingMode: BillingMode.PAY_PER_REQUEST,
+            encryption: TableEncryption.AWS_MANAGED,
+            removalPolicy: RemovalPolicy.DESTROY
         });
-
-        NagSuppressions.addResourceSuppressions(this.workflowLambdaSendApprovalEmailRole, [
-            {
-                id: "AwsSolutions-IAM4",
-                reason: "Basic logging functionality"
-            }
-        ])
 
         this.productShareMappingTable = new Table(this, "ProductShareMappingTable", {
             partitionKey: {
@@ -130,6 +65,39 @@ export class ApprovalWorkflow extends Construct {
             },
             billingMode: BillingMode.PAY_PER_REQUEST
         })
+
+        this.approvalsLayer = new LayerVersion(this, "ApprovalsLayer", {
+            code: Code.fromAsset(__dirname+"/resources/lambda/layers/approvals"),
+            compatibleRuntimes: [Runtime.NODEJS_16_X],
+            removalPolicy: RemovalPolicy.DESTROY
+        })
+
+        this.workflowLambdaSendApprovalEmailRole = new Role(this, "WorkflowLambdaSendApprovalEmailRole", {
+            assumedBy: new ServicePrincipal("lambda.amazonaws.com"),
+            managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole")],
+            inlinePolicies: {
+                "RecordApprovalRequest": new PolicyDocument({
+                    statements: [
+                        new PolicyStatement({
+                            effect: Effect.ALLOW,
+                            actions: [
+                                "dynamodb:TransactWriteItems",
+                                "dynamodb:PutItem",
+                                "dynamodb:UpdateItem"
+                            ],
+                            resources: [this.approvalsTable.tableArn, this.productShareMappingTable.tableArn]
+                        })
+                    ]
+                })
+            }
+        });
+
+        NagSuppressions.addResourceSuppressions(this.workflowLambdaSendApprovalEmailRole, [
+            {
+                id: "AwsSolutions-IAM4",
+                reason: "Basic logging functionality"
+            }
+        ])
 
         this.workflowLambdaShareCatalogItemRole = new Role(this, "WorkflowLambdaShareCatalogItemRole", {
             assumedBy: new ServicePrincipal("lambda.amazonaws.com"),
@@ -212,31 +180,6 @@ export class ApprovalWorkflow extends Construct {
             }
         });
 
-        const workflowActivityApprover = new Function(this, "WorkflowActivityApprover", {
-            runtime: Runtime.NODEJS_16_X,
-            handler: 'index.handler',
-            code: Code.fromAsset(__dirname+"/resources/lambda/WorkflowActivityApprover"),
-            role: this.workflowLambdaSMApproverRole
-        });
-
-        props.httpApi.addRoutes({
-            path: '/workflow/update-state',
-            methods: [HttpMethod.GET],
-            integration: new HttpLambdaIntegration("ApprovalStateIntegration", workflowActivityApprover),
-            authorizer: new HttpNoneAuthorizer()
-        });
-
-        NagSuppressions.addResourceSuppressions(props.httpApi, [
-            {
-                id: "AwsSolutions-APIG1",
-                reason: "API is only used for access approvals."
-            },
-            {
-                id: "AwsSolutions-APIG4",
-                reason: "Endpoint requires a task token before proceeding."
-            }
-        ], true)
-
         const deriveBaseDatabaseName = new Function(this, "DeriveBaseDatabaseName", {
             runtime: Runtime.NODEJS_16_X,
             handler: 'index.handler',
@@ -256,12 +199,11 @@ export class ApprovalWorkflow extends Construct {
             code: Code.fromAsset(__dirname+"/resources/lambda/WorkflowSendApprovalNotification"),
             role: this.workflowLambdaSendApprovalEmailRole,
             environment: {
-                "API_GATEWAY_BASE_URL": props.httpApi.apiEndpoint+"/workflow",
-                "CENTRAL_APPROVAL_BUS_NAME": centralApprovalEventBus.eventBusName
-            }
+                APPROVALS_TABLE_NAME: this.approvalsTable.tableName,
+                PRODUCT_SHARE_MAPPING_TABLE_NAME: this.productShareMappingTable.tableName
+            },
+            layers: [this.approvalsLayer]
         });
-
-        this.approvalBaseUrl = props.httpApi.apiEndpoint+"/workflow";
 
         const workflowGetTableDetails = new Function(this, "WorkflowGetTableDetails", {
             runtime: Runtime.NODEJS_16_X,
@@ -429,62 +371,7 @@ export class ApprovalWorkflow extends Construct {
                 inputPath: "$.payload"
             });
 
-            const emitApprovalWorkflowProducerEventRule = new CallAwsService(this, "EmitApprovalWorkflowProducerEventRule", {
-                service: "eventbridge",
-                action: "putRule",
-                iamResources: ["*"],
-                inputPath: "$.payload",
-                resultPath: JsonPath.DISCARD,
-                parameters: {
-                    "Name.$": "States.Format('{}_sharingApproval', $.producer_acc_id)",
-                    "EventBusName": centralApprovalEventBus.eventBusName,
-                    "EventPattern": {
-                        "source": ["com.central.sharing-approval"],
-                        "detail-type": [{
-                            "prefix.$": "States.Format('{}_', $.producer_acc_id)"
-                        }]
-                    }
-                }
-            })
-
             const lfAdminRole = Role.fromRoleArn(this, "DPMLFAdminRole", props.dpmStateMachineRoleArn);
-
-            const approvalRuleArn = util.format("arn:aws:events:%s:%s:rule/%s/*", Stack.of(this).region, Stack.of(this).account, centralApprovalEventBus.eventBusName);
-            lfAdminRole.attachInlinePolicy(new Policy(this, "eventBridgePassRolePolicy", {
-                document: new PolicyDocument({
-                    statements: [
-                        new PolicyStatement({
-                            effect: Effect.ALLOW,
-                            actions: ["events:Put*"],
-                            resources: [centralApprovalEventBus.eventBusArn, approvalRuleArn]
-                        }),
-                        new PolicyStatement({
-                            effect: Effect.ALLOW,
-                            actions: ["iam:PassRole"],
-                            resources: [eventBridgeCrossAccountRole.roleArn]
-                        })
-                    ]
-                })
-            }))
-
-            const approvalWorkflowTarget = new CallAwsService(this, "ApprovalWorkflowTarget", {
-                service: "eventbridge",
-                action: "putTargets",
-                iamResources: ["*"],
-                inputPath: "$.payload",
-                resultPath: JsonPath.DISCARD,
-                parameters: {
-                    "EventBusName": centralApprovalEventBus.eventBusName,
-                    "Rule.$": "States.Format('{}_sharingApproval', $.producer_acc_id)",
-                    "Targets": [
-                        {
-                            "Id.$": "States.Format('{}_approvalWorkflowTarget', $.producer_acc_id)",
-                            "Arn.$": util.format("States.Format('arn:aws:events:%s:{}:event-bus/{}_sharingApprovalBus', $.producer_acc_id, $.producer_acc_id)", Stack.of(this).region),
-                            "RoleArn": eventBridgeCrossAccountRole.roleArn
-                        }
-                    ]
-                }
-            })
 
             const initialState = new Pass(this, "InitialState", {
                 inputPath: "$.detail.input",
@@ -493,11 +380,7 @@ export class ApprovalWorkflow extends Construct {
                 }
             })
 
-            approvalWorkflowTarget.endStates;
-
-            emitApprovalWorkflowProducerEventRule.next(approvalWorkflowTarget);
-
-            grantWorkflowLambdaShareCatalogPermission.next(emitApprovalWorkflowProducerEventRule);
+            grantWorkflowLambdaShareCatalogPermission.endStates;
 
             grantWorkflowLambdaTableDetailsPermission.next(grantWorkflowLambdaShareCatalogPermission);
 

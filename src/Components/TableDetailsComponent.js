@@ -28,6 +28,7 @@ import DisplayLFTagsFromContextComponent from "./TBAC/DisplayLFTagsFromContextCo
 import DataProductStateComponent from "./DataProductStateComponent";
 import ProductConsumersComponent from "./ProductConsumersComponent";
 import RouterAwareBreadcrumbComponent from "./RouterAwareBreadcrumbComponent";
+import TogglePiiFlagComponent from "./TogglePiiFlagComponent"
 
 const config = Amplify.configure();
 
@@ -35,10 +36,10 @@ function TableDetailsComponent(props) {
     const {dbname, tablename} = useParams();
     const [table, setTable] = useState();
     const [tableNotFound, setTableNotFound] = useState(false);
-    const [requestSuccessful, setRequestSuccessful] = useState(false);
-    const [executionArn, setExecutionArn] = useState();
     const [accessMode, setAccessMode] = useState("nrac")
     const [owner, setOwner] = useState(false)
+    const [forceReload, setForceReload] = useState(1)
+    const [domainId, setDomainId] = useState(null)
 
     useEffect(() => {
         if (props.breadcrumbsCallback) {
@@ -64,7 +65,11 @@ function TableDetailsComponent(props) {
         }
 
         run()
-    }, []);
+    }, [forceReload]);
+
+    const toggleCallback = () => {
+        setForceReload(forceReload + 1)
+    }
 
     const renderRequestAccess = () => {
         if (accessMode == "nrac" && !owner) {
@@ -90,14 +95,28 @@ function TableDetailsComponent(props) {
         return null
     }
 
+    const renderAccessApproval = (item) => {
+        if (accessMode === "nrac") {
+            return (
+                <TogglePiiFlagComponent objectParameters={item.Parameters} type="column" owner={owner} domainId={domainId} dbName={dbname} tableName={tablename} columnName={item.Name} toggleCallback={toggleCallback} />
+            )
+        } else if (accessMode === "tbac") {
+            return (
+                <TogglePiiFlagComponent type="tags" resourceType="column" owner={owner} domainId={domainId} dbName={dbname} tableName={tablename} columnName={item.Name} toggleCallback={toggleCallback} />
+            )
+        }
+
+        return null
+    }
+
     if (tableNotFound) {
         return <Flashbar items={[{header: "Invalid Request", type: "error", content: "There's no table found for the given parameter."}]} />;
     } else if (table) {
         return (
             <div>
                 <ContentLayout header={<Header variant="h1">{tablename}</Header>}>
-                    <DatabaseDetailsComponent dbName={dbname} accessModeCallback={setAccessMode} ownerCallback={setOwner} />
-                    <ResourceLFTagsWrapper resourceName={tablename} resourceDatabaseName={dbname}>
+                    <DatabaseDetailsComponent dbName={dbname} accessModeCallback={setAccessMode} domainIdCallback={setDomainId} ownerCallback={setOwner} />
+                    <ResourceLFTagsWrapper forceReload={forceReload} resourceName={tablename} resourceDatabaseName={dbname}>
                         <Box margin={{top: "l"}}>
                             <Container header={<Header variant="h2">Table Details</Header>}>
                                 <ColumnLayout columns={2} variant="text-grid">
@@ -135,8 +154,8 @@ function TableDetailsComponent(props) {
                                     cell: item => <DisplayLFTagsFromContextComponent resourceType="column" resourceColumnName={item.Name} />
                                 },
                                 {
-                                    header: "Is PII",
-                                    cell: item => (item.Parameters && "pii_flag" in item.Parameters && item.Parameters.pii_flag === "true") ? <Badge color="red">Yes</Badge> : <Badge color="green">No</Badge>
+                                    header: "Access Approval",
+                                    cell: item => renderAccessApproval(item)
                                 }
                             ]} empty={
                                 <Box textAlign="center">

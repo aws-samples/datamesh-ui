@@ -27,6 +27,7 @@ import RegisterNewProductComponent from "./RegisterNewProductComponent";
 import DataProductDetailsComponent from "./DataProductDetailsComponent"
 import { useEffect, useState } from "react";
 import Event from "../Backend/Event";
+import PendingApprovalsComponent from "./Approvals/PendingApprovalsComponent";
 const cfnOutput = require("../cfn-output.json");
 const searchApiUrl = cfnOutput.InfraStack.SearchApiUrl;
 const axios = require("axios")
@@ -183,6 +184,7 @@ function MainComponent(props) {
                 <Route exact path="/data-product-details/:dataProduct" element={<DataProductDetailsComponent />} />
                 <Route exact path="/execution-details/:execArn" element={<WorkflowExecutionDetailsComponent />} />
                 <Route exact path="/product-registration/:domainId/new" element={<RegisterNewProductComponent breadcrumbsCallback={setBreadcrumbs} />} />
+                <Route exact path="/approvals/pending" element={<PendingApprovalsComponent breadcrumbsCallback={setBreadcrumbs} />} />
             </Routes>
         } tools={
             <HelpPanel header={<Header variant="h3">Additional Resources</Header>}>

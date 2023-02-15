@@ -141,6 +141,13 @@ export class DataMeshUIAuth extends Construct {
             defaultAuthorizer: httpApiUserPoolAuthorizer
         });
 
+        NagSuppressions.addResourceSuppressions(this.httpApi, [
+            {
+                id: "AwsSolutions-APIG1",
+                reason: "Not needed"
+            }
+        ], true)
+
         this.httpApi.addRoutes({
             path: "/data-domains/sync-permissions",
             methods: [HttpMethod.POST],
