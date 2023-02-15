@@ -21,6 +21,7 @@
     "@testing-library/user-event": "^12.1.10",
     "aws-amplify": "^4.2.4",
     "axios": "^0.27.2",
+    "buffer": "^6.0.3",
     "chart.js": "^3.7.1",
     "inquirer": "^8.1.2",
     "minimist": "^1.2.5",

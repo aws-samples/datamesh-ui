@@ -20,6 +20,7 @@ import { useEffect, useState } from "react";
 import {GlueClient, GetDatabasesCommand, GetDatabaseCommand} from '@aws-sdk/client-glue';
 import { Alert, Box, Button, ButtonDropdown, FormField, Header, Icon, Input, Link, Modal, SpaceBetween, Spinner, Table, TextFilter } from "@cloudscape-design/components";
 import ResourceLFTagsComponent from "./TBAC/ResourceLFTagsComponent";
+import PendingApprovalCountComponent from "./Approvals/PendingApprovalCountComponent"
 import { v4 as uuid } from 'uuid';
 import DataDomain from "../Backend/DataDomain";
 import DataDomainActionComponent from "./DataDomainActionComponent";
@@ -227,6 +228,7 @@ function CatalogComponent(props) {
 
     return (
         <div>
+            <PendingApprovalCountComponent />
             <Box margin={{top: "l"}}>
                 <Table
                     filter={

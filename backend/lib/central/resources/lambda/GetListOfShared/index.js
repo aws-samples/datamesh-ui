@@ -66,7 +66,7 @@ exports.handler = async(event) => {
 
                 return {
                     accountId: userAccountId,
-                    shared: (promiseResult && promiseResult.Item) ? true : false
+                    status: (promiseResult && promiseResult.Item) ? promiseResult.Item.status.S : null
                 }
             })
 

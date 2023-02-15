@@ -108,9 +108,10 @@ export class DataMeshUICentralStack extends Stack {
 
         const tbacSharingWorkflow = new TbacSharingWorkflow(this, "TbacSharingWorkflow", {
             cognitoAuthRole: dataMeshUIAuth.identityPool.authenticatedRole,
-            centralApprovalEventBus: approvalWorkflow.centralApprovalEventBus,
-            approvalBaseUrl: approvalWorkflow.approvalBaseUrl,
-            centralEventBusArn: centralEventBusArn.valueAsString
+            centralEventBusArn: centralEventBusArn.valueAsString,
+            approvalsLayer: approvalWorkflow.approvalsLayer,
+            approvalsTable: approvalWorkflow.approvalsTable,
+            productSharingMappingTable: approvalWorkflow.productShareMappingTable
         });
 
         const dataMeshUI = new DataMeshUI(this, "DataMeshUI", {
@@ -142,7 +143,11 @@ export class DataMeshUICentralStack extends Stack {
             httpApi: dataMeshUIAuth.httpApi,
             centralEventBusArn: centralEventBusArn.valueAsString,
             adjustGlueResourcePolicyFunction: tbacSharingWorkflow.adjustGlueResourcePolicyFunction,
-            userDomainMappingTable: dataMeshUI.userDomainMappingTable
+            userDomainMappingTable: dataMeshUI.userDomainMappingTable,
+            approvalsLayer: approvalWorkflow.approvalsLayer,
+            approvalsTable: approvalWorkflow.approvalsTable,
+            crDataDomainUIAccessRole: dataMeshUIAuth.crDataDomainUIAccessRole,
+            confidentialityKey: tbacConfig.TagKeys.Confidentiality
         })
 
         const registrationStateMachine = StateMachine.fromStateMachineArn(this, "RegistrationStateMachine", centralStateMachineArn.valueAsString)

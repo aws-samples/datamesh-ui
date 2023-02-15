@@ -81,7 +81,8 @@ function RequestAccessComponent({dbName, tableName, successHandler}) {
         
             if (sharedAccountIds && sharedAccountIds.length > 0) {
                 const formatted = sharedAccountIds.map((row) => {
-                    if (pendingSubmission && pendingSubmission === row.accountId && row.shared) {
+                    console.log(row)
+                    if (pendingSubmission && pendingSubmission === row.accountId && row.status) {
                         setPendingSubmission(null)
 
                         if (timerHandler) {
@@ -95,8 +96,8 @@ function RequestAccessComponent({dbName, tableName, successHandler}) {
                     return {
                         label: row.accountId,
                         value: row.accountId,
-                        description: row.shared ? "Shared" : null,
-                        disabled: row.shared
+                        description: row.status,
+                        disabled: row.status
                     }
                 })
 

@@ -15,9 +15,7 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-const AWS = require("aws-sdk");
-const util = require("util");
-const SOURCE = "com.central.sharing-approval";
+const {Approvals} = require("/opt/nodejs/approvals")
 
 exports.handler = async (event) => {
     const input = event.Input;
@@ -26,36 +24,50 @@ exports.handler = async (event) => {
     const target = input.target;
     const source = input.source;
     const sourceAccountId = input.table_details.Payload.data_owner;
-    
-    const apiGatewayBaseUrl = process.env.API_GATEWAY_BASE_URL;
-    const approveLink = util.format("%s/update-state?action=approve&token=%s", apiGatewayBaseUrl, encodeURIComponent(taskToken));
-    const denyLink = util.format("%s/update-state?action=deny&token=%s", apiGatewayBaseUrl, encodeURIComponent(taskToken));
-    
-    const topicArn = util.format("arn:aws:sns:%s:%s:DataLakeSharingApproval", process.env.AWS_REGION, sourceAccountId);
-    var messageBody = "A data sharing request has been created, please see the following details:\n";
-    messageBody += util.format("Database: %s\n", source.database);
-    messageBody += util.format("Table: %s\n", source.table);
-    messageBody += util.format("Target Account: %s\n\n", target.account_id);
-    messageBody += util.format("Approve: %s\n\nDeny: %s\n\n", approveLink, denyLink);
-    
-    const subject = util.format("Data Sharing Request Approval %s - %s", source.database, source.table);
-    
-    const eb = new AWS.EventBridge();
-    const centralApprovalBusName = process.env.CENTRAL_APPROVAL_BUS_NAME;
 
-    await eb.putEvents({
-        Entries: [
-            {
-                Detail: JSON.stringify({
-                    messageBody: messageBody,
-                    subject: subject
-                }),
-                DetailType: util.format("%s_sharingApproval", sourceAccountId),
-                EventBusName: centralApprovalBusName,
-                Source: SOURCE
+    const approvalsPayload = {
+        TableName: process.env.APPROVALS_TABLE_NAME,
+        Item: {
+            "accountId": {
+                "S": sourceAccountId
+            },
+            "requestIdentifier": {
+                "S": `PENDING#${(new Date()).getTime()}`
+            },
+            "mode": {
+                "S": "nrac"
+            },
+            "token": {
+                "S": encodeURIComponent(taskToken)
+            },
+            "targetAccountId": {
+                "S": target.account_id
+            },
+            "sourceDomain": {
+                "S": source.database
+            },
+            "sourceProduct": {
+                "S": source.table
             }
-        ]
-    }).promise();
+        }
+    }
+
+    const productShareMappingPayload = {
+        TableName: process.env.PRODUCT_SHARE_MAPPING_TABLE_NAME,
+        Item: {
+            "domainId": {
+                "S": source.database
+            },
+            "resourceMapping": {
+                "S": `${source.table}#${target.account_id}`
+            },
+            "status": {
+                "S": "pending"
+            }
+        }
+    }
+
+    await Approvals.recordApproval(sourceAccountId, approvalsPayload, productShareMappingPayload)
     
     return {};
 };

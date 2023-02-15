@@ -58,6 +58,9 @@ exports.handler = async (event) => {
                 },
                 "resourceMapping": {
                     "S": `${source.table}#${target.account_id}`
+                },
+                "status": {
+                    "S": "shared"
                 }
             }
         }).promise()

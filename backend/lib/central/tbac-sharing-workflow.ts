@@ -1,19 +1,19 @@
 import { Stack } from "aws-cdk-lib";
+import { Table } from "aws-cdk-lib/aws-dynamodb";
 import { EventBus } from "aws-cdk-lib/aws-events";
 import { Effect, IRole, ManagedPolicy, Policy, PolicyDocument, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
 import { CfnDataLakeSettings } from "aws-cdk-lib/aws-lakeformation";
-import { Code, Function, Runtime } from "aws-cdk-lib/aws-lambda";
+import { Code, Function, LayerVersion, Runtime } from "aws-cdk-lib/aws-lambda";
 import { Choice, Condition, IntegrationPattern, JsonPath, StateMachine, TaskInput } from "aws-cdk-lib/aws-stepfunctions";
 import { CallAwsService, LambdaInvoke } from "aws-cdk-lib/aws-stepfunctions-tasks";
 import { Construct } from "constructs";
 
 export interface TbacSharingWorkflowProps {
-    dataDomainTagName?: string
-    confidentialityTagName?: string
     cognitoAuthRole: IRole
-    centralApprovalEventBus: EventBus
-    approvalBaseUrl: string
     centralEventBusArn: string
+    approvalsTable: Table
+    productSharingMappingTable: Table
+    approvalsLayer: LayerVersion
 }
 
 export class TbacSharingWorkflow extends Construct {
@@ -72,6 +72,13 @@ export class TbacSharingWorkflow extends Construct {
                             effect: Effect.ALLOW,
                             actions: ["lakeformation:GrantPermissions"],
                             resources: ["*"]
+                        }),
+                        new PolicyStatement({
+                            effect: Effect.ALLOW,
+                            actions: [
+                                "dynamodb:PutItem"
+                            ],
+                            resources: [props.productSharingMappingTable.tableArn]
                         })
                     ]
                 })
@@ -82,7 +89,11 @@ export class TbacSharingWorkflow extends Construct {
             runtime: Runtime.NODEJS_16_X,
             handler: "index.handler",
             role: grantPermissionRole,
-            code: Code.fromAsset(__dirname+"/resources/lambda/LFTagGrantPermissions")
+            code: Code.fromAsset(__dirname+"/resources/lambda/LFTagGrantPermissions"),
+            environment: {
+                PRODUCT_SHARING_MAPPING_TABLE_NAME: props.productSharingMappingTable.tableName
+            },
+            layers: [props.approvalsLayer]
         });
 
         const invokeAdjustGlueResourcePolicy = new LambdaInvoke(this, "InvokeAdjustGlueResourcePolicy", {
@@ -108,12 +119,16 @@ export class TbacSharingWorkflow extends Construct {
             assumedBy: new ServicePrincipal("lambda.amazonaws.com"),
             managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole")],
             inlinePolicies: {
-                "AllowCentralApprovalBus": new PolicyDocument({
+                "RecordApprovalRequest": new PolicyDocument({
                     statements: [
                         new PolicyStatement({
                             effect: Effect.ALLOW,
-                            actions: ["events:PutEvents"],
-                            resources: [props.centralApprovalEventBus.eventBusArn]
+                            actions: [
+                                "dynamodb:TransactWriteItems",
+                                "dynamodb:PutItem",
+                                "dynamodb:UpdateItem"
+                            ],
+                            resources: [props.approvalsTable.tableArn, props.productSharingMappingTable.tableArn]
                         })
                     ]
                 })
@@ -126,9 +141,10 @@ export class TbacSharingWorkflow extends Construct {
             code: Code.fromAsset(__dirname+"/resources/lambda/LFTagSendApproval"),
             role: sendApprovalRole,
             environment: {
-                "API_GATEWAY_BASE_URL": props.approvalBaseUrl,
-                "CENTRAL_APPROVAL_BUS_NAME": props.centralApprovalEventBus.eventBusName
-            }
+                APPROVALS_TABLE_NAME: props.approvalsTable.tableName,
+                PRODUCT_SHARING_MAPPING_TABLE_NAME: props.productSharingMappingTable.tableName
+            },
+            layers: [props.approvalsLayer]
         });
 
         const invokeSendApprovalFunction = new LambdaInvoke(this, "InvokeSendApprovalFunction", {

@@ -8,7 +8,6 @@ const config = Amplify.configure();
 function ResourceLFTagsComponent(props) {
     const [resourceTag, setResourceTag] = useState([]);
     const [databaseName, setDatabaseName] = useState(null);
-    const [id, setId] = useState()
 
     useEffect(() => {
         async function run() {
@@ -40,15 +39,22 @@ function ResourceLFTagsComponent(props) {
     
             const responsePayload = await lfClient.send(new GetResourceLFTagsCommand(payload));
     
+            let tags = null
             if (props.resourceType == "database") {
-                setResourceTag(responsePayload["LFTagOnDatabase"]);
+                tags = responsePayload["LFTagOnDatabase"]
             } else if (props.resourceType == "table") {
-                setResourceTag(responsePayload["LFTagsOnTable"]);
+                tags = responsePayload["LFTagsOnTable"]
+            }
+
+            setResourceTag(tags);
+
+            if (props.tagsCallback) {
+                props.tagsCallback(tags)
             }
         }
 
         run()
-    }, []);
+    }, [props.forceReload]);
 
     return (
         <DisplayLFTagsComponent lfTags={resourceTag} database={databaseName} showDataDomain />

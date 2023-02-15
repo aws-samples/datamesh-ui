@@ -1,5 +1,6 @@
 const { LakeFormation } = require("aws-sdk");
 const AWS = require("aws-sdk");
+const {Approvals} = require("/opt/nodejs/approvals")
 
 exports.handler = async(event) => {
     const lf = new LakeFormation();
@@ -44,4 +45,22 @@ exports.handler = async(event) => {
         },
         "PermissionsWithGrantOption": ["SELECT", "DESCRIBE"]
     }).promise();
+
+    const ddb = new AWS.DynamoDB()
+    const tableName = process.env.PRODUCT_SHARING_MAPPING_TABLE_NAME
+
+    await ddb.putItem({
+        TableName: tableName,
+        Item: {
+            "domainId": {
+                "S": event.databaseName
+            },
+            "resourceMapping": {
+                "S": Approvals.generateLfTagRequestIdentifier(event.lfTags, event.targetAccountId)
+            },
+            "status": {
+                "S": "shared"
+            }
+        }
+    }).promise()
 }
