@@ -1,0 +1,532 @@
+openapi: "3.0.1"
+info:
+  title: "DataMesh UI Backend API"
+  version: "v1.8.0"
+servers:
+- url: "{apiGatewayEndpoint}"
+  variables:
+    apiGatewayEndpoint:
+      default: ""
+paths:
+  /data-domain/list:
+    get:
+      summary: "Retrieves data domains owned by logged in user."
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+          description: JWT token of user
+      responses:
+        '200':
+          description: Returns an array of data domain IDs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+  /data-domain/validate-owner:
+    get:
+      summary: "Validates whether the provided account ID is owned by the user."
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+          description: JWT token of user
+        - in: query
+          name: accountId
+          required: true
+          schema:
+            type: string
+          description: The account ID to validate.
+      responses:
+        '200':
+          description: OK if this is owned by the provided user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: "Returns ok if the user is the valid owner of the account ID"
+        '404':
+          description: If user is not the valid user or if the account does not exists.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+  /data-domains/pending-approval-count:
+    get:
+      summary: "Returns the number of pending approvals for data domains owned by the user."
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+          description: JWT token of user
+      responses:
+        '200':
+          description: "The pending count across all the data domains owned by the user."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pendingCount:
+                    type: integer
+  /data-domains/pending-approvals:
+    get:
+      summary: "Retrieves details for all pending approvals"
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+          description: JWT token of user
+      responses:
+        '200':
+          description: "Response payload changes depending if it's tbac or nrac. The primary difference is whether sourceProduct or lfTags would be returned as part of the payload"
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    properties:
+                      accountId:
+                        $ref: "#/components/schemas/ddbString"
+                      requestIdentifier:
+                        $ref: "#/components/schemas/ddbString"
+                      mode:
+                        $ref: "#/components/schemas/ddbString"
+                      token:
+                        $ref: "#/components/schemas/ddbString"
+                      targetAccountId:
+                        $ref: "#/components/schemas/ddbString"
+                      sourceDomain:
+                        $ref: "#/components/schemas/ddbString"
+                      sourceProduct:
+                        $ref: "#/components/schemas/ddbString"
+                  - type: object
+                    properties:
+                      accountId:
+                        $ref: "#/components/schemas/ddbString"
+                      requestIdentifier:
+                        $ref: "#/components/schemas/ddbString"
+                      mode:
+                        $ref: "#/components/schemas/ddbString"
+                      token:
+                        $ref: "#/components/schemas/ddbString"
+                      targetAccountId:
+                        $ref: "#/components/schemas/ddbString"
+                      sourceDomain:
+                        $ref: "#/components/schemas/ddbString"
+                      lfTags:
+                        $ref: "#/components/schemas/ddbString"
+  /data-products/latest-state:
+    get:
+      summary: "Get crawler status."
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+          description: JWT token of user
+        - in: query
+          name: dbName
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: tableName
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  dbName:
+                    type: string
+                  tableName:
+                    type: string
+                  state: 
+                    type: string
+                  error:
+                    type: string
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+  /data-products/list-of-consumers:
+    get:
+      summary: "Get list of consumers of the data product."
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+          description: JWT token of user
+        - in: query
+          name: domainId
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: product
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  consumerAccountIds:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        accountId:
+                          type: string
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorPayload'
+  /data-products/list-of-shared:
+    get:
+      summary: "Get list of owned domains that the data product was shared to and its corresponding share status, for example: shared, rejected, pending."
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+          description: JWT token of user
+        - in: query
+          name: domainId
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: product
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sharedAccountIds:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        accountId:
+                          type: string
+                        status:
+                          type: string
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorPayload'
+  /event/details:
+    get:
+      summary: "Get event hash to be shared to participants of the workshop."
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+          description: JWT token of user
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  eventHash:
+                    type: string
+  /data-domain/register:
+    post:
+      summary: "Register a new data domain."
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+          description: JWT token of user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                domainId:
+                  type: string
+                domainSecretArn:
+                  type: string
+                customLfTags:
+                  $ref: '#/components/schemas/lfTags'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorPayload'
+  /data-domains/process-approval:
+    post:
+      summary: "Send approval action (approve or reject)"
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+          description: JWT token of user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sourceAccountId:
+                  type: string
+                requestIdentifier:
+                  type: string
+                actionType:
+                  type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorPayload'
+  /data-domains/sync-permissions:
+    post:
+      summary: "Refresh Lake Formation permissions."
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+          description: JWT token of user
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: string
+  /data-products/toggle-pii-flag:
+    post:
+      summary: "Toggle whether approval is required or not. The impacted value depends if the underlying resource is using Lake Formation tags or not."
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+          description: JWT token of user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                domainId:
+                  type string:
+                dbName:
+                  type: string
+                tableName:
+                  type: string
+                columnName:
+                  type: string
+                resourceType:
+                  type: string
+      responses:
+        '200':
+          description: "Successful"
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorPayload'
+  /data-products/validate:
+    post:
+      summary: "Validate S3 path during data product registration."
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+          description: JWT token of user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bucket:
+                  type: string
+                products:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      prefix:
+                        type: string
+                      id:
+                        type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  products:
+                    type: object
+                    properties:
+                      "prod.id":
+                        type: object
+                        properties:
+                          error:
+                            type: string
+  /tags/sync-permissions:
+    post:
+      summary: "Refresh Lake Formation Tag permissions."
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+          description: JWT token of user
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: string
+  /workflow/exec:
+    post:
+      summary: "Execute step function state machine with owner checks."
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+          description: JWT token of user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                stateMachineArn:
+                  type: string
+                input: 
+                  type: string
+                domainId:
+                  type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  executionArn:
+                    type: string
+                  startDate:
+                    type: string
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorPayload'
+components:
+  schemas:
+    errorPayload:
+      type: object
+      properties:
+        error:
+          type: string
+    ddbString:
+      type: object
+      properties:
+        S:
+          type: string
+    lfTags:
+      type: array
+      items:
+        type: object
+        properties:
+          TagKey:
+            type: string
+          TagValues:
+            type: array
+            items:
+              type: string
