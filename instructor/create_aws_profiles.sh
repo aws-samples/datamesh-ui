@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-export AWS_REGION="us-west-2"
+if [ -z "$AWS_REGION" ]; then
+  echo "[ERROR] AWS_REGION is missing. aborting..."; return;
+fi
+
 # Placeholder for AWS credentials environment variables
 # export AWS_ACCESS_KEY_ID_CENTRAL="TO_BE_REPLACED"
 # export AWS_SECRET_ACCESS_KEY_CENTRAL="TO_BE_REPLACED"
