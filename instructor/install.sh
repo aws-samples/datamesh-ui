@@ -35,7 +35,7 @@ pip3 install --upgrade pip
 cat <<EOT > requirements.txt
 aws-cdk-lib==2.51.0
 constructs>=10.0.0,<11.0.0
-aws_analytics_reference_architecture==2.9.4
+aws_analytics_reference_architecture==2.9.8
 EOT
 
 pip3 install -r requirements.txt
