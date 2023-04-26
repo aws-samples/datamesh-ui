@@ -33,14 +33,14 @@ cdk init --language=python && source .venv/bin/activate
 pip3 install --upgrade pip
 
 cat <<EOT > requirements.txt
-aws-cdk-lib==2.51.0
+aws-cdk-lib==2.72.1
 constructs>=10.0.0,<11.0.0
-aws_analytics_reference_architecture==2.9.4
+aws_analytics_reference_architecture==2.9.9
 EOT
 
 pip3 install -r requirements.txt
 mkdir -p stacks && touch stacks/central.py stacks/customer.py
-cat cdk.json | jq --arg centralAccountId "$CENTRAL_ACC_ID" --arg customerAccountId "$CUSTOMER_ACC_ID" '.context += {"central_account_id": $centralAccountId, "customer_account_id": $customerAccountId}' > cdk_temp.json
+cat cdk.json | jq --arg centralAccountId "$CENTRAL_ACC_ID" --arg customerAccountId "$CUSTOMER_ACC_ID" '.context += {"central_account_id": $centralAccountId, "customer_account_id": $customerAccountId, "@aws-cdk/aws-s3:serverAccessLogsUseBucketPolicy": false}' > cdk_temp.json
 rm -f cdk.json
 mv cdk_temp.json cdk.json
 
