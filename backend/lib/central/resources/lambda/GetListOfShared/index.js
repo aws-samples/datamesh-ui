@@ -1,8 +1,8 @@
-const AWS = require("aws-sdk")
+const { DynamoDBClient, QueryCommand } = require("@aws-sdk/client-dynamodb");
 
 exports.handler = async(event) => {
     const userClaims = event.requestContext.authorizer.jwt.claims
-    const ddbClient = new AWS.DynamoDB()
+    const ddbClient = new DynamoDBClient()
     const userId = userClaims.sub
 
     const payload = {
@@ -21,7 +21,7 @@ exports.handler = async(event) => {
         let userAccountIds = []
         
         do {
-            const userMappingResults = await ddbClient.query({
+            const userMappingResults = await ddbClient.send(new QueryCommand({
                 TableName: process.env.USER_MAPPING_TABLE_NAME,
                 KeyConditionExpression: "userId = :userId",
                 ExpressionAttributeValues: {
@@ -31,7 +31,7 @@ exports.handler = async(event) => {
                 },
                 ConsistentRead: false,
                 ExclusiveStartKey: token
-            }).promise()
+            }))
 
             token = userMappingResults.LastEvaluatedKey
             if (userMappingResults.Items) {

@@ -15,14 +15,15 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-const AWS = require("aws-sdk");
+const { DynamoDBClient, PutItemCommand } = require("@aws-sdk/client-dynamodb");
+const { LakeFormationClient, GrantPermissionsCommand } = require("@aws-sdk/client-lakeformation");
 const util = require("util");
 
 exports.handler = async (event) => {
     const target = event.target;
     const source = event.source;
     
-    const lakeformation = new AWS.LakeFormation();
+    const lakeformation = new LakeFormationClient();
     
     const grantParams = {
         Permissions: ["SELECT", "DESCRIBE"],
@@ -47,10 +48,10 @@ exports.handler = async (event) => {
             }
         }
 
-        const ddb = new AWS.DynamoDB()
+        const ddb = new DynamoDBClient()
         const tableName = process.env.MAPPING_TABLE_NAME
 
-        await ddb.putItem({
+        await ddb.send(new PutItemCommand({
             TableName: tableName,
             Item: {
                 "domainId": {
@@ -63,9 +64,9 @@ exports.handler = async (event) => {
                     "S": "shared"
                 }
             }
-        }).promise()
+        }))
 
     }
     
-    return await lakeformation.grantPermissions(grantParams).promise();
+    return await lakeformation.send(new GrantPermissionsCommand(grantParams))
 };

@@ -1,9 +1,10 @@
-const AWS = require("aws-sdk")
+const { DynamoDBClient, GetItemCommand } = require("@aws-sdk/client-dynamodb");
+const { SFNClient, StartExecutionCommand } = require("@aws-sdk/client-sfn");
 
 exports.handler = async(event) => {
     const userClaims = event.requestContext.authorizer.jwt.claims
-    const sfnClient = new AWS.StepFunctions()
-    const ddbClient = new AWS.DynamoDB()
+    const sfnClient = new SFNClient()
+    const ddbClient = new DynamoDBClient()
 
     const payload = {
         "statusCode": "200",
@@ -17,7 +18,7 @@ exports.handler = async(event) => {
 
     const {stateMachineArn, input, domainId} = body
 
-    const userMapping = await ddbClient.getItem({
+    const userMapping = await ddbClient.send(new GetItemCommand({
         TableName: process.env.USER_MAPPING_TABLE_NAME,
         Key: {
             "userId": {
@@ -28,10 +29,10 @@ exports.handler = async(event) => {
             }
         },
         ConsistentRead: false
-    }).promise()
+    }))
 
     if (userMapping && userMapping.Item) {
-        const execResult = await sfnClient.startExecution({stateMachineArn,input}).promise()
+        const execResult = await sfnClient.send(new StartExecutionCommand({stateMachineArn,input}))
         payload.body = JSON.stringify(execResult)
     } else {
         payload.statusCode = 404

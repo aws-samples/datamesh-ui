@@ -1,24 +1,26 @@
 import { EventBridgeEvent } from "aws-lambda";
 import axios from "axios";
 import { aws4Interceptor } from "aws4-axios";
-import * as AWS from "aws-sdk";
 import {
     TableSearchInformation,
     tableToOpensearchId,
     glueTableToTableSearchInformation,
 } from "../utilities";
+import { GetTableCommand, GlueClient } from "@aws-sdk/client-glue";
 
 const opensearchDomainEndpoint = process.env.DOMAIN_ENDPOINT;
 const awsRegion = process.env.AWS_REGION;
 
 const interceptor = aws4Interceptor({
-    region: awsRegion,
-    service: "es",
+    options: {
+        region: awsRegion,
+        service: "es",
+    }
 });
 
 axios.interceptors.request.use(interceptor);
 
-const glue = new AWS.Glue({ apiVersion: "2017-03-31" });
+const glue = new GlueClient({region: awsRegion})
 
 interface BaseGlueChangeEventDetail {
     typeOfChange: string;
@@ -54,12 +56,10 @@ async function getTableInformationFromGlueCatalog(
     databaseName: string,
     tableName: string
 ): Promise<TableSearchInformation> {
-    const response = await glue
-        .getTable({
-            DatabaseName: databaseName,
-            Name: tableName,
-        })
-        .promise();
+    const response = await glue.send(new GetTableCommand({
+        DatabaseName: databaseName,
+        Name: tableName,
+    }))
 
     if (!response.Table) {
         throw new Error(`No table found for ${databaseName}.${tableName}`);

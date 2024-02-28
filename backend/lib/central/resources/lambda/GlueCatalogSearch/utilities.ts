@@ -1,10 +1,12 @@
+import { Table } from "@aws-sdk/client-glue";
+
 // TODO add facetting
 export interface TableSearchInformation {
     catalogName: string;
     databaseName: string;
     tableName: string;
     columnNames?: string[];
-    tableDescription?: AWS.Glue.Table;
+    tableDescription?: Table;
 }
 
 export function tableToOpensearchId(table: TableSearchInformation): string {
@@ -12,15 +14,15 @@ export function tableToOpensearchId(table: TableSearchInformation): string {
 }
 
 export function glueTableToTableSearchInformation(
-    glueTable: AWS.Glue.Table
+    glueTable: Table
 ): TableSearchInformation {
     return {
         catalogName: glueTable.CatalogId ?? "",
         databaseName: glueTable.DatabaseName ?? "",
-        tableName: glueTable.Name,
+        tableName: glueTable.Name!,
         columnNames:
             glueTable.StorageDescriptor?.Columns?.map(
-                (column) => column.Name
+                (column) => column.Name!
             ) ?? [],
         tableDescription: glueTable,
     };

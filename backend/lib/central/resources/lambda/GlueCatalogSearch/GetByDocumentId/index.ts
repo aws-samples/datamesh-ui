@@ -7,8 +7,10 @@ const opensearchDomainEndpoint = process.env.DOMAIN_ENDPOINT;
 const awsRegion = process.env.AWS_REGION;
 
 const interceptor = aws4Interceptor({
-    region: awsRegion,
-    service: "es",
+    options: {
+        region: awsRegion,
+        service: "es",   
+    }
 });
 
 axios.interceptors.request.use(interceptor);

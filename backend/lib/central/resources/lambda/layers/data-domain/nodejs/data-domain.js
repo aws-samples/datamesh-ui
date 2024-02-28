@@ -1,13 +1,13 @@
-const AWS = require("aws-sdk")
+const { DynamoDBClient, GetItemCommand, QueryCommand } = require("@aws-sdk/client-dynamodb");
 
 const DataDomain = {
     extractUserId(event) {
         return event.requestContext.authorizer.jwt.claims.sub
     },
     async isOwner(userId, accountId, userMappingTableName) {
-        const ddbClient = new AWS.DynamoDB()
+        const ddbClient = new DynamoDBClient()
         try {
-            const result = await ddbClient.getItem({
+            const result = await ddbClient.send(new GetItemCommand({
                 TableName: userMappingTableName,
                 Key: {
                     "userId": {
@@ -18,7 +18,7 @@ const DataDomain = {
                     }
                 },
                 ConsistentRead: false
-            }).promise()
+            }))
     
             if (result && result.Item) {
                 return true
@@ -30,12 +30,12 @@ const DataDomain = {
         }
     },
     async getUserDataDomains(userId, userMappingTableName) {
-        const ddbClient = new AWS.DynamoDB()
+        const ddbClient = new DynamoDBClient()
         let nextToken = null
         const domainIds = []
 
         do {
-            const resp = await ddbClient.query({
+            const resp = await ddbClient.send(new QueryCommand({
                 TableName: userMappingTableName,
                 ConsistentRead: false,
                 ExclusiveStartKey: nextToken,
@@ -45,7 +45,7 @@ const DataDomain = {
                         "S": userId
                     }
                 }
-            }).promise()
+            }))
     
             if (resp && resp.Items) {
                 resp.Items.forEach((item) => {

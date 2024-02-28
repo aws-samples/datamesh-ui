@@ -1,12 +1,12 @@
-const { LakeFormation } = require("aws-sdk");
-const AWS = require("aws-sdk");
+const { LakeFormationClient, GrantPermissionsCommand } = require("@aws-sdk/client-lakeformation");
+const { DynamoDBClient, PutItemCommand } = require("@aws-sdk/client-dynamodb");
 const {Approvals} = require("/opt/nodejs/approvals")
 
 exports.handler = async(event) => {
-    const lf = new LakeFormation();
+    const lf = new LakeFormationClient()
 
     for (const row of event.lfTags) {
-        await lf.grantPermissions({
+        await lf.send(new GrantPermissionsCommand({
             "Permissions": ["DESCRIBE"],
             "Principal": {
                 "DataLakePrincipalIdentifier": event.targetAccountId
@@ -15,10 +15,10 @@ exports.handler = async(event) => {
                 "LFTag": row
             },
             "PermissionsWithGrantOption": ["DESCRIBE"]
-        }).promise();
+        }))
     }
 
-    await lf.grantPermissions({
+    await lf.send(new GrantPermissionsCommand({
         "Permissions": ["DESCRIBE"],
         "Principal": {
             "DataLakePrincipalIdentifier": event.targetAccountId
@@ -30,9 +30,9 @@ exports.handler = async(event) => {
             }
         },
         "PermissionsWithGrantOption": ["DESCRIBE"]
-    }).promise();
+    }))
 
-    await lf.grantPermissions({
+    await lf.send(new GrantPermissionsCommand({
         "Permissions": ["SELECT", "DESCRIBE"],
         "Principal": {
             "DataLakePrincipalIdentifier": event.targetAccountId
@@ -44,12 +44,12 @@ exports.handler = async(event) => {
             }
         },
         "PermissionsWithGrantOption": ["SELECT", "DESCRIBE"]
-    }).promise();
+    }))
 
-    const ddb = new AWS.DynamoDB()
+    const ddb = new DynamoDBClient()
     const tableName = process.env.PRODUCT_SHARING_MAPPING_TABLE_NAME
 
-    await ddb.putItem({
+    await ddb.send(new PutItemCommand({
         TableName: tableName,
         Item: {
             "domainId": {
@@ -62,5 +62,5 @@ exports.handler = async(event) => {
                 "S": "shared"
             }
         }
-    }).promise()
+    }))
 }

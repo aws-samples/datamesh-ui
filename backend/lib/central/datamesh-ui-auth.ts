@@ -82,7 +82,7 @@ export class DataMeshUIAuth extends Construct {
         this.crDataDomainUIAccessRole = crDataDomainUIAccessRole
 
         const crDataDomainUIAccessFunction = new Function(this, "CRDataDomainUIAccessFunction", {
-            runtime: Runtime.NODEJS_16_X,
+            runtime: Runtime.NODEJS_LATEST,
             handler: "index.handler",
             role: crDataDomainUIAccessRole,
             code: Code.fromAsset(__dirname+"/resources/lambda/CRDataDomainUIAccess"),
@@ -119,7 +119,7 @@ export class DataMeshUIAuth extends Construct {
         });
 
         const syncDataDomainUIPermissionsFunction = new Function(this, "SyncDataDomainUIPermissionsFunction", {
-            runtime: Runtime.NODEJS_16_X,
+            runtime: Runtime.NODEJS_LATEST,
             handler: "index.handler",
             role: crDataDomainUIAccessRole,
             code: Code.fromAsset(__dirname+"/resources/lambda/SyncDataDomainUIPermissions"),

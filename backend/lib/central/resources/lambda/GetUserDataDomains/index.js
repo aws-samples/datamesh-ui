@@ -1,8 +1,8 @@
-const AWS = require("aws-sdk")
+const { DynamoDBClient, QueryCommand } = require("@aws-sdk/client-dynamodb");
 
 exports.handler = async(event) => {
     const userClaims = event.requestContext.authorizer.jwt.claims
-    const ddbClient = new AWS.DynamoDB()
+    const ddbClient = new DynamoDBClient()
 
     const payload = {
         "statusCode": "200",
@@ -16,7 +16,7 @@ exports.handler = async(event) => {
     const domainIds = []
 
     do {
-        const resp = await ddbClient.query({
+        const resp = await ddbClient.send(new QueryCommand({
             TableName: process.env.USER_MAPPING_TABLE_NAME,
             ConsistentRead: false,
             ExclusiveStartKey: nextToken,
@@ -26,7 +26,7 @@ exports.handler = async(event) => {
                     "S": userClaims.sub
                 }
             }
-        }).promise()
+        })).promise()
 
         if (resp && resp.Items) {
             resp.Items.forEach((item) => {

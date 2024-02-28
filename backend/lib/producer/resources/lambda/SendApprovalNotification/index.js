@@ -15,20 +15,20 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-const AWS = require("aws-sdk");
+const { SNSClient, PublishCommand } = require("@aws-sdk/client-sns");
 
 exports.handler = async(event) => {
     const messageBody = event.messageBody;
     const subject = event.subject;
     const topicArn = process.env.TOPIC_ARN;
 
-    const sns = new AWS.SNS();
+    const client = new SNSClient()
 
-    await sns.publish({
+    await client.send(new PublishCommand({
         "Message": messageBody,
         "Subject": subject,
-        "TopicArn": topicArn
-    }).promise();
+        "TopicArn": topicArn        
+    }))
 
     return {};
 }

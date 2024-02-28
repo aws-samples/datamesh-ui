@@ -1,7 +1,7 @@
-const AWS = require("aws-sdk")
+const { DynamoDBClient, GetItemCommand } = require("@aws-sdk/client-dynamodb");
 
 exports.handler = async(event) => {
-    const ddbClient = new AWS.DynamoDB()
+    const ddbClient = new DynamoDBClient()
     const userClaim = event.requestContext.authorizer.jwt.claims
 
     const payload = {
@@ -19,7 +19,7 @@ exports.handler = async(event) => {
         payload.body = JSON.stringify({"error": "Missing required parameters"})
     } else {
         try {
-            const result = await ddbClient.getItem({
+            const result = await ddbClient.send(new GetItemCommand({
                 TableName: process.env.USER_MAPPING_TABLE_NAME,
                 Key: {
                     "userId": {
@@ -30,7 +30,8 @@ exports.handler = async(event) => {
                     }
                 },
                 ConsistentRead: false
-            }).promise()
+            }))
+
             if (result && result.Item) {
                 payload.body = JSON.stringify({"message": "ok"})
             } else {

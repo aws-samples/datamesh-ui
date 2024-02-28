@@ -49,7 +49,7 @@ export class DataMeshUIAuthWorkflow extends Construct {
         });
 
         const authWorkflowFunction = new Function(this, "AuthWorkflowFunction", {
-            runtime: Runtime.NODEJS_16_X,
+            runtime: Runtime.NODEJS_LATEST,
             role: authWorkflowRole,
             handler: "index.handler",
             timeout: Duration.seconds(30),

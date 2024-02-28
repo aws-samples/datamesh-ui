@@ -1,9 +1,9 @@
-const AWS = require("aws-sdk")
+const { DynamoDBClient, GetItemCommand, QueryCommand } = require("@aws-sdk/client-dynamodb");
 const DOMAIN_NAME_PATTERN = /.+?(\d+)$/
 
 exports.handler = async(event) => {
     const userClaims = event.requestContext.authorizer.jwt.claims
-    const ddbClient = new AWS.DynamoDB()
+    const ddbClient = new DynamoDBClient()
     const userId = userClaims.sub
 
     const payload = {
@@ -19,7 +19,7 @@ exports.handler = async(event) => {
     if (queryStringParameters.domainId && queryStringParameters.product) {
         const {domainId, product} = queryStringParameters
         const accountId = DOMAIN_NAME_PATTERN.exec(domainId)[1]
-        const userMapping = (await ddbClient.getItem({
+        const userMapping = (await ddbClient.send(new GetItemCommand({
             TableName: process.env.USER_MAPPING_TABLE_NAME,
             ConsistentRead: false,
             Key: {
@@ -30,14 +30,14 @@ exports.handler = async(event) => {
                     "S": accountId
                 }
             }
-        }).promise()).Item
+        }))).Item
 
         if (userMapping) {
             let consumerAccountIds = []
             let token = null
 
             do {
-                const queryResp = (await ddbClient.query({
+                const queryResp = (await ddbClient.send(new QueryCommand({
                     TableName: process.env.MAPPING_TABLE_NAME,
                     KeyConditionExpression: "domainId = :domainId and begins_with(resourceMapping, :resourceMapping)",
                     ConsistentRead: true,
@@ -49,7 +49,7 @@ exports.handler = async(event) => {
                             "S": product
                         }
                     }
-                }).promise())
+                })))
 
                 token = queryResp.LastEvaluatedKey
                 consumerAccountIds = consumerAccountIds.concat(queryResp.Items.map((row) => {

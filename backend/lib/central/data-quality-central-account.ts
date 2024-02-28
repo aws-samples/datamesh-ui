@@ -53,7 +53,7 @@ export class DataQualityCentralAccount extends Construct {
         ])
 
         const dataQualityReports = new Function(this, "DataQualityReports", {
-            runtime: Runtime.NODEJS_16_X,
+            runtime: Runtime.NODEJS_LATEST,
             handler: "index.handler",
             timeout: Duration.seconds(30),
             code: Code.fromAsset(
@@ -87,7 +87,7 @@ export class DataQualityCentralAccount extends Construct {
             this,
             "DataQualityReportResults",
             {
-                runtime: Runtime.NODEJS_16_X,
+                runtime: Runtime.NODEJS_LATEST,
                 handler: "index.handler",
                 timeout: Duration.seconds(30),
                 code: Code.fromAsset(

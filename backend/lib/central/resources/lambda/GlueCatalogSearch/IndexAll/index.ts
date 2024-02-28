@@ -1,28 +1,23 @@
-import {
-    GetDatabasesRequest,
-    GetTableRequest,
-    GetTablesRequest,
-    TableList,
-    DatabaseList,
-} from "aws-sdk/clients/glue";
-import * as AWS from "aws-sdk";
 import axios, { AxiosError, AxiosResponse } from "axios";
 import { aws4Interceptor } from "aws4-axios";
+import { Database, GetDatabasesCommand, GetDatabasesCommandInput, GetTableCommand, GetTableCommandInput, GetTablesCommand, GetTablesCommandInput, GlueClient, Table } from "@aws-sdk/client-glue"
 
 const opensearchDomainEndpoint = process.env.DOMAIN_ENDPOINT;
 const awsRegion = process.env.AWS_REGION;
 const CatalogId = process.env.accountId;
 
-AWS.config.update({ region: awsRegion });
+// AWS.config.update({ region: awsRegion });
 
 const interceptor = aws4Interceptor({
-    region: awsRegion,
-    service: "es",
+    options: {
+        region: awsRegion,
+        service: "es"
+    }
 });
 
 axios.interceptors.request.use(interceptor);
 
-var glue = new AWS.Glue();
+var glue = new GlueClient({region: awsRegion});
 
 async function deleteIndex(indexName: string): Promise<AxiosResponse> {
     return axios.delete(`https://${opensearchDomainEndpoint}/${indexName}`);
@@ -86,14 +81,14 @@ exports.handler = async (): Promise<void> => {
         databaseName?: string;
         tableName?: string;
         columnNames?: string[];
-        tableDescription?: AWS.Glue.Table;
-        tableList?: TableList;
-        databaseList?: DatabaseList;
+        tableDescription?: Table;
+        tableList?: Table[];
+        databaseList?: Database[];
         NextToken?: string;
     }
 
     // Get All Databases that are visibile to the account doing the call.
-    let databases_params: GetDatabasesRequest = {
+    let databases_params: GetDatabasesCommandInput = {
         CatalogId: CatalogId,
         MaxResults: 100,
     };
@@ -104,15 +99,15 @@ exports.handler = async (): Promise<void> => {
     }
 
     // Loop through all the databases and get all their respective tables.
-    async function getDatabases(databases_params: GetDatabasesRequest) {
+    async function getDatabases(databases_params: GetDatabasesCommandInput) {
         let databases: string[];
         let data: TableSearchInformation = await getDatabasesInformation(
             databases_params
         );
         if (data.databaseList) {
-            databases = data.databaseList.map((database) => database.Name);
+            databases = data.databaseList.map((database) => database.Name!);
             for (const database of databases) {
-                let tables_params: GetTablesRequest = {
+                let tables_params: GetTablesCommandInput = {
                     DatabaseName: database,
                     CatalogId: CatalogId,
                     MaxResults: 100,
@@ -127,10 +122,10 @@ exports.handler = async (): Promise<void> => {
     async function getTable(data: TableSearchInformation, database: string) {
         let tables: string[];
         if (data.tableList) {
-            tables = data.tableList.map((table) => table.Name);
+            tables = data.tableList.map((table) => table.Name!);
 
             for (const table of tables) {
-                let table_params: GetTableRequest = {
+                let table_params: GetTableCommandInput = {
                     DatabaseName: database.toLowerCase(),
                     CatalogId: CatalogId,
                     Name: table,
@@ -150,10 +145,10 @@ exports.handler = async (): Promise<void> => {
     async function getDatabasesInformation(
         database_params: TableSearchInformation
     ): Promise<TableSearchInformation> {
-        const response = await glue.getDatabases(database_params).promise();
+        const response = await glue.send(new GetDatabasesCommand(database_params))
         //TODO check if no databases returned
         console.log(response.DatabaseList);
-        if (response.DatabaseList.length === 0) {
+        if (response.DatabaseList?.length === 0) {
             console.log(
                 "Database list is empty, please validate that the actual Lambda Role has Lakeformation permissions to see the databases and tables."
             );
@@ -166,17 +161,17 @@ exports.handler = async (): Promise<void> => {
     }
 
     async function getTableInformation(
-        table_params: GetTableRequest
+        table_params: GetTableCommandInput
     ): Promise<TableSearchInformation> {
-        const response = await glue.getTable(table_params).promise();
+        const response = await glue.send(new GetTableCommand(table_params))
         if (!response.Table) {
             throw new Error(`No table found`);
         }
         return glueTableToTableSearchInformation(response.Table);
     }
 
-    async function getTableList(tables_params: GetTablesRequest): Promise<any> {
-        const response = await glue.getTables(tables_params).promise();
+    async function getTableList(tables_params: GetTablesCommandInput): Promise<any> {
+        const response = await glue.send(new GetTablesCommand(tables_params))
 
         if (!response.TableList) {
             throw new Error(`Unable retrieve tables`);
@@ -185,7 +180,7 @@ exports.handler = async (): Promise<void> => {
     }
 
     function glueTableToTableSearchInformation(
-        glueTable: AWS.Glue.Table
+        glueTable: Table
     ): TableSearchInformation {
         return {
             catalogName: glueTable.CatalogId ?? "",
@@ -193,14 +188,14 @@ exports.handler = async (): Promise<void> => {
             tableName: glueTable.Name,
             columnNames:
                 glueTable.StorageDescriptor?.Columns?.map(
-                    (column) => column.Name
+                    (column) => column.Name!
                 ) ?? [],
             tableDescription: glueTable,
         };
     }
 
     function glueTableListToTableSearchInformation(
-        glueTableList: AWS.Glue.TableList
+        glueTableList: Table[] | undefined
     ): TableSearchInformation {
         return {
             tableList: glueTableList,
@@ -208,7 +203,7 @@ exports.handler = async (): Promise<void> => {
     }
 
     function glueDatabaseToTableSearchInformation(
-        glueDatabaseList: AWS.Glue.DatabaseList
+        glueDatabaseList: Database[] | undefined
     ): TableSearchInformation {
         return {
             databaseList: glueDatabaseList,

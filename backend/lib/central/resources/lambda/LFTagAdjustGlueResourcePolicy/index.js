@@ -1,4 +1,4 @@
-const AWS = require("aws-sdk")
+const { GlueClient, GetResourcePolicyCommand, PutResourcePolicyCommand } = require("@aws-sdk/client-glue");
 const util = require("util");
 
 const POLICY_VERSION = "2012-10-17"
@@ -7,7 +7,7 @@ exports.handler = async(event, context) => {
     const accountId = event.accountId;
     const accountIdRootArn = util.format("arn:aws:iam::%s:root", accountId);
 
-    const glue = new AWS.Glue();
+    const glue = new GlueClient()
 
     
     const functionArn = context.invokedFunctionArn
@@ -18,7 +18,7 @@ exports.handler = async(event, context) => {
     let resourcePolicy = null
 
     try {
-        resourcePolicyResp = await glue.getResourcePolicy().promise();
+        resourcePolicyResp = await glue.send(new GetResourcePolicyCommand())
         resourcePolicy = JSON.parse(resourcePolicyResp.PolicyInJson);
     } catch (e) {
         resourcePolicy = {
@@ -86,9 +86,9 @@ exports.handler = async(event, context) => {
         resourcePolicy.Statement.push(ramPolicyDocument)
     }
 
-    await glue.putResourcePolicy({
+    await glue.send(new PutResourcePolicyCommand({
         PolicyInJson: JSON.stringify(resourcePolicy),
         EnableHybrid: "TRUE"
-    }).promise();
+    }))
 
 }

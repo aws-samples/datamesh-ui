@@ -154,7 +154,7 @@ export class DataMeshUI extends Construct {
         });
 
         const validateProductPathFunction = new Function(this, "ValidateProductPathFunction", {
-            runtime: Runtime.NODEJS_16_X,
+            runtime: Runtime.NODEJS_LATEST,
             role: validateProductPathRole,
             handler: "index.handler",
             timeout: Duration.seconds(30),
@@ -253,7 +253,7 @@ export class DataMeshUI extends Construct {
             });
     
             const updateDataDomainStateChangeFunction = new Function(this, "UpdateDataDomainStateChangeFunction", {
-                runtime: Runtime.NODEJS_16_X,
+                runtime: Runtime.NODEJS_LATEST,
                 role: updateDataDomainStateChangeRole,
                 handler: "index.handler",
                 timeout: Duration.seconds(30),
@@ -297,7 +297,7 @@ export class DataMeshUI extends Construct {
             });
     
             const getCrawlerStateFunction = new Function(this, "GetCrawlerStateFunction", {
-                runtime: Runtime.NODEJS_16_X,
+                runtime: Runtime.NODEJS_LATEST,
                 role: getCrawlerStateRole,
                 handler: "index.handler",
                 timeout: Duration.seconds(30),
@@ -330,7 +330,7 @@ export class DataMeshUI extends Construct {
             });
     
             const getEventSecretFunction = new Function(this, "GetEventSecretFunction", {
-                runtime: Runtime.NODEJS_16_X,
+                runtime: Runtime.NODEJS_LATEST,
                 role: getEventSecretRole,
                 handler: "index.handler",
                 timeout: Duration.seconds(30),
@@ -364,7 +364,7 @@ export class DataMeshUI extends Construct {
             });
     
             const getListOfConsumersFunction = new Function(this, "GetListOfConsumers", {
-                runtime: Runtime.NODEJS_16_X,
+                runtime: Runtime.NODEJS_LATEST,
                 role: productShareMappingAccessRole,
                 handler: "index.handler",
                 timeout: Duration.seconds(30),
@@ -382,7 +382,7 @@ export class DataMeshUI extends Construct {
             })
 
             const getListOfSharedFunction = new Function(this, "GetListOfShared", {
-                runtime: Runtime.NODEJS_16_X,
+                runtime: Runtime.NODEJS_LATEST,
                 role: productShareMappingAccessRole,
                 handler: "index.handler",
                 timeout: Duration.seconds(30),

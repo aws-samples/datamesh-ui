@@ -110,7 +110,7 @@ export class ProducerApprovalWorkflow extends Construct {
 
         const sendApprovalLambda = new Function(this, "SendApprovalFunction", {
             handler: "index.handler",
-            runtime: Runtime.NODEJS_16_X,
+            runtime: Runtime.NODEJS_LATEST,
             code: Code.fromAsset(__dirname+"/resources/lambda/SendApprovalNotification"),
             role: sendApprovalNotificationLambdaRole,
             environment: {

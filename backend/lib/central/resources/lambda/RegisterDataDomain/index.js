@@ -1,4 +1,10 @@
-const AWS = require("aws-sdk");
+const { LakeFormationClient, GetLFTagCommand, UpdateLFTagCommand, CreateLFTagCommand, GrantPermissionsCommand, RegisterResourceCommand, AddLFTagsToResourceCommand, BatchGrantPermissionsCommand } = require("@aws-sdk/client-lakeformation");
+const { GlueClient, GetDatabaseCommand, CreateDatabaseCommand } = require("@aws-sdk/client-glue")
+const { IAMClient, CreateRoleCommand, PutRolePolicyCommand } = require("@aws-sdk/client-iam")
+const { EventBridgeClient, PutPermissionCommand, PutRuleCommand, PutTargetsCommand } = require("@aws-sdk/client-eventbridge")
+const { SecretsManagerClient, GetSecretValueCommand } = require("@aws-sdk/client-secrets-manager");
+const { LambdaClient, InvokeCommand } = require("@aws-sdk/client-lambda")
+const { DynamoDBClient, PutItemCommand } = require("@aws-sdk/client-dynamodb")
 
 const DOMAIN_DATABASE_PREFIX = "data-domain"
 const DOMAIN_BUS_NAME = 'data-mesh-bus';
@@ -19,22 +25,22 @@ const createOrUpdateLFTags = async(lfClient, key, values, targetRole, permission
 
     if (key && values) {
         try {
-            await lfClient.getLFTag({TagKey: key}).promise()
-            await lfClient.updateLFTag({
+            await lfClient.send(new GetLFTagCommand({TagKey: key}))
+            await lfClient.send(new UpdateLFTagCommand({
                 TagKey: key,
                 TagValuesToAdd: values
-            }).promise()
+            }))
         } catch (e) {
-            await lfClient.createLFTag({
+            await lfClient.send(new CreateLFTagCommand({
                 TagKey: key,
                 TagValues: values
-            }).promise()
+            }))
         }
     }
 
-    const refreshedTag = await lfClient.getLFTag({TagKey: key}).promise()
+    const refreshedTag = await lfClient.send(new GetLFTagCommand({TagKey: key}))
 
-    await lfClient.grantPermissions({
+    await lfClient.send(new GrantPermissionsCommand({
         Permissions: [permissions],
         Principal: {
             DataLakePrincipalIdentifier: targetRole
@@ -45,7 +51,7 @@ const createOrUpdateLFTags = async(lfClient, key, values, targetRole, permission
                 TagValues: refreshedTag.TagValues
             }
         }
-    }).promise()
+    }))
 }
 
 exports.handler = async(event) => {
@@ -67,18 +73,18 @@ exports.handler = async(event) => {
     const centralEventBusName = centralEventBusArn.split("/")[1]
     const dataDomainBusArn = `arn:aws:events:${awsRegion}:${domainId}:event-bus/${DOMAIN_BUS_NAME}`
 
-    const secretsManagerClient = new AWS.SecretsManager()
-    const glueClient = new AWS.Glue()
-    const iamClient = new AWS.IAM()
-    const lfClient = new AWS.LakeFormation()
-    const ebClient = new AWS.EventBridge()
+    const secretsManagerClient = new SecretsManagerClient()
+    const glueClient = new GlueClient()
+    const iamClient = new IAMClient()
+    const lfClient = new LakeFormationClient()
+    const ebClient = new EventBridgeClient()
 
     let SecretString, BucketName, Prefix, KmsKeyId, DomainName, domainName = null;
 
     const userClaims = event.requestContext.authorizer.jwt.claims
 
     try {
-        const secretsResult = await secretsManagerClient.getSecretValue({SecretId: domainSecretArn}).promise()
+        const secretsResult = await secretsManagerClient.send(new GetSecretValueCommand({SecretId: domainSecretArn}))
         SecretString = secretsResult.SecretString
     } catch (e) {
         console.log(JSON.stringify(e))
@@ -91,17 +97,17 @@ exports.handler = async(event) => {
 
     domainName = DomainName
 
-    const lambdaClient = new AWS.Lambda()
-    await lambdaClient.invoke({
+    const lambdaClient = new LambdaClient()
+    await lambdaClient.send(new InvokeCommand({
         FunctionName: process.env.ADJUST_RESOURCE_POLICY_FUNC_NAME,
         Payload: JSON.stringify({
             "accountId": domainId
         })
-    }).promise()
+    }))
 
     const validationCheck = await Promise.allSettled([
-        glueClient.getDatabase({Name: `${LF_MODE_NRAC}-${DOMAIN_DATABASE_PREFIX}-${domainId}`}).promise(),
-        glueClient.getDatabase({Name: `${LF_MODE_TBAC}-${DOMAIN_DATABASE_PREFIX}-${domainId}`}).promise()
+        glueClient.send(new GetDatabaseCommand({Name: `${LF_MODE_NRAC}-${DOMAIN_DATABASE_PREFIX}-${domainId}`})),
+        glueClient.send(new GetDatabaseCommand({Name: `${LF_MODE_TBAC}-${DOMAIN_DATABASE_PREFIX}-${domainId}`}))        
     ])
 
     if (validationCheck[0].status == "fulfilled" || validationCheck[1].status == "fulfilled") {
@@ -110,7 +116,7 @@ exports.handler = async(event) => {
         return returnPayload
     }
 
-    const createRoleResult = await iamClient.createRole({
+    const createRoleResult = await iamClient.send(new CreateRoleCommand({
         RoleName: `${DOMAIN_DATABASE_PREFIX}-${domainId}-accessRole`,
         AssumeRolePolicyDocument: JSON.stringify({
             "Version": "2012-10-17",
@@ -124,7 +130,7 @@ exports.handler = async(event) => {
                 }
             ]
         })
-    }).promise()
+    }))
 
     // await iamClient.putRolePolicy({
     //     PolicyName: `AllowRoleAccess_${domainId}`,
@@ -148,7 +154,7 @@ exports.handler = async(event) => {
 
     for (let mode of lfModes) {
         const dbName = `${mode}-${DOMAIN_DATABASE_PREFIX}-${domainId}`;
-        await glueClient.createDatabase({
+        await glueClient.send(new CreateDatabaseCommand({
             DatabaseInput: {
                 Description: `Database for data products in ${domainName} data domain. Account id: ${domainId}. LF Access Control mode: ${mode}`,
                 Name: dbName,
@@ -160,9 +166,9 @@ exports.handler = async(event) => {
                     access_mode: mode
                 }
             }
-        }).promise()
+        }))
 
-        await lfClient.grantPermissions({
+        await lfClient.send(new GrantPermissionsCommand({
             Permissions: ["ALL"],
             Principal: {
                 DataLakePrincipalIdentifier: workflowRoleArn
@@ -172,9 +178,9 @@ exports.handler = async(event) => {
                     Name: dbName
                 }
             }
-        }).promise()
+        }))
 
-        await lfClient.grantPermissions({
+        await lfClient.send(new GrantPermissionsCommand({
             Permissions: ["DESCRIBE"],
             Principal: {
                 DataLakePrincipalIdentifier: UI_AUTH_ROLE_ARN
@@ -184,12 +190,12 @@ exports.handler = async(event) => {
                     Name: dbName
                 }
             }
-        }).promise()
+        }))
     }
 
     await createOrUpdateLFTags(lfClient, confidentialityTagKey, null, process.env.LAMBDA_EXEC_ROLE_ARN, "ASSOCIATE")
 
-    await iamClient.putRolePolicy({
+    await iamClient.send(new PutRolePolicyCommand({
         PolicyName: "AllowDataAccess",
         PolicyDocument: JSON.stringify({
             "Version": "2012-10-17",
@@ -216,10 +222,10 @@ exports.handler = async(event) => {
             ]
         }),
         RoleName: `${DOMAIN_DATABASE_PREFIX}-${domainId}-accessRole`
-    }).promise()
+    }))
 
     if (KmsKeyId) {
-        await iamClient.putRolePolicy({
+        await iamClient.send(new PutRolePolicyCommand({
             PolicyName: "AllowEncryptedDataAccess",
             PolicyDocument: JSON.stringify({
                 "Version": "2012-10-17",
@@ -240,18 +246,18 @@ exports.handler = async(event) => {
                 ]
             }),
             RoleName: `${DOMAIN_DATABASE_PREFIX}-${domainId}-accessRole`
-        }).promise()
+        }))
     }
 
-    await lfClient.registerResource({
+    await lfClient.send(new RegisterResourceCommand({
         ResourceArn: `arn:aws:s3:::${BucketName}/${Prefix}/*`,
         UseServiceLinkedRole: false,
         RoleArn: createRoleResult.Role.Arn
-    }).promise()
+    }))
 
     await createOrUpdateLFTags(lfClient, domainTagKey, [domainName])
 
-    await lfClient.addLFTagsToResource({
+    await lfClient.send(new AddLFTagsToResourceCommand({
         LFTags: [
             {
                 TagKey: domainTagKey,
@@ -267,9 +273,9 @@ exports.handler = async(event) => {
                 Name: `${LF_MODE_TBAC}-${DOMAIN_DATABASE_PREFIX}-${domainId}`
             }
         }
-    }).promise()
+    }))
 
-    await lfClient.batchGrantPermissions({
+    await lfClient.send(new BatchGrantPermissionsCommand({
         Entries: [
             {
                 Id: 'GrantDomainTagAccess',
@@ -338,7 +344,7 @@ exports.handler = async(event) => {
                 }
             }
         ]
-    }).promise()
+    }))
 
     if (customLfTags && customLfTags.length > 0) {
         const finalCustomLfTags = []
@@ -346,7 +352,7 @@ exports.handler = async(event) => {
             if (customLfTag.TagKey != domainTagKey && customLfTag.TagKey != confidentialityTagKey) {
                 await createOrUpdateLFTags(lfClient, customLfTag.TagKey, customLfTag.TagValues);
                 await createOrUpdateLFTags(lfClient, customLfTag.TagKey, null, process.env.LAMBDA_EXEC_ROLE_ARN, "ASSOCIATE")
-                await lfClient.grantPermissions({
+                await lfClient.send(new GrantPermissionsCommand({
                     Permissions: ["ASSOCIATE"],
                     PermissionsWithGrantOption: ["ASSOCIATE"],
                     Principal: {
@@ -358,41 +364,41 @@ exports.handler = async(event) => {
                             TagValues: customLfTag.TagValues
                         }
                     }
-                }).promise()
+                }))
 
                 finalCustomLfTags.push(customLfTag)
             }
         }
 
         if (finalCustomLfTags.length > 0) {
-            await lfClient.addLFTagsToResource({
+            await lfClient.send(new AddLFTagsToResourceCommand({
                 LFTags: finalCustomLfTags,
                 Resource: {
                     Database: {
                         Name: `${LF_MODE_TBAC}-${DOMAIN_DATABASE_PREFIX}-${domainId}`
                     }
                 }
-            }).promise()
+            }))
         }
     }
 
-    await ebClient.putPermission({
+    await ebClient.send(new PutPermissionCommand({
         EventBusName: centralEventBusName,
         StatementId: `AllowDataDomainAccToPutEvents_${domainId}`,
         Action: "events:PutEvents",
         Principal: domainId
-    }).promise()
+    }))
 
-    await ebClient.putRule({
+    await ebClient.send(new PutRuleCommand({
         Name: `${domainId}_createResourceLinks_rule`,
         EventBusName: centralEventBusName,
         EventPattern: JSON.stringify({
             "source": ["com.central.stepfunction"],
             "detail-type": [`${domainId}_createResourceLinks`]
         })
-    }).promise()
+    }))
 
-    await ebClient.putTargets({
+    await ebClient.send(new PutTargetsCommand({
         Rule: `${domainId}_createResourceLinks_rule`,
         Targets: [
             {
@@ -402,10 +408,10 @@ exports.handler = async(event) => {
             }
         ],
         EventBusName: centralEventBusName
-    }).promise()
+    }))
 
-    const dynamodbClient = new AWS.DynamoDB()
-    await dynamodbClient.putItem({
+    const dynamodbClient = new DynamoDBClient
+    await dynamodbClient.send(new PutItemCommand({
         TableName: process.env.USER_MAPPING_TABLE_NAME,
         Item: {
             "userId": {
@@ -418,7 +424,7 @@ exports.handler = async(event) => {
                 "S": "owner"
             }
         }
-    }).promise()
+    }))
 
     returnPayload.body = JSON.stringify({"status": "200 OK"})
     return returnPayload

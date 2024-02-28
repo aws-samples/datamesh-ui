@@ -42,7 +42,7 @@ export class TbacSharingWorkflow extends Construct {
         });
 
         const adjustGlueResourcePolicyFunction = new Function(this, "AdjustGlueResourcePolicyFunction", {
-            runtime: Runtime.NODEJS_16_X,
+            runtime: Runtime.NODEJS_LATEST,
             handler: "index.handler",
             role: adjustGlueResourcePolicyRole,
             code: Code.fromAsset(__dirname+"/resources/lambda/LFTagAdjustGlueResourcePolicy")
@@ -56,7 +56,7 @@ export class TbacSharingWorkflow extends Construct {
         });
 
         const checkApprovalRequirementFunction = new Function(this, "CheckApprovalRequirementFunction", {
-            runtime: Runtime.NODEJS_16_X,
+            runtime: Runtime.NODEJS_LATEST,
             handler: "index.handler",
             role: checkApprovalRequirementRole,
             code: Code.fromAsset(__dirname+"/resources/lambda/LFTagCheckApprovalRequirement")
@@ -86,7 +86,7 @@ export class TbacSharingWorkflow extends Construct {
         });
 
         const grantPermissionFunction = new Function(this, "LFTagGrantPermissions", {
-            runtime: Runtime.NODEJS_16_X,
+            runtime: Runtime.NODEJS_LATEST,
             handler: "index.handler",
             role: grantPermissionRole,
             code: Code.fromAsset(__dirname+"/resources/lambda/LFTagGrantPermissions"),
@@ -136,7 +136,7 @@ export class TbacSharingWorkflow extends Construct {
         });
 
         const sendApprovalFunction = new Function(this, "SendApprovalFunction", {
-            runtime: Runtime.NODEJS_16_X,
+            runtime: Runtime.NODEJS_LATEST,
             handler: 'index.handler',
             code: Code.fromAsset(__dirname+"/resources/lambda/LFTagSendApproval"),
             role: sendApprovalRole,

@@ -32,7 +32,7 @@ export class ProducerStateChange extends Construct {
         });
 
         const parseCrawlerStateChangeFunction = new Function(this, "ParseCrawlerStateChangeFunction", {
-            runtime: Runtime.NODEJS_16_X,
+            runtime: Runtime.NODEJS_LATEST,
             role: parseCrawlerStateChangeRole,
             handler: "index.handler",
             timeout: Duration.seconds(30),

@@ -1,4 +1,4 @@
-const AWS = require("aws-sdk")
+const { EventBridgeClient, PutEventsCommand } = require("@aws-sdk/client-eventbridge");
 const CRAWLER_NAME_REGEX = /.+?(tbac.+?|nrac.+?)_rl-(.+)/
 
 const NRAC_NAME_REGEX = /.+?(nrac.+?)_rl-(.+)/
@@ -31,8 +31,8 @@ exports.handler = async({detail}) => {
         error: error
     }
 
-    const ebClient = new AWS.EventBridge()
-    await ebClient.putEvents({
+    const client = new EventBridgeClient()
+    await client.send(new PutEventsCommand({
         Entries: [
             {
                 Detail: JSON.stringify(payload),
@@ -41,7 +41,7 @@ exports.handler = async({detail}) => {
                 Source: "data-domain-state-change"
             }
         ]
-    }).promise()
+    }))
 
     console.log(`Payload: ${JSON.stringify(payload)}`)
     return payload
