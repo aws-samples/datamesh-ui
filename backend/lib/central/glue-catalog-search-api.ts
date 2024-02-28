@@ -104,7 +104,7 @@ export class GlueCatalogSearchApi extends Construct {
 
         const privateSubnetSelection = [{ subnets: vpc.privateSubnets }];
         const privateSubnets = vpc.selectSubnets({
-            subnetType: SubnetType.PRIVATE_WITH_NAT,
+            subnetType: SubnetType.PRIVATE_WITH_EGRESS,
         });
 
         const opensearchServiceLinkedRole = new CfnServiceLinkedRole(
@@ -517,6 +517,14 @@ export class GlueCatalogSearchApi extends Construct {
                     id: "AwsSolutions-APIG6",
                     reason: "Not needed",
                 },
+                {
+                    id: "AwsSolutions-APIG4",
+                    reason: "Not needed for preflight"
+                },
+                {
+                    id: "AwsSolutions-COG4",
+                    reason: "Not needed for preflight"
+                }
             ],
             true
         );

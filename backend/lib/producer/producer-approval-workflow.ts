@@ -129,5 +129,12 @@ export class ProducerApprovalWorkflow extends Construct {
                 })
             ]
         })
+
+        NagSuppressions.addResourceSuppressions(sendApprovalLambda, [
+            {
+                id: "AwsSolutions-L1",
+                reason: "Using LATEST runtime alias"
+            }
+        ])
     }
 }
