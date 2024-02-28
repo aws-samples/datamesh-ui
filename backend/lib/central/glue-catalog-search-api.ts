@@ -31,6 +31,7 @@ import {
 import { UserPool } from "aws-cdk-lib/aws-cognito";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { NagSuppressions } from "cdk-nag";
+import { Runtime } from "aws-cdk-lib/aws-lambda";
 
 interface GlueCatalogSearchApiWithCommonProps {
     accountId: string;
@@ -250,6 +251,7 @@ export class GlueCatalogSearchApi extends Construct {
                 "/resources/lambda/GlueCatalogSearch/IndexDelta/index.ts",
             depsLockFilePath: __dirname + "/../../yarn.lock",
             vpc,
+            runtime: Runtime.NODEJS_LATEST,
             vpcSubnets: privateSubnets,
             securityGroups: [opensearchDomainSecurityGroup],
             role: indexDeltaLambdaRole,
@@ -289,6 +291,7 @@ export class GlueCatalogSearchApi extends Construct {
                 "/resources/lambda/GlueCatalogSearch/SearchIndex/index.ts",
             depsLockFilePath: __dirname + "/../../yarn.lock",
             vpc,
+            runtime: Runtime.NODEJS_LATEST,
             vpcSubnets: privateSubnets,
             securityGroups: [opensearchDomainSecurityGroup],
             logRetention: RetentionDays.ONE_DAY,
@@ -341,6 +344,7 @@ export class GlueCatalogSearchApi extends Construct {
                     "/resources/lambda/GlueCatalogSearch/GetByDocumentId/index.ts",
                 depsLockFilePath: __dirname + "/../../yarn.lock",
                 vpc,
+                runtime: Runtime.NODEJS_LATEST,
                 vpcSubnets: privateSubnets,
                 securityGroups: [opensearchDomainSecurityGroup],
 
@@ -391,6 +395,7 @@ export class GlueCatalogSearchApi extends Construct {
                 "/resources/lambda/GlueCatalogSearch/IndexAll/index.ts",
             depsLockFilePath: __dirname + "/../../yarn.lock",
             vpc,
+            runtime: Runtime.NODEJS_LATEST,
             vpcSubnets: privateSubnets,
             securityGroups: [opensearchDomainSecurityGroup],
             logRetention: RetentionDays.ONE_DAY,
