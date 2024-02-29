@@ -33,9 +33,9 @@ cdk init --language=python && source .venv/bin/activate
 pip3 install --upgrade pip
 
 cat <<EOT > requirements.txt
-aws-cdk-lib==2.72.1
+aws-cdk-lib==2.130.0
 constructs>=10.0.0,<11.0.0
-aws_analytics_reference_architecture==2.9.9
+aws_analytics_reference_architecture==2.12.13
 EOT
 
 pip3 install -r requirements.txt
