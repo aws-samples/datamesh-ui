@@ -127,20 +127,12 @@ cdk deploy Customer --require-approval never --profile customer
 
 cd ..
 
-cat <<'EOT' > load_seed_data.sh
-#!/bin/bash
-TARGET_BUCKET_NAME="${1}"
-PROFILE="${2}"
-
-cd datamesh-ui/dataset
-aws s3 cp --recursive ./ s3://${TARGET_BUCKET_NAME}/data-products/ --request-payer requester --profile ${PROFILE}
-cd ..
-EOT
-
-chmod +x load_seed_data.sh
-./load_seed_data.sh clean-${CUSTOMER_ACC_ID}-${AWS_REGION} customer
-
 git clone https://github.com/aws-samples/datamesh-ui -b $DATAMESH_UI_VERSION
+
+wget https://raw.githubusercontent.com/aws-samples/datamesh-ui/main/instructor/load_seed_data.sh && chmod +x load_seed_data.sh
+./load_seed_data.sh clean-${CUSTOMER_ACC_ID}-${AWS_REGION} datamesh-ui/dataset/customer customer customer
+./load_seed_data.sh clean-${CUSTOMER_ACC_ID}-${AWS_REGION} datamesh-ui/dataset/customer-address customer-address customer
+
 cd datamesh-ui
 export MESHBASELINE_SM_ARN=$(aws stepfunctions list-state-machines --profile central | jq -r '.stateMachines | map(select(.stateMachineArn | contains("MeshRegisterDataProduct"))) | .[].stateMachineArn')
 export MESHBASELINE_LF_ADMIN=$(aws stepfunctions describe-state-machine --state-machine-arn=$MESHBASELINE_SM_ARN --profile central | jq -r '.roleArn')
