@@ -1,4 +1,4 @@
-const { DynamoDBClient, QueryCommand } = require("@aws-sdk/client-dynamodb");
+const { DynamoDBClient, QueryCommand, GetItemCommand } = require("@aws-sdk/client-dynamodb");
 
 exports.handler = async(event) => {
     const userClaims = event.requestContext.authorizer.jwt.claims
@@ -45,7 +45,7 @@ exports.handler = async(event) => {
 
         if (userAccountIds) {
             const getItemPromises = userAccountIds.map((userAccountId) => {
-                return ddbClient.getItem({
+                return ddbClient.send(new GetItemCommand({
                     TableName: process.env.MAPPING_TABLE_NAME,
                     ConsistentRead: true,
                     Key: {
@@ -56,7 +56,7 @@ exports.handler = async(event) => {
                             "S": `${product}#${userAccountId}`
                         }
                     }
-                }).promise()
+                }))
             })
 
             const getItemPromisesResult = await Promise.all(getItemPromises)
