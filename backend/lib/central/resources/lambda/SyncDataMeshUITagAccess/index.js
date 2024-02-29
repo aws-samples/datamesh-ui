@@ -1,4 +1,4 @@
-const AWS = require("aws-sdk");
+const { LakeFormationClient, ListLFTagsCommand, BatchGrantPermissionsCommand } = require("@aws-sdk/client-lakeformation")
 
 const BATCH_GRANT_MAX_SIZE = 20;
 function sliceIntoChunks(arr, chunkSize) {
@@ -12,13 +12,13 @@ function sliceIntoChunks(arr, chunkSize) {
 
 exports.handler = async(event) => {
     const rolesToGrant = JSON.parse(process.env.ROLES_TO_GRANT);
-    const lf = new AWS.LakeFormation();
+    const lf = new LakeFormationClient()
     let NextToken = null
     let LFTags = null
     let tags = []
 
     do {
-        ({LFTags, NextToken} = await lf.listLFTags({NextToken}).promise())
+        ({LFTags, NextToken} = await lf.send(new ListLFTagsCommand({NextToken})))
         tags = tags.concat(LFTags)
     } while (NextToken);
 
@@ -43,7 +43,7 @@ exports.handler = async(event) => {
                 })
             })
     
-            await lf.batchGrantPermissions({Entries: entries}).promise()
+            await lf.send(new BatchGrantPermissionsCommand({Entries: entries}))
         })
     })
 

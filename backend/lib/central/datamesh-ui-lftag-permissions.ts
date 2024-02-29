@@ -50,7 +50,7 @@ export default class DataMeshUILFTagPermissions extends Construct {
         this.crDataMeshUITagAccessRole = crDataMeshUITagAccessRole
 
         const crDataMeshUITagAccessFunction = new Function(this, "CRDataMeshUITagAccessFunction", {
-            runtime: Runtime.NODEJS_16_X,
+            runtime: Runtime.NODEJS_LATEST,
             role: crDataMeshUITagAccessRole,
             handler: "index.handler",
             code: Code.fromAsset(__dirname+"/resources/lambda/CRDataMeshUITagAccess"),
@@ -66,7 +66,7 @@ export default class DataMeshUILFTagPermissions extends Construct {
         new CustomResource(this, "CRLFTagsAssociationResource", {serviceToken: crLFTagsProvider.serviceToken})
 
         const syncDataMeshUITagAccessFunction = new Function(this, "SyncDataMeshUITagAccessFunction", {
-            runtime: Runtime.NODEJS_16_X,
+            runtime: Runtime.NODEJS_LATEST,
             role: crDataMeshUITagAccessRole,
             handler: "index.handler",
             code: Code.fromAsset(__dirname+"/resources/lambda/SyncDataMeshUITagAccess"),

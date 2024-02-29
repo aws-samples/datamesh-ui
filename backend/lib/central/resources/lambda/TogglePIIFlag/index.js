@@ -1,5 +1,6 @@
 const {DataDomain} = require("/opt/nodejs/data-domain")
-const AWS = require("aws-sdk")
+const { GlueClient, GetDatabaseCommand, UpdateDatabaseCommand, GetTableCommand, UpdateTableCommand } = require("@aws-sdk/client-glue")
+const { LakeFormationClient, GrantPermissionsCommand, GetResourceLFTagsCommand, AddLFTagsToResourceCommand } = require("@aws-sdk/client-lakeformation")
 
 exports.handler = async(event) => {
     const userId = DataDomain.extractUserId(event)
@@ -17,11 +18,11 @@ exports.handler = async(event) => {
     }
 
     if (isOwner) {
-        const glueClient = new AWS.Glue()
-        const lfClient = new AWS.LakeFormation()
+        const glueClient = new GlueClient()
+        const lfClient = new LakeFormationClient()
         let updateResp = null
         if (body.type == "database") {
-            await lfClient.grantPermissions({
+            await lfClient.send(new GrantPermissionsCommand({
                 Permissions: ["ALTER"],
                 Principal: {
                     DataLakePrincipalIdentifier: process.env.LAMBDA_EXEC_ROLE_ARN
@@ -31,15 +32,15 @@ exports.handler = async(event) => {
                         Name: body.dbName
                     }
                 }
-            }).promise()
-            const {Database} = await glueClient.getDatabase({Name: body.dbName}).promise()
+            }))
+            const {Database} = await glueClient.send(new GetDatabaseCommand({Name: body.dbName}))
             let piiFlag = "false"
             if (!Database.Parameters || !Database.Parameters.pii_flag || Database.Parameters.pii_flag === "false") {
                 piiFlag = "true"
             }
 
             Database.Parameters.pii_flag = piiFlag
-            updateResp = await glueClient.updateDatabase({
+            updateResp = await glueClient.send(new UpdateDatabaseCommand({
                 Name: body.dbName,
                 DatabaseInput: {
                     Name: body.dbName,
@@ -47,10 +48,10 @@ exports.handler = async(event) => {
                     Parameters: Database.Parameters,
                     Description: Database.Description
                 }
-            }).promise()
+            }))
             
         } else if (body.type == "column") {
-            await lfClient.grantPermissions({
+            await lfClient.send(new GrantPermissionsCommand({
                 Permissions: ["ALTER"],
                 Principal: {
                     DataLakePrincipalIdentifier: process.env.LAMBDA_EXEC_ROLE_ARN
@@ -61,8 +62,8 @@ exports.handler = async(event) => {
                         Name: body.tableName
                     }
                 }
-            }).promise()
-            const {Table} = await glueClient.getTable({DatabaseName: body.dbName, Name: body.tableName}).promise()
+            }))
+            const {Table} = await glueClient.send(new GetTableCommand({DatabaseName: body.dbName, Name: body.tableName}))
 
             Table.StorageDescriptor.Columns = Table.StorageDescriptor.Columns.map((column) => {
                 if (column.Name === body.columnName) {
@@ -90,10 +91,10 @@ exports.handler = async(event) => {
             delete Table.UpdateTime
             delete Table.VersionId
 
-            updateResp = await glueClient.updateTable({
+            updateResp = await glueClient.send(new UpdateTableCommand({
                 DatabaseName: body.dbName,
                 TableInput: Table
-            }).promise()
+            }))
         } else if (body.type == "tags") {
             let resourceLfTagParams = null
             let resourceLfTagResponseName = null
@@ -128,7 +129,7 @@ exports.handler = async(event) => {
                 
             }
             
-            const resourceLfTagsResponse = await lfClient.getResourceLFTags({Resource: resourceLfTagParams}).promise()
+            const resourceLfTagsResponse = await lfClient.send(new GetResourceLFTagsCommand({Resource: resourceLfTagParams}))
             let tags = null
 
             if (resourceLfTagResponseName !== "LFTagsOnColumns") {
@@ -141,7 +142,7 @@ exports.handler = async(event) => {
             const confidentialityTag = tags.find((tag) => tag.TagKey === process.env.CONFIDENTIALITY_KEY)
 
             if (confidentialityTag) {
-                await lfClient.grantPermissions({
+                await lfClient.send(new GrantPermissionsCommand({
                     Permissions: ["ASSOCIATE"],
                     Principal: {
                         DataLakePrincipalIdentifier: process.env.LAMBDA_EXEC_ROLE_ARN
@@ -152,7 +153,7 @@ exports.handler = async(event) => {
                             TagValues: ["sensitive", "non-sensitive"]
                         }
                     }
-                }).promise()
+                }))
 
                 const value = confidentialityTag.TagValues[0]
                 let newValue = ""
@@ -163,7 +164,7 @@ exports.handler = async(event) => {
                     newValue = "sensitive"
                 }
 
-                updateResp = await lfClient.addLFTagsToResource({
+                updateResp = await lfClient.send(new AddLFTagsToResourceCommand({
                     LFTags: [
                         {
                             TagKey: process.env.CONFIDENTIALITY_KEY,
@@ -171,7 +172,7 @@ exports.handler = async(event) => {
                         }
                     ],
                     Resource: resourceLfTagParams
-                }).promise()
+                }))
             }
         }
 

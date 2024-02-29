@@ -129,25 +129,16 @@ cd ..
 
 cat <<'EOT' > load_seed_data.sh
 #!/bin/bash
-SOURCE_TABLE="${1}"
-TARGET_BUCKET_NAME="${2}"
-PROFILE="${3}"
-SOURCE_BUCKET="aws-analytics-reference-architecture/datasets/retail/1GB"
+TARGET_BUCKET_NAME="${1}"
+PROFILE="${2}"
 
-echo "Loading ${SOURCE_TABLE} data to ${TARGET_BUCKET_NAME}/data-products/${SOURCE_TABLE}"
-
-FILES="$(aws s3 ls s3://${SOURCE_BUCKET}/${SOURCE_TABLE}/ --request-payer requester --profile ${PROFILE} | awk '{print $4}')"
-for f in ${FILES}
-do
-  echo "Processing ${f}"
-  aws s3api copy-object --copy-source ${SOURCE_BUCKET}/${SOURCE_TABLE}/${f} --bucket ${TARGET_BUCKET_NAME} --key data-products/${SOURCE_TABLE}/${f} --request-payer requester --profile ${PROFILE}
-done
+cd datamesh-ui/dataset
+aws s3 cp --recursive ./ s3://${TARGET_BUCKET_NAME}/data-products/ --request-payer requester --profile ${PROFILE}
+cd ..
 EOT
 
 chmod +x load_seed_data.sh
-./load_seed_data.sh customer clean-${CUSTOMER_ACC_ID}-${AWS_REGION} customer
-./load_seed_data.sh customer-address clean-${CUSTOMER_ACC_ID}-${AWS_REGION} customer
-
+./load_seed_data.sh clean-${CUSTOMER_ACC_ID}-${AWS_REGION} customer
 
 git clone https://github.com/aws-samples/datamesh-ui -b $DATAMESH_UI_VERSION
 cd datamesh-ui

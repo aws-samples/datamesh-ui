@@ -1,10 +1,10 @@
-const AWS = require("aws-sdk")
+const { SecretsManagerClient, GetSecretValueCommand } = require("@aws-sdk/client-secrets-manager");
 
 exports.handler = async(event) => {
-    const smClient = new AWS.SecretsManager()
-    const resp = await smClient.getSecretValue({
+    const smClient = new SecretsManagerClient()
+    const resp = await smClient.send(new GetSecretValueCommand({
         SecretId: process.env.EVENT_SECRET_ARN
-    }).promise()
+    }))
 
     return {
         "statusCode": "200",

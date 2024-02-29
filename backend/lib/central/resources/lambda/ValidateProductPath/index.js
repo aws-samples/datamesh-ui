@@ -1,9 +1,9 @@
-const AWS = require("aws-sdk")
+const { S3Client, ListObjectsV2Command } = require("@aws-sdk/client-s3")
 
 exports.handler = async(event) => {
     const payload = JSON.parse(event.body)
 
-    const s3Client = new AWS.S3()
+    const s3Client = new S3Client
 
     const results = {
         "valid": true,
@@ -14,10 +14,10 @@ exports.handler = async(event) => {
 
     for (const prod of payload.products) {
         try {
-            const result = await s3Client.listObjectsV2({
+            const result = await s3Client.send(new ListObjectsV2Command({
                 Bucket: bucket,
                 Prefix: prod.prefix
-            }).promise()
+            }))
 
             if (!result.Contents || result.Contents.length == 0) {
                 results.valid = false

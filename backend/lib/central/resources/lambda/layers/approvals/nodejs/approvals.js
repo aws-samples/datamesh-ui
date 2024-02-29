@@ -1,8 +1,9 @@
-const AWS = require("aws-sdk")
+const { SFNClient, SendTaskSuccessCommand, SendTaskFailureCommand } = require("@aws-sdk/client-sfn");
+const { DynamoDBClient, GetItemCommand, TransactWriteItemsCommand } = require("@aws-sdk/client-dynamodb");
 
 const SORT_KEY_COUNTER_NAME = "itemsForApproval"
-const ddbClient = new AWS.DynamoDB()
-const sfnClient = new AWS.StepFunctions()
+const ddbClient = new DynamoDBClient()
+const sfnClient = new SFNClient()
 const EXCLUDED_KEY = "LoB"
 
 const Approvals = {
@@ -11,7 +12,7 @@ const Approvals = {
         return `tags-${buffer.toString('base64')}#${targetAccountId}`
     },
     async processApproval(sourceAccountId, requestIdentifier, actionType, approvalsTableName, productShareMappingTableName) {
-        const resp = await ddbClient.getItem({
+        const resp = await ddbClient.send(new GetItemCommand({
             TableName: approvalsTableName,
             Key: {
                 "accountId": {
@@ -21,7 +22,7 @@ const Approvals = {
                     "S": requestIdentifier
                 }
             }
-        }).promise()
+        }))
 
         if (resp && resp.Item) {
             const {Item} = resp
@@ -29,10 +30,10 @@ const Approvals = {
 
             switch (actionType) {
                 case "approve":
-                    await sfnClient.sendTaskSuccess({taskToken: decodeURIComponent(token.S), output: "{}"}).promise()
+                    await sfnClient.send(new SendTaskSuccessCommand({taskToken: decodeURIComponent(token.S), output: "{}"}))
                     break;
                 case "reject":
-                    await sfnClient.sendTaskFailure({taskToken: decodeURIComponent(token.S)}).promise()
+                    await sfnClient.send(new SendTaskFailureCommand({taskToken: decodeURIComponent(token.S)}))
                     break;
                 default:
                     throw new Error("Invalid actionType")
@@ -125,9 +126,9 @@ const Approvals = {
                 transactPayload.push({Update: rejectPayload})
             }
 
-            const updateResp = await ddbClient.transactWriteItems({
+            const updateResp = await ddbClient.send(new TransactWriteItemsCommand({
                 TransactItems: transactPayload
-            }).promise()
+            }))
 
             return updateResp
         }
@@ -135,7 +136,7 @@ const Approvals = {
         throw new Error("Record not found")
     },
     async getNumberOfPendingRecords(sourceAccountId, approvalsTableName) {
-        const resp = await ddbClient.getItem({
+        const resp = await ddbClient.send(new GetItemCommand({
             TableName: approvalsTableName,
             Key: {
                 "accountId": {
@@ -145,7 +146,7 @@ const Approvals = {
                     "S": SORT_KEY_COUNTER_NAME
                 }
             }
-        }).promise()
+        }))
 
         if (resp && resp.Item) {
             return resp.Item.pendingCount.N
@@ -154,7 +155,7 @@ const Approvals = {
         return 0
     },
     async recordApproval(sourceAccountId, approvalPayload, productShareMappingPayload) {
-        await ddbClient.transactWriteItems({
+        await ddbClient.send(new TransactWriteItemsCommand({
             TransactItems: [
                 {
                     Put: approvalPayload
@@ -185,7 +186,7 @@ const Approvals = {
                     Put: productShareMappingPayload
                 }
             ]
-        }).promise()
+        }))
 
         // await ddbClient.putItem(approvalPayload).promise()
         // await ddbClient.updateItem({

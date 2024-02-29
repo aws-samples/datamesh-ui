@@ -68,7 +68,7 @@ export class ApprovalWorkflow extends Construct {
 
         this.approvalsLayer = new LayerVersion(this, "ApprovalsLayer", {
             code: Code.fromAsset(__dirname+"/resources/lambda/layers/approvals"),
-            compatibleRuntimes: [Runtime.NODEJS_16_X],
+            compatibleRuntimes: [Runtime.NODEJS_LATEST],
             removalPolicy: RemovalPolicy.DESTROY
         })
 
@@ -181,7 +181,7 @@ export class ApprovalWorkflow extends Construct {
         });
 
         const deriveBaseDatabaseName = new Function(this, "DeriveBaseDatabaseName", {
-            runtime: Runtime.NODEJS_16_X,
+            runtime: Runtime.NODEJS_LATEST,
             handler: 'index.handler',
             code: Code.fromAsset(__dirname+"/resources/lambda/DeriveBaseDatabaseName")
         });
@@ -194,7 +194,7 @@ export class ApprovalWorkflow extends Construct {
         ], true);
 
         const workflowSendApprovalNotification = new Function(this, "WorkflowSendApprovalNotification", {
-            runtime: Runtime.NODEJS_16_X,
+            runtime: Runtime.NODEJS_LATEST,
             handler: 'index.handler',
             code: Code.fromAsset(__dirname+"/resources/lambda/WorkflowSendApprovalNotification"),
             role: this.workflowLambdaSendApprovalEmailRole,
@@ -206,14 +206,14 @@ export class ApprovalWorkflow extends Construct {
         });
 
         const workflowGetTableDetails = new Function(this, "WorkflowGetTableDetails", {
-            runtime: Runtime.NODEJS_16_X,
+            runtime: Runtime.NODEJS_LATEST,
             handler: 'index.handler',
             code: Code.fromAsset(__dirname+"/resources/lambda/WorkflowGetTableDetails"),
             role: this.workflowLambdaTableDetailsRole
         });
 
         const workflowShareCatalogItem = new Function(this, "WorkflowShareCatalogItem", {
-            runtime: Runtime.NODEJS_16_X,
+            runtime: Runtime.NODEJS_LATEST,
             handler: 'index.handler',
             code: Code.fromAsset(__dirname+"/resources/lambda/WorkflowShareCatalogItem"),
             role: this.workflowLambdaShareCatalogItemRole,

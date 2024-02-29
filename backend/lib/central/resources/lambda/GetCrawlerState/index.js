@@ -1,4 +1,4 @@
-const AWS = require("aws-sdk")
+const { DynamoDBClient, GetItemCommand } = require("@aws-sdk/client-dynamodb");
 
 exports.handler = async(event) => {
     const {queryStringParameters} = event
@@ -23,10 +23,10 @@ exports.handler = async(event) => {
     }
 
     if (dbName && tableName) {
-        const ddbClient = new AWS.DynamoDB()
+        const ddbClient = new DynamoDBClient()
 
         try {
-            const result = await ddbClient.getItem({
+            const result = await ddbClient.send(new GetItemCommand({
                 TableName: process.env.DDB_TABLE_NAME,
                 Key: {
                     "dbName": {
@@ -37,7 +37,7 @@ exports.handler = async(event) => {
                     }
                 },
                 ConsistentRead: false
-            }).promise()
+            }))
     
             const {Item} = result
 

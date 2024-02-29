@@ -15,7 +15,7 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-const AWS = require("aws-sdk");
+const { SFNClient, SendTaskFailureCommand, SendTaskSuccessCommand } = require("@aws-sdk/client-sfn");
 const util = require("util");
 
 exports.handler = async (event) => {
@@ -33,19 +33,19 @@ exports.handler = async (event) => {
         statusCode = 400;
         body = 'Result: Invalid parameters';
     } else {
-        const state = new AWS.StepFunctions();
+        const state = new SFNClient();
         try {
             if (action == 'deny') {
                 let params = {
                     taskToken: token
                 }
-                await state.sendTaskFailure(params).promise();
+                await state.send(new SendTaskFailureCommand(params))
             } else if (action == 'approve') {
                 let params = {
                     taskToken: token,
                     output: "{}"
                 }
-                await state.sendTaskSuccess(params).promise();
+                await state.send(new SendTaskSuccessCommand(params))
             }
             body = util.format("OK\nResult:%s", action);
         } catch (error) {

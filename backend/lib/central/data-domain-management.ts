@@ -33,7 +33,7 @@ export class DataDomainManagement extends Construct {
 
         this.dataDomainLayer = new LayerVersion(this, "DataDomainLayer", {
             code: Code.fromAsset(__dirname+"/resources/lambda/layers/data-domain"),
-            compatibleRuntimes: [Runtime.NODEJS_16_X],
+            compatibleRuntimes: [Runtime.NODEJS_LATEST],
             removalPolicy: RemovalPolicy.DESTROY
         })
 
@@ -126,7 +126,7 @@ export class DataDomainManagement extends Construct {
         // });
 
         const registerDataDomainFunction = new Function(this, "RegisterDataDomainFunction", {
-            runtime: Runtime.NODEJS_16_X,
+            runtime: Runtime.NODEJS_LATEST,
             role: registerDataDomainRole,
             handler: "index.handler",
             timeout: Duration.seconds(30),
@@ -170,7 +170,7 @@ export class DataDomainManagement extends Construct {
         });
 
         const getDataDomainOwnerFunction = new Function(this, "GetDataDomainOwnerFunction", {
-            runtime: Runtime.NODEJS_16_X,
+            runtime: Runtime.NODEJS_LATEST,
             role: getDataDomainOwnerRole,
             handler: "index.handler",
             timeout: Duration.seconds(30),
@@ -205,7 +205,7 @@ export class DataDomainManagement extends Construct {
         });
 
         const getUserDataDomainsFunction = new Function(this, "GetUserDataDomainsFunction", {
-            runtime: Runtime.NODEJS_16_X,
+            runtime: Runtime.NODEJS_LATEST,
             role: getUserDataDomainsRole,
             handler: "index.handler",
             timeout: Duration.seconds(30),
@@ -250,7 +250,7 @@ export class DataDomainManagement extends Construct {
         });
 
         const getPendingShareApprovalsFunction = new Function(this, "GetPendingShareApprovalsFunction", {
-            runtime: Runtime.NODEJS_16_X,
+            runtime: Runtime.NODEJS_LATEST,
             role: getPendingShareApprovalsRole,
             handler: "index.handler",
             timeout: Duration.seconds(30),
@@ -269,7 +269,7 @@ export class DataDomainManagement extends Construct {
         })
 
         const togglePIIFlagFunction = new Function(this, "TogglePIIFlagFunction", {
-            runtime: Runtime.NODEJS_16_X,
+            runtime: Runtime.NODEJS_LATEST,
             role: props.crDataDomainUIAccessRole,
             handler: "index.handler",
             timeout: Duration.seconds(30),
@@ -328,7 +328,7 @@ export class DataDomainManagement extends Construct {
         });
 
         const processApprovalFunction = new Function(this, "ProcessApprovalFunction", {
-            runtime: Runtime.NODEJS_16_X,
+            runtime: Runtime.NODEJS_LATEST,
             role: processApprovalRole,
             handler: "index.handler",
             timeout: Duration.seconds(30),
@@ -376,7 +376,7 @@ export class DataDomainManagement extends Construct {
         });
 
         const getPendingApprovalCountFunction = new Function(this, "GetPendingApprovalCountFunction", {
-            runtime: Runtime.NODEJS_16_X,
+            runtime: Runtime.NODEJS_LATEST,
             role: getPendingApprovalCountRole,
             handler: "index.handler",
             timeout: Duration.seconds(30),

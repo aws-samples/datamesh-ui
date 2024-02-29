@@ -1,4 +1,5 @@
-const AWS = require("aws-sdk");
+const { GlueClient, GetDatabasesCommand } = require("@aws-sdk/client-glue");
+const { LakeFormationClient, BatchGrantPermissionsCommand, BatchRevokePermissionsCommand } = require("@aws-sdk/client-lakeformation");
 
 const GLUE_MAX_RESULTS = 100;
 const BATCH_GRANT_MAX_SIZE = 20;
@@ -15,12 +16,13 @@ function sliceIntoChunks(arr, chunkSize) {
 exports.handler = async(event) => {
     const roleToGrant = process.env.ROLE_TO_GRANT;
 
-    const glueClient = new AWS.Glue();
+    const glueClient = new GlueClient()
+    const lfClient = new LakeFormationClient()
     let databases = [];
     let nextToken = null;
 
     do {
-        const dbResp = await glueClient.getDatabases({MaxResults: GLUE_MAX_RESULTS, NextToken: nextToken}).promise();
+        const dbResp = await glueClient.send(new GetDatabasesCommand({MaxResults: GLUE_MAX_RESULTS, NextToken: nextToken}));
 
         databases = databases.concat(dbResp.DatabaseList)
 
@@ -47,12 +49,12 @@ exports.handler = async(event) => {
         });
 
         const entriesChunked = sliceIntoChunks(entriesFlat, BATCH_GRANT_MAX_SIZE)
-        const lfClient = new AWS.LakeFormation();
+        
         entriesChunked.forEach(async(batch) => {
             if (event.RequestType == "Create" || event.RequestType == "Update") {
-                await lfClient.batchGrantPermissions({Entries: batch}).promise()            
+                await lfClient.send(new BatchGrantPermissionsCommand({Entries: batch}))
             } else if (event.RequestType == "Delete") {
-                await lfClient.batchRevokePermissions({Entries: batch}).promise() 
+                await lfClient.send(new BatchRevokePermissionsCommand({Entries: batch}))
             }
         });
     }

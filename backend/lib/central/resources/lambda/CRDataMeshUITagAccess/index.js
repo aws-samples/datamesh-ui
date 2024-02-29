@@ -1,14 +1,14 @@
-const AWS = require("aws-sdk");
+const { LakeFormationClient, GrantPermissionsCommand, RevokePermissionsCommand, ListLFTagsCommand } = require("@aws-sdk/client-lakeformation");
 
 exports.handler = async(event) => {
     const rolesToGrant = JSON.parse(process.env.ROLES_TO_GRANT);
-    const lf = new AWS.LakeFormation();
+    const lf = new LakeFormationClient()
     let NextToken = null
     let LFTags = null
     let tags = []
 
     do {
-        ({LFTags, NextToken} = await lf.listLFTags({NextToken}).promise())
+        ({LFTags, NextToken} = await lf.send(new ListLFTagsCommand({NextToken})))
         tags = tags.concat(LFTags)
     } while (NextToken);
 
@@ -16,7 +16,7 @@ exports.handler = async(event) => {
         try {
             if (event.RequestType == "Create" || event.RequestType == "Update") {
                 for (let roleArn of rolesToGrant) {
-                    await lf.grantPermissions({
+                    await lf.send(new GrantPermissionsCommand({
                         Permissions: ["DESCRIBE"],
                         Principal: {
                             DataLakePrincipalIdentifier: roleArn
@@ -27,11 +27,11 @@ exports.handler = async(event) => {
                                 TagValues: t.TagValues
                             }
                         }
-                    }).promise();
+                    }))
                 }
             } else if (event.RequestType == "Delete") {
                 for (let roleArn of rolesToGrant) {
-                    await lf.revokePermissions({
+                    await lf.send(new RevokePermissionsCommand({
                         Permissions: ["DESCRIBE"],
                         Principal: {
                             DataLakePrincipalIdentifier: roleArn
@@ -42,7 +42,7 @@ exports.handler = async(event) => {
                                 TagValues: t.TagValues
                             }
                         }
-                    }).promise();
+                    }))
                 }
             }
         } catch (e) {

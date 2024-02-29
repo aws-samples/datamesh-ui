@@ -15,7 +15,7 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-const AWS = require("aws-sdk");
+const { GlueClient, GetDatabaseCommand, GetTableCommand } = require("@aws-sdk/client-glue");
 const PII_PROPERTY_KEY = "pii_flag";
 const DATA_OWNER_KEY = "data_owner";
 
@@ -23,12 +23,12 @@ exports.handler = async (event) => {
     const dbName = event.database;
     const tableName = event.table;
     
-    const glue = new AWS.Glue();
+    const glue = new GlueClient()
     var hasPii = false;
     var dataOwner = null;
     var db = null;
     
-    const dbDetails = await glue.getDatabase({Name: dbName}).promise();
+    const dbDetails = await glue.send(new GetDatabaseCommand({Name: dbName}))
     if (dbDetails.Database) {
         db = dbDetails.Database;
         if (db.Parameters && DATA_OWNER_KEY in db.Parameters) {
@@ -45,10 +45,10 @@ exports.handler = async (event) => {
             hasPii = db.Parameters[PII_PROPERTY_KEY] === "true";
         }
     } else {
-        const details = await glue.getTable({
+        const details = await glue.send(new GetTableCommand({
             DatabaseName: dbName,
             Name: tableName
-        }).promise();
+        }))
     
         const columns = details.Table.StorageDescriptor.Columns;
 
